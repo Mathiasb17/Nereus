@@ -1,22 +1,30 @@
 #include "sph.h"
 
 #include <iostream>
+#include <algorithm>
+
 #include <glm/glm.hpp>
+
+#include <thrust/host_vector.h>
 
 namespace CFD
 {
 
+static bool compareVel(glm::vec3 v1, glm::vec3 v2)
+{
+	return glm::length(v1) < glm::length(v2);
+}
+
 SPH::SPH ():
-	m_gas_stiffness(50.f),
+	m_gas_stiffness(300.f),
 	m_rest_density(998.29),
-	m_particle_mass(0.02),
 	m_particle_radius(0.02),
 	m_timestep(1E-3f),
-	m_viscosity(0.01f),
-	m_surface_tension(6.4f),
+	m_viscosity(0.013f),
+	m_surface_tension(0.01f),
 	m_interaction_radius(0.0457f)
 {
-
+	m_particle_mass = powf(m_interaction_radius, 3)*m_rest_density;
 }
 
 SPH::~SPH ()
@@ -72,7 +80,6 @@ void SPH::ComputeNeighbors()
 	for (std::vector<glm::vec3>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
 	{
 		unsigned int index1 = i - m_pos.begin();
-		//#pragma omg parallel for
 		for (std::vector<glm::vec3>::iterator j  = m_pos.begin(); j != m_pos.end(); ++j)
 		{
 			unsigned int index2 = j - m_pos.begin();
@@ -81,6 +88,7 @@ void SPH::ComputeNeighbors()
 			{
 				m_neighbors[index1].push_back(index2);
 			}
+			if(m_neighbors[index1].size() > 40) std::cout << "nb neighbors : " << m_neighbors[index1].size() << std::endl;
 		}
 	}
 }
@@ -148,10 +156,7 @@ void SPH::ComputeInternalForces()
 		glm::vec3 force_pres = -(m_particle_mass/m_density[index1]) * pres_grad;
 		glm::vec3 force_visc = (m_particle_mass*m_viscosity) * vel_lapl;
 
-		//std::cout << std::setw(15) << "pres " << force_pres.x << " " << force_pres.y << " " << force_pres.z << " visc " << force_visc.x << " " <<
-		//force_visc.y << " " << force_visc.z << std::endl;
-
-		m_forces[index1] = force_pres + force_visc;
+		m_forces[index1] = force_pres + force_visc + force_surf;
 	}
 }
 
@@ -167,7 +172,11 @@ void SPH::CollisionDetectionsAndResponses()
 
 void SPH::ComputeImplicitEulerScheme()
 {
-	//#pragma omg parallel for
+	//compute timestep
+	std::vector<glm::vec3>::iterator vel_max_length_it = std::max(m_vel.begin(), m_vel.end());
+	float len = glm::length(*vel_max_length_it);
+	m_timestep = 0.01 * (m_interaction_radius /  len);
+
 	for (std::vector<glm::vec3>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
 	{
 		unsigned int index1 = i - m_pos.begin();

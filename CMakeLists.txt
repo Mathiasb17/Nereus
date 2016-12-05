@@ -9,6 +9,8 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++-4.9")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+include_directories(/usr/local/cuda-7.5/include/)
+
 #LIBS
 find_package(glfw3 3.2 REQUIRED)
 find_package(OpenGL REQUIRED)

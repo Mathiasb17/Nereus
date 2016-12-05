@@ -36,6 +36,8 @@ flags = [
 '-std=c++11',
 '-I',
 '/opt/boost_1_61_0/',
+'-I',
+'/usr/local/cuda-7.5/include/',
 # ...and the same thing goes for the magic -x option which specifies the
 # language that the files to be compiled are written in. This is mostly
 # relevant for c++ headers.

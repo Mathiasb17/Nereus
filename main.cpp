@@ -415,6 +415,19 @@ glm::vec3 getCamMove(GLFWwindow *win, glm::vec3 camDir, glm::vec3 camUp)
 		res += 0.0001f * camDir;
 	}
 
+	int stateSp = glfwGetKey(win, GLFW_KEY_SPACE);
+	if (stateSp == GLFW_PRESS || stateSp == GLFW_REPEAT)
+	{
+		res += glm::vec3(0, 0.0001f, 0);
+	}
+
+	int stateC = glfwGetKey(win, GLFW_KEY_C);
+	if (stateC == GLFW_PRESS || stateSp == GLFW_REPEAT)
+	{
+		res += glm::vec3(0, -0.0001f, 0);
+	}
+
+
 	return res;
 }
 

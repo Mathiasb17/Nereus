@@ -72,7 +72,6 @@ public:
 	void setSurfaceTension(float new_surfacetension){m_surface_tension = new_surfacetension;}
 
 public:
-
 	float m_gas_stiffness;
 	float m_rest_density;
 	float m_particle_mass;
@@ -82,6 +81,7 @@ public:
 	float m_surface_tension;
 	float m_interaction_radius;
 
+	std::vector<unsigned int> m_key;
 	std::vector<glm::vec3> m_pos;
 	std::vector<glm::vec3> m_vel;
 	std::vector<float> m_density;
