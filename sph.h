@@ -4,6 +4,8 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+#include <thrust/host_vector.h>
+
 namespace CFD
 {
 
@@ -58,9 +60,9 @@ public:
 	float getSurfaceTension() const {return m_surface_tension;}
 	float getInteractionRadius() const {return m_interaction_radius;}
 
-	std::vector<glm::vec3> & getPos() {return m_pos;}
-	std::vector<glm::vec3> & getCol() {return m_colors;}
-	std::vector<glm::vec3> & getVel() {return m_vel;}
+	thrust::host_vector<glm::vec3> & getPos() {return m_pos;}
+	thrust::host_vector<glm::vec3> & getCol() {return m_colors;}
+	thrust::host_vector<glm::vec3> & getVel() {return m_vel;}
 
 	/*************
 	*  SETTERS  *
@@ -81,14 +83,19 @@ public:
 	float m_surface_tension;
 	float m_interaction_radius;
 
-	std::vector<unsigned int> m_key;
-	std::vector<glm::vec3> m_pos;
-	std::vector<glm::vec3> m_vel;
-	std::vector<float> m_density;
-	std::vector<float> m_pressure;
-	std::vector<glm::vec3> m_forces;
-	std::vector<std::vector<unsigned int> > m_neighbors;
-	std::vector<glm::vec3> m_colors;
+	glm::vec3 m_grid_min;
+	float m_nb_cell_x;
+	float m_nb_cell_y;
+	float m_cell_size;
+
+	thrust::host_vector<unsigned int> m_key;
+	thrust::host_vector<glm::vec3> m_pos;
+	thrust::host_vector<glm::vec3> m_vel;
+	thrust::host_vector<float> m_density;
+	thrust::host_vector<float> m_pressure;
+	thrust::host_vector<glm::vec3> m_forces;
+	thrust::host_vector<thrust::host_vector<unsigned int>* > m_neighbors;
+	thrust::host_vector<glm::vec3> m_colors;
 };
 
 } /*  CFD */ 
