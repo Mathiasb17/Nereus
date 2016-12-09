@@ -15,10 +15,19 @@ include_directories(/usr/local/cuda-7.5/include/)
 find_package(glfw3 3.2 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
+find_package(CUDA REQUIRED)
 
-file(GLOB SYSTEM_SOURCES sph.h sph.cpp)
+file(GLOB SYSTEM_SOURCES sph.h sph.cpp sph_cuda.cu)
 
 set(SOURCES ${SYSTEM_SOURCES})
+
+#CUDA OPTIONS
+set(CUDA_64_BIT_DEVICE_CODE ON)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_52,code=sm_52)
+set(CUDA_SOURCES sph_kernel.cuh sph-)
+
+CUDA_INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
+CUDA_COMPILE(CUDA_OBJ ${CUDA_SOURCES})
 
 add_executable(sph main.cpp ${SOURCES})
 
@@ -27,3 +36,4 @@ target_link_libraries(sph ${OPENGL_gl_LIBRARY})
 target_link_libraries(sph ${OPENGL_LIBRARIES})
 target_link_libraries(sph glfw ${GLFW_LIBRARIES})
 target_link_libraries(sph ${GLEW_LIBRARIES})
+target_link_libraries(sph ${CUDA_LIBRARIES})

@@ -2,6 +2,10 @@
 #define SPH_H 
 
 #include <vector>
+
+#ifndef GLM_SWIZZLE
+#define GLM_SWIZZLE
+#endif /* ifndef GLM_SWIZZLE */
 #include <glm/glm.hpp>
 
 #include <thrust/host_vector.h>
