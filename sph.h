@@ -10,6 +10,8 @@
 
 #include <thrust/host_vector.h>
 
+#include "sph_kernel.cuh"
+
 namespace CFD
 {
 
@@ -55,14 +57,14 @@ public:
 	/*************
 	 *  GETTERS  *
 	 *************/
-	float getGasStiffness() const {return m_gas_stiffness;}
-	float getRestDensity() const {return m_rest_density;}
-	float getParticleMass() const {return m_particle_mass;}
-	float getParticleRadius() const {return m_particle_radius;}
-	float getTimestep() const {return m_timestep;}
-	float getViscosity() const {return m_viscosity;}
-	float getSurfaceTension() const {return m_surface_tension;}
-	float getInteractionRadius() const {return m_interaction_radius;}
+	float getGasStiffness() const {return m_params.gasStiffness;}
+	float getRestDensity() const {return m_params.restDensity;}
+	float getParticleMass() const {return m_params.particleMass;}
+	float getParticleRadius() const {return m_params.particleRadius;}
+	float getTimestep() const {return m_params.timestep;}
+	float getViscosity() const {return m_params.viscosity;}
+	float getSurfaceTension() const {return m_params.surfaceTension;}
+	float getInteractionRadius() const {return m_params.interactionRadius;}
 
 	thrust::host_vector<glm::vec4> & getPos() {return m_pos;}
 	thrust::host_vector<glm::vec4> & getCol() {return m_colors;}
@@ -71,26 +73,32 @@ public:
 	/*************
 	*  SETTERS  *
 	*************/
-	void setGasStiffness(float new_stiffness){m_gas_stiffness = new_stiffness;}
-	void setRestDensity(float new_restdensity){m_rest_density = new_restdensity;}
-	void setParticleMass(float new_particlemass){m_particle_mass = new_particlemass;}
-	void setViscosity(float new_viscosity){m_viscosity = new_viscosity;}
-	void setSurfaceTension(float new_surfacetension){m_surface_tension = new_surfacetension;}
+	void setGasStiffness(float new_stiffness){m_params.gasStiffness = new_stiffness;}
+	void setRestDensity(float new_restdensity){m_params.restDensity = new_restdensity;}
+	void setParticleMass(float new_particlemass){m_params.particleMass = new_particlemass;}
+	void setViscosity(float new_viscosity){m_params.viscosity = new_viscosity;}
+	void setSurfaceTension(float new_surfacetension){m_params.surfaceTension = new_surfacetension;}
 
 public:
-	float m_gas_stiffness;
-	float m_rest_density;
-	float m_particle_mass;
-	float m_particle_radius;
-	float m_timestep;
-	float m_viscosity;
-	float m_surface_tension;
-	float m_interaction_radius;
+	SphSimParams m_params;
 
 	glm::vec4 m_grid_min;
 	float m_nb_cell_x;
 	float m_nb_cell_y;
 	float m_cell_size;
+
+	uint* m_hParticleHash;
+	uint* m_hCellStart;
+	uint* m_hCellEnd;
+
+	uint   m_gridSortBits;
+
+	glm::vec4* m_dpos;
+	glm::vec4* m_dvel;
+	float* m_ddensity;
+	float* m_dpressure;
+	glm::vec4* m_dforces;
+	glm::vec4* m_dcolors;
 
 	thrust::host_vector<unsigned int> m_key;
 	thrust::host_vector<glm::vec4> m_pos;

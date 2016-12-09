@@ -34,19 +34,20 @@ static bool compareVel(glm::vec3 v1, glm::vec3 v2)
 }
 
 SPH::SPH ():
-	m_gas_stiffness(300.f),
-	m_rest_density(998.29),
-	m_particle_radius(0.02),
-	m_timestep(1E-3f),
-	m_viscosity(0.013f),
-	m_surface_tension(0.01f),
-	m_interaction_radius(0.0457f),
 	m_grid_min(glm::vec4(-2,-2,-2,1)),
 	m_nb_cell_x(10),
 	m_nb_cell_y(10)
 {
-	m_particle_mass = powf(m_interaction_radius, 3)*m_rest_density;
-	m_cell_size = m_interaction_radius;
+	m_params.gasStiffness = 300.f;
+	m_params.restDensity = 998.29;
+	m_params.particleRadius = 0.02;
+	m_params.timestep = 1E-3f;
+	m_params.viscosity = 0.013f;
+	m_params.surfaceTension = 0.01f;
+	m_params.interactionRadius = 0.0457f;
+
+	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
+	m_cell_size = m_params.interactionRadius;
 }
 
 SPH::~SPH ()
@@ -123,7 +124,7 @@ void SPH::ComputeNeighbors()
 		{
 			unsigned int index2 = j - m_pos.begin();
 			float len = glm::length(*i - *j);
-			if(len > 0 && len <= m_interaction_radius /*&& index1 != index2*/)
+			if(len > 0 && len <= m_params.interactionRadius /*&& index1 != index2*/)
 			{
 				m_neighbors[index1]->push_back(index2);
 			}
@@ -144,10 +145,10 @@ void SPH::ComputeDensitiesAndPressure()
 		{
 			unsigned int index2 = m_neighbors[index1]->data()[j];
 			glm::vec4 p_ij = m_pos[index1] - m_pos[index2];
-			dens += m_particle_mass * Wdefault(p_ij.xyz(), m_interaction_radius);
+			dens += m_params.particleMass * Wdefault(p_ij.xyz(), m_params.interactionRadius);
 		}
 		m_density[index1] = dens;
-		m_pressure[index1] = m_gas_stiffness * ( powf(dens/m_rest_density,7) - 1 );
+		m_pressure[index1] = m_params.gasStiffness * ( powf(dens/m_params.restDensity,7) - 1 );
 
 		//std::cout << std::setw(10) << "density : " << dens << " | pressure " << pressure[index1] << std::endl;
 	}
@@ -172,28 +173,28 @@ void SPH::ComputeInternalForces()
 			glm::vec4 p_ij = m_pos[index1] - m_pos[index2];
 			float pi_rhoi2 = m_pressure[index1] / powf(m_density[index1],2);
 			float pj_rhoj2 = m_pressure[index2] / powf(m_density[index2],2);
-			pres_grad += m_particle_mass * (pi_rhoi2 + pj_rhoj2) * Wpressure_grad(p_ij.xyz(), m_interaction_radius);
+			pres_grad += m_params.particleMass * (pi_rhoi2 + pj_rhoj2) * Wpressure_grad(p_ij.xyz(), m_params.interactionRadius);
 
 			//visc
-			float mj_rhoj = m_particle_mass / m_density[index2];
+			float mj_rhoj = m_params.particleMass / m_density[index2];
 			glm::vec4 v_ij = m_vel[index1] - m_vel[index2];
-			float num = glm::dot(p_ij.xyz(), Wdefault_grad(p_ij.xyz(), m_interaction_radius));
-			float denum = glm::dot(p_ij.xyz(), p_ij.xyz()) + 0.01f*(m_interaction_radius*m_interaction_radius);
+			float num = glm::dot(p_ij.xyz(), Wdefault_grad(p_ij.xyz(), m_params.interactionRadius));
+			float denum = glm::dot(p_ij.xyz(), p_ij.xyz()) + 0.01f*(m_params.interactionRadius*m_params.interactionRadius);
 			vel_lapl += mj_rhoj*v_ij.xyz()*(num/denum);
 
 			//surface tension
-			glm::vec3 b = m_particle_mass * p_ij.xyz()  * Wdefault(p_ij.xyz(), m_interaction_radius);
+			glm::vec3 b = m_params.particleMass * p_ij.xyz()  * Wdefault(p_ij.xyz(), m_params.interactionRadius);
 
 			force_surf += b;
 		}
-		float a = -(m_surface_tension / m_particle_mass);
+		float a = -(m_params.surfaceTension / m_params.particleMass);
 		force_surf *= a;
 
 		pres_grad *= m_density[index1];
 		vel_lapl *= 2.f;
 
-		glm::vec3 force_pres = -(m_particle_mass/m_density[index1]) * pres_grad;
-		glm::vec3 force_visc = (m_particle_mass*m_viscosity) * vel_lapl;
+		glm::vec3 force_pres = -(m_params.particleMass/m_density[index1]) * pres_grad;
+		glm::vec3 force_visc = (m_params.particleMass*m_params.viscosity) * vel_lapl;
 
 		m_forces[index1] = glm::vec4(force_pres + force_visc + force_surf,0);
 	}
@@ -216,14 +217,14 @@ void SPH::ComputeImplicitEulerScheme()
 	//float len = glm::length(*vel_max_length_it);
 	//m_timestep = 0.01 * (m_interaction_radius /  len);
 
-	m_timestep = 1E-3f;
+	m_params.timestep = 1E-3f;
 
 	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
 	{
 		unsigned int index1 = i - m_pos.begin();
 
-		m_vel[index1] += m_timestep*m_forces[index1]/m_particle_mass;
-		m_pos[index1] += m_timestep*m_vel[index1];
+		m_vel[index1] += m_params.timestep*m_forces[index1]/m_params.particleMass;
+		m_pos[index1] += m_params.timestep*m_vel[index1];
 
 		//is_nan
 		if (m_pos[index1].x != m_pos[index1].x || m_pos[index1].y != m_pos[index1].y || m_pos[index1].z != m_pos[index1].z)
@@ -250,11 +251,11 @@ void SPH::addNewParticle(glm::vec4 p)
 
 void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size)
 {
-	for(float x = center.x-size.x/2.f; x <= center.x+size.x/2.f; x += m_particle_radius*2 )
+	for(float x = center.x-size.x/2.f; x <= center.x+size.x/2.f; x += m_params.particleRadius*2 )
 	{
-		for(float y = center.y-size.y/2.f; y <= center.y+size.y/2.f; y += m_particle_radius*2 )
+		for(float y = center.y-size.y/2.f; y <= center.y+size.y/2.f; y += m_params.particleRadius*2 )
 		{
-			for(float z = center.z-size.z/2.f; z <= center.z+size.z/2.f; z += m_particle_radius*2 )
+			for(float z = center.z-size.z/2.f; z <= center.z+size.z/2.f; z += m_params.particleRadius*2 )
 			{
 				addNewParticle(glm::vec4(x,y,z,1.f));
 			}

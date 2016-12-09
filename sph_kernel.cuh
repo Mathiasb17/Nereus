@@ -25,6 +25,7 @@ struct SphSimParams
     unsigned int numBodies;
     unsigned int maxParticlesPerCell;
 
+	float gasStiffness;
     float viscosity;
     float surfaceTension;
     float restDensity;
