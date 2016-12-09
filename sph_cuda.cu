@@ -15,6 +15,7 @@
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/sort.h>
 
+#include "sph_kernel.cuh"
 #include "sph_kernel_impl.cuh"
 
 extern "C"
@@ -101,10 +102,10 @@ extern "C"
 		}
 	}
 
-	void setParameters(SimParams *hostParams)
+	void setParameters(SphSimParams *hostParams)
 	{
 		// copy parameters to constant memory
-		checkCudaErrors(cudaMemcpyToSymbol(params, hostParams, sizeof(SimParams)));
+		checkCudaErrors(cudaMemcpyToSymbol(sph_params, hostParams, sizeof(SphSimParams)));
 	}
 
 	//Round a / b to nearest higher integer value
@@ -156,10 +157,18 @@ extern "C"
 			uint  *cellEnd,
 			float *sortedPos,
 			float *sortedVel,
+			float *sortedDens,
+			float *sortedPres,
+			float *sortedForces,
+			float *sortedCol,
 			uint  *gridParticleHash,
 			uint  *gridParticleIndex,
 			float *oldPos,
 			float *oldVel,
+			float *oldDens,
+			float *oldPres,
+			float *oldForces,
+			float *oldCol,
 			uint   numParticles,
 			uint   numCells)
 	{
@@ -180,10 +189,18 @@ extern "C"
 				cellEnd,
 				(float4 *) sortedPos,
 				(float4 *) sortedVel,
+				(float *) sortedDens,
+				(float *) sortedPres,
+				(float4 *) sortedForces,
+				(float4 *) sortedCol,
 				gridParticleHash,
 				gridParticleIndex,
 				(float4 *) oldPos,
 				(float4 *) oldVel,
+				(float *) oldDens,
+				(float *) oldPres,
+				(float4 *) oldForces,
+				(float4 *) oldCol,
 				numParticles);
 		getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
 
@@ -196,6 +213,10 @@ extern "C"
 	void collide(float *newVel,
 			float *sortedPos,
 			float *sortedVel,
+			float *sortedDens,
+			float *sortedPres,
+			float *sortedForces,
+			float *sortedCol,
 			uint  *gridParticleIndex,
 			uint  *cellStart,
 			uint  *cellEnd,
@@ -205,6 +226,10 @@ extern "C"
 #if USE_TEX
 		checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
 		checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldDensTex, sortedVel, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldPresTex, sortedVel, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedVel, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldColTex, sortedVel, numParticles*sizeof(float4)));
 		checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(uint)));
 		checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(uint)));
 #endif
@@ -217,6 +242,10 @@ extern "C"
 		collideD<<< numBlocks, numThreads >>>((float4 *)newVel,
 				(float4 *)sortedPos,
 				(float4 *)sortedVel,
+				(float *)sortedDens,
+				(float *)sortedPres,
+				(float4 *)sortedForces,
+				(float4 *)sortedCol,
 				gridParticleIndex,
 				cellStart,
 				cellEnd,
@@ -228,6 +257,10 @@ extern "C"
 #if USE_TEX
 		checkCudaErrors(cudaUnbindTexture(oldPosTex));
 		checkCudaErrors(cudaUnbindTexture(oldVelTex));
+		checkCudaErrors(cudaUnbindTexture(oldDensTex));
+		checkCudaErrors(cudaUnbindTexture(oldPresTex));
+		checkCudaErrors(cudaUnbindTexture(oldForcesTex));
+		checkCudaErrors(cudaUnbindTexture(oldColTex));
 		checkCudaErrors(cudaUnbindTexture(cellStartTex));
 		checkCudaErrors(cudaUnbindTexture(cellEndTex));
 #endif

@@ -212,11 +212,6 @@ void SPH::CollisionDetectionsAndResponses()
 
 void SPH::ComputeImplicitEulerScheme()
 {
-	//compute timestep
-	//thrust::host_vector<glm::vec3>::iterator vel_max_length_it = thrust::max_element(m_vel.begin(), m_vel.end(), compareVel);
-	//float len = glm::length(*vel_max_length_it);
-	//m_timestep = 0.01 * (m_interaction_radius /  len);
-
 	m_params.timestep = 1E-3f;
 
 	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
@@ -231,7 +226,7 @@ void SPH::ComputeImplicitEulerScheme()
 		{
 			m_pos[index1] = glm::vec4(-100,-100,-100,1);
 			m_vel[index1] = glm::vec4(0,0,0,0);
-			//std::cout << "PARTICULE CLAMPEE !" << std::endl;
+			std::cout << "PARTICULE CLAMPEE !" << std::endl;
 		}
 	}
 }

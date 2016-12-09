@@ -6,14 +6,16 @@
 #ifndef GLM_SWIZZLE
 #define GLM_SWIZZLE
 #endif /* ifndef GLM_SWIZZLE */
-#define USE_TEX 1
 #include <glm/glm.hpp>
 
+#define USE_TEX 0
 #if USE_TEX
 #define FETCH(t, i) tex1Dfetch(t##Tex, i)
 #else
 #define FETCH(t, i) t[i]
 #endif
+
+#include <vector_types.h>
 
 struct SphSimParams
 {
