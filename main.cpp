@@ -4,6 +4,9 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
+#ifndef GLM_SWIZZLE
+#define GLM_SWIZZLE 
+#endif /* ifndef GLM_SWIZZLE */
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/glm.hpp>
 
@@ -31,14 +34,14 @@ const char* vertex_shader_spheres =
 "uniform float pointRadius;"
 "uniform mat4 MVP;"
 "uniform mat4 MV;"
-"in vec3 vp;"
-"in vec3 col;"
-"out vec3 fcol;"
+"in vec4 vp;"
+"in vec4 col;"
+"out vec4 fcol;"
 "void main() {"
-"  vec3 posEye = vec3(MVP*vec4(vp,1));"
+"  vec3 posEye = vec3(MVP*vec4(vp));"
 "  float dist = length(posEye);"
 "  gl_PointSize = 0.02 * (pointScale/dist);"
-"  gl_Position = MVP*vec4(vp, 1.0);"
+"  gl_Position = MVP*vec4(vp);"
 "  fcol = col;"
 "}";
 
@@ -46,7 +49,7 @@ const char* fragment_shader_spheres =
 "#version 400\n"
 "const float PI = 3.1415926535897932384626433832795;"
 "out vec4 frag_colour;"
-"in vec3 fcol;"
+"in vec4 fcol;"
 "void main() "
 "{"
 "if(dot(gl_PointCoord-0.5,gl_PointCoord-0.5)>0.25) "
@@ -59,27 +62,27 @@ const char* fragment_shader_spheres =
 "float mag = dot(N.xy, N.xy);"
 "N.z = sqrt(1.0-mag);"
 "float diffuse = max(0.0, dot(lightDir, N));"
-"frag_colour = vec4(fcol, 1.0)*diffuse;"
+"frag_colour = vec4(fcol)*diffuse;"
 "}"
 "}";
 
 const char * vertex_shader_basic =
 "#version 400\n"
 "uniform mat4 MVP;"
-"in vec3 vp;"
-"in vec3 col;"
-"out vec3 fcol;"
+"in vec4 vp;"
+"in vec4 col;"
+"out vec4 fcol;"
 "void main() {"
 "  fcol = col;"
-"  gl_Position = MVP*vec4(vp, 1.0);"
+"  gl_Position = MVP*vp;"
 "}";
 
 const char * fragment_shader_basic = 
 "#version 400\n"
-"in vec3 fcol;"
+"in vec4 fcol;"
 "out vec4 frag_colour;"
 "void main() {"
-"  frag_colour = vec4(fcol, 1.0);"
+"  frag_colour = fcol;"
 "}";
 
 /**********************************************************************
@@ -87,27 +90,27 @@ const char * fragment_shader_basic =
  **********************************************************************/
 
 float particle_radius = 0.02;
-glm::vec3 cube_points[8];glm::vec3 cube_colors[8]; unsigned int cube_indices[36];
+glm::vec4 cube_points[8];glm::vec4 cube_colors[8]; unsigned int cube_indices[36];
 
 void initCube()
 {
-	cube_points[0] = glm::vec3(-0.5,-0.5,0.5);
-	cube_points[1] = glm::vec3(-0.5,-0.5,-0.5);
-	cube_points[2] = glm::vec3(-0.5,0.5,-0.5);
-	cube_points[3] = glm::vec3(-0.5,0.5,0.5);
-	cube_points[4] = glm::vec3(0.5,-0.5,0.5);
-	cube_points[5] = glm::vec3(0.5,-0.5,-0.5);
-	cube_points[6] = glm::vec3(0.5,0.5,-0.5);
-	cube_points[7] = glm::vec3(0.5,0.5,0.5);
+	cube_points[0] = glm::vec4(-0.5,-0.5,0.5,1.f);
+	cube_points[1] = glm::vec4(-0.5,-0.5,-0.5,1.f);
+	cube_points[2] = glm::vec4(-0.5,0.5,-0.5,1.f);
+	cube_points[3] = glm::vec4(-0.5,0.5,0.5,1.f);
+	cube_points[4] = glm::vec4(0.5,-0.5,0.5,1.f);
+	cube_points[5] = glm::vec4(0.5,-0.5,-0.5,1.f);
+	cube_points[6] = glm::vec4(0.5,0.5,-0.5,1.f);
+	cube_points[7] = glm::vec4(0.5,0.5,0.5,1.f);
 
-	cube_colors[0] = glm::vec3(1,0,0);
-	cube_colors[1] = glm::vec3(1,0,0);
-	cube_colors[2] = glm::vec3(0,1,0);
-	cube_colors[3] = glm::vec3(0,1,0);
-	cube_colors[4] = glm::vec3(0,0,1);
-	cube_colors[5] = glm::vec3(0,0,1);
-	cube_colors[6] = glm::vec3(1,0,0);
-	cube_colors[7] = glm::vec3(1,0,0);
+	cube_colors[0] = glm::vec4(1,0,0,1);
+	cube_colors[1] = glm::vec4(1,0,0,1);
+	cube_colors[2] = glm::vec4(0,1,0,1);
+	cube_colors[3] = glm::vec4(0,1,0,1);
+	cube_colors[4] = glm::vec4(0,0,1,1);
+	cube_colors[5] = glm::vec4(0,0,1,1);
+	cube_colors[6] = glm::vec4(1,0,0,1);
+	cube_colors[7] = glm::vec4(1,0,0,1);
 
 	//front
 	cube_indices[0] = 0; cube_indices[1] = 4; cube_indices[2] = 3;
@@ -185,7 +188,7 @@ void getNewVao(GLuint *newVao, GLuint vbo_pos)
 	glGenVertexArrays(1, newVao);
 	glBindVertexArray(*newVao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
 void getNewVao(GLuint *newVao, GLuint vbo_pos, GLuint vbo_col)
@@ -193,9 +196,9 @@ void getNewVao(GLuint *newVao, GLuint vbo_pos, GLuint vbo_col)
 	glGenVertexArrays(1, newVao);
 	glBindVertexArray(*newVao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_col);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
 void getNewVao(GLuint *newVao, GLuint vbo_pos, GLuint vbo_col, GLuint vbo_indices)
@@ -203,11 +206,11 @@ void getNewVao(GLuint *newVao, GLuint vbo_pos, GLuint vbo_col, GLuint vbo_indice
 	glGenVertexArrays(1, newVao);
 	glBindVertexArray(*newVao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_col);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_indices);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 
 void compileVertexAndFragmentShaders(GLuint *vs, GLuint *fs, const GLchar **string_vs, const GLchar **string_fs)
@@ -274,7 +277,7 @@ GLuint shader_program_spheres, shader_program_basic;
 
 glm::mat4 mvp;
 float fov = 45.f;
-glm::vec3 campos(4,0,0);
+glm::vec4 campos(4,0,0,1);
 
 bool do_simulation = false;
 
@@ -309,7 +312,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	fov += yoffset*0.02;
 }
 
-void move_camera_direction(GLFWwindow* win, glm::vec3* dir)
+void move_camera_direction(GLFWwindow* win, glm::vec4* dir)
 {
 	int mouse_left_state = glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT);
 	if (mouse_left_state == GLFW_PRESS || mouse_left_state == GLFW_REPEAT)
@@ -384,11 +387,11 @@ void move_camera_rotate(GLFWwindow * win, glm::mat4 *mvp)
 	*mvp = glm::rotate(*mvp, rotateAroundX, glm::vec3(1,0,0));
 }
 
-glm::vec3 getCamMove(GLFWwindow *win, glm::vec3 camDir, glm::vec3 camUp)
+glm::vec4 getCamMove(GLFWwindow *win, glm::vec4 camDir, glm::vec4 camUp)
 {
-	static glm::vec3 res(0,0,0);
+	static glm::vec4 res(0,0,0,0);
 	
-	glm::vec3 right = glm::cross(camUp, camDir);
+	glm::vec4 right = glm::vec4(glm::cross(camUp.xyz(), camDir.xyz()),0);
 
 
 	int stateA = glfwGetKey(win, GLFW_KEY_A);
@@ -418,13 +421,13 @@ glm::vec3 getCamMove(GLFWwindow *win, glm::vec3 camDir, glm::vec3 camUp)
 	int stateSp = glfwGetKey(win, GLFW_KEY_SPACE);
 	if (stateSp == GLFW_PRESS || stateSp == GLFW_REPEAT)
 	{
-		res += glm::vec3(0, 0.0001f, 0);
+		res += glm::vec4(0, 0.0001f, 0, 0);
 	}
 
 	int stateC = glfwGetKey(win, GLFW_KEY_C);
 	if (stateC == GLFW_PRESS || stateSp == GLFW_REPEAT)
 	{
-		res += glm::vec3(0, -0.0001f, 0);
+		res += glm::vec4(0, -0.0001f, 0, 0);
 	}
 
 
@@ -438,7 +441,7 @@ glm::vec3 getCamMove(GLFWwindow *win, glm::vec3 camDir, glm::vec3 camUp)
 int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
-	sim_sph->generateParticleCube(glm::vec3(0.f, 0.25f, 0.f), glm::vec3(0.3f, 0.3f, 0.3f));
+	sim_sph->generateParticleCube(glm::vec4(0.f, 0.25f, 0.f,1.f), glm::vec4(0.3f, 0.3f, 0.3f, 0.f));
 
 	//call to helper functions
 	initWindow();
@@ -447,13 +450,13 @@ int main(void)
 	initCube();
 
 	//opengl sphere buffers handling
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_pos.size() * sizeof(glm::vec3), sim_sph->m_pos.data(), GL_STATIC_DRAW);
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_colors.size() * sizeof(glm::vec3), sim_sph->m_colors.data(), GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_pos.size() * sizeof(glm::vec4), sim_sph->m_pos.data(), GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_colors.size() * sizeof(glm::vec4), sim_sph->m_colors.data(), GL_STATIC_DRAW);
 	getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
 
 	//opengl cube buffers handling
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_pos, 8 * sizeof(glm::vec3), cube_points, GL_STATIC_DRAW);
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_color, 8 *sizeof(glm::vec3), cube_colors, GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_pos, 8 * sizeof(glm::vec4), cube_points, GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_color, 8 *sizeof(glm::vec4), cube_colors, GL_STATIC_DRAW);
 	getNewVbo(GL_ELEMENT_ARRAY_BUFFER, &vbo_cube_indices, 36 * sizeof(unsigned int), cube_indices, GL_STATIC_DRAW);
 	getNewVao(&vao_cube, vbo_cube_pos, vbo_cube_color, vbo_cube_indices);
 
@@ -463,12 +466,12 @@ int main(void)
 	compileVertexAndFragmentShaders(&vs_basic, &fs_basic, &vertex_shader_basic, &fragment_shader_basic);
 	compileShaderProgram(&shader_program_basic, vs_basic, fs_basic);
 
-	glm::vec3 direction(0,0,1);
+	glm::vec4 direction(0,0,1,0);
 	while(!glfwWindowShouldClose(window))
 	{
 
-		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_pos.size() * sizeof(glm::vec3), sim_sph->m_pos.data(), GL_DYNAMIC_DRAW);
-		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_colors.size() * sizeof(glm::vec3), sim_sph->m_colors.data(), GL_DYNAMIC_DRAW);
+		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_pos.size() * sizeof(glm::vec4), sim_sph->m_pos.data(), GL_DYNAMIC_DRAW);
+		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_colors.size() * sizeof(glm::vec4), sim_sph->m_colors.data(), GL_DYNAMIC_DRAW);
 		getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
 		//step 1 : clear screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -477,10 +480,10 @@ int main(void)
 
 		//step 2 : handle mvp matrix
 		glm::mat4 m(1.f);
-		glm::vec3 camMove = getCamMove(window, direction, glm::vec3(0,1,0));
-		glm::vec3 camPos = glm::vec3(0,0,4) + camMove;
+		glm::vec4 camMove = getCamMove(window, direction, glm::vec4(0,1,0,0));
+		glm::vec4 camPos = glm::vec4(0,0,4,1) + camMove;
 
-		glm::mat4 v = glm::lookAt(camPos, direction, glm::vec3(0,1,0));
+		glm::mat4 v = glm::lookAt(camPos.xyz(), direction.xyz(), glm::vec4(0,1,0, 0).xyz());
 		glm::mat4 p = glm::perspective(fov,(float)width/float(height), 0.1f, 100.f);
 		mvp = p*v*m;
 		move_camera_rotate(window,&mvp);

@@ -49,8 +49,8 @@ public:
 	/********************
 	 *  GENERATE FLUID  *
 	 ********************/
-	void addNewParticle(glm::vec3 p);
-	void generateParticleCube(glm::vec3 center, glm::vec3 size);
+	void addNewParticle(glm::vec4 p);
+	void generateParticleCube(glm::vec4 center, glm::vec4 size);
 
 	/*************
 	 *  GETTERS  *
@@ -64,9 +64,9 @@ public:
 	float getSurfaceTension() const {return m_surface_tension;}
 	float getInteractionRadius() const {return m_interaction_radius;}
 
-	thrust::host_vector<glm::vec3> & getPos() {return m_pos;}
-	thrust::host_vector<glm::vec3> & getCol() {return m_colors;}
-	thrust::host_vector<glm::vec3> & getVel() {return m_vel;}
+	thrust::host_vector<glm::vec4> & getPos() {return m_pos;}
+	thrust::host_vector<glm::vec4> & getCol() {return m_colors;}
+	thrust::host_vector<glm::vec4> & getVel() {return m_vel;}
 
 	/*************
 	*  SETTERS  *
@@ -87,19 +87,19 @@ public:
 	float m_surface_tension;
 	float m_interaction_radius;
 
-	glm::vec3 m_grid_min;
+	glm::vec4 m_grid_min;
 	float m_nb_cell_x;
 	float m_nb_cell_y;
 	float m_cell_size;
 
 	thrust::host_vector<unsigned int> m_key;
-	thrust::host_vector<glm::vec3> m_pos;
-	thrust::host_vector<glm::vec3> m_vel;
+	thrust::host_vector<glm::vec4> m_pos;
+	thrust::host_vector<glm::vec4> m_vel;
 	thrust::host_vector<float> m_density;
 	thrust::host_vector<float> m_pressure;
-	thrust::host_vector<glm::vec3> m_forces;
+	thrust::host_vector<glm::vec4> m_forces;
 	thrust::host_vector<thrust::host_vector<unsigned int>* > m_neighbors;
-	thrust::host_vector<glm::vec3> m_colors;
+	thrust::host_vector<glm::vec4> m_colors;
 };
 
 } /*  CFD */ 

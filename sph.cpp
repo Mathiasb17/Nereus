@@ -19,7 +19,7 @@ typedef thrust::host_vector<int>::iterator   IntIterator;
 typedef thrust::host_vector<float>::iterator FloatIterator;
 typedef thrust::host_vector<char>::iterator  CharIterator;
 typedef thrust::host_vector<double>::iterator  DoubleIterator;
-typedef thrust::host_vector<glm::vec3>::iterator  Vec3Iterator;
+typedef thrust::host_vector<glm::vec4>::iterator  Vec3Iterator;
 typedef thrust::host_vector<unsigned int>::iterator  UIntIterator;
 
 typedef thrust::tuple<Vec3Iterator, Vec3Iterator, FloatIterator, FloatIterator, Vec3Iterator, Vec3Iterator> IteratorTuple;
@@ -41,7 +41,7 @@ SPH::SPH ():
 	m_viscosity(0.013f),
 	m_surface_tension(0.01f),
 	m_interaction_radius(0.0457f),
-	m_grid_min(glm::vec3(-2,-2,-2)),
+	m_grid_min(glm::vec4(-2,-2,-2,1)),
 	m_nb_cell_x(10),
 	m_nb_cell_y(10)
 {
@@ -90,7 +90,7 @@ float SPH::Wviscosity_laplacian(glm::vec3 r, float h)
 
 void SPH::initNeighbors()
 {
-	for (thrust::host_vector<glm::vec3>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
+	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
 	{
 		unsigned int index1 = i - m_pos.begin();
 
@@ -116,10 +116,10 @@ void SPH::initNeighbors()
 
 void SPH::ComputeNeighbors()
 {
-	for (thrust::host_vector<glm::vec3>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
+	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
 	{
 		unsigned int index1 = i - m_pos.begin();
-		for (thrust::host_vector<glm::vec3>::iterator j  = m_pos.begin(); j != m_pos.end(); ++j)
+		for (thrust::host_vector<glm::vec4>::iterator j  = m_pos.begin(); j != m_pos.end(); ++j)
 		{
 			unsigned int index2 = j - m_pos.begin();
 			float len = glm::length(*i - *j);
@@ -134,7 +134,7 @@ void SPH::ComputeNeighbors()
 
 void SPH::ComputeDensitiesAndPressure()
 {
-	for (thrust::host_vector<glm::vec3>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
+	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
 	{
 		unsigned int index1 = i - m_pos.begin();
 		float dens = 0.f;
@@ -143,8 +143,8 @@ void SPH::ComputeDensitiesAndPressure()
 		for (unsigned int j = 0; j < m_neighbors[index1]->size(); j++)
 		{
 			unsigned int index2 = m_neighbors[index1]->data()[j];
-			glm::vec3 p_ij = m_pos[index1] - m_pos[index2];
-			dens += m_particle_mass * Wdefault(p_ij, m_interaction_radius);
+			glm::vec4 p_ij = m_pos[index1] - m_pos[index2];
+			dens += m_particle_mass * Wdefault(p_ij.xyz(), m_interaction_radius);
 		}
 		m_density[index1] = dens;
 		m_pressure[index1] = m_gas_stiffness * ( powf(dens/m_rest_density,7) - 1 );
@@ -156,7 +156,7 @@ void SPH::ComputeDensitiesAndPressure()
 void SPH::ComputeInternalForces()
 {
 	//#pragma omg parallel for
-	for (thrust::host_vector<glm::vec3>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
+	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
 	{
 		unsigned int index1 = i - m_pos.begin();
 		glm::vec3 pres_grad(0,0,0);
@@ -169,20 +169,20 @@ void SPH::ComputeInternalForces()
 			unsigned index2 = m_neighbors[index1]->data()[j];
 
 			//pres
-			glm::vec3 p_ij = m_pos[index1] - m_pos[index2];
+			glm::vec4 p_ij = m_pos[index1] - m_pos[index2];
 			float pi_rhoi2 = m_pressure[index1] / powf(m_density[index1],2);
 			float pj_rhoj2 = m_pressure[index2] / powf(m_density[index2],2);
-			pres_grad += m_particle_mass * (pi_rhoi2 + pj_rhoj2) * Wpressure_grad(p_ij, m_interaction_radius);
+			pres_grad += m_particle_mass * (pi_rhoi2 + pj_rhoj2) * Wpressure_grad(p_ij.xyz(), m_interaction_radius);
 
 			//visc
 			float mj_rhoj = m_particle_mass / m_density[index2];
-			glm::vec3 v_ij = m_vel[index1] - m_vel[index2];
-			float num = glm::dot(p_ij, Wdefault_grad(p_ij, m_interaction_radius));
-			float denum = glm::dot(p_ij, p_ij) + 0.01f*(m_interaction_radius*m_interaction_radius);
-			vel_lapl += mj_rhoj*v_ij*(num/denum);
+			glm::vec4 v_ij = m_vel[index1] - m_vel[index2];
+			float num = glm::dot(p_ij.xyz(), Wdefault_grad(p_ij.xyz(), m_interaction_radius));
+			float denum = glm::dot(p_ij.xyz(), p_ij.xyz()) + 0.01f*(m_interaction_radius*m_interaction_radius);
+			vel_lapl += mj_rhoj*v_ij.xyz()*(num/denum);
 
 			//surface tension
-			glm::vec3 b = m_particle_mass * p_ij  * Wdefault(p_ij, m_interaction_radius);
+			glm::vec3 b = m_particle_mass * p_ij.xyz()  * Wdefault(p_ij.xyz(), m_interaction_radius);
 
 			force_surf += b;
 		}
@@ -195,7 +195,7 @@ void SPH::ComputeInternalForces()
 		glm::vec3 force_pres = -(m_particle_mass/m_density[index1]) * pres_grad;
 		glm::vec3 force_visc = (m_particle_mass*m_viscosity) * vel_lapl;
 
-		m_forces[index1] = force_pres + force_visc + force_surf;
+		m_forces[index1] = glm::vec4(force_pres + force_visc + force_surf,0);
 	}
 }
 
@@ -218,7 +218,7 @@ void SPH::ComputeImplicitEulerScheme()
 
 	m_timestep = 1E-3f;
 
-	for (thrust::host_vector<glm::vec3>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
+	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
 	{
 		unsigned int index1 = i - m_pos.begin();
 
@@ -228,27 +228,27 @@ void SPH::ComputeImplicitEulerScheme()
 		//is_nan
 		if (m_pos[index1].x != m_pos[index1].x || m_pos[index1].y != m_pos[index1].y || m_pos[index1].z != m_pos[index1].z)
 		{
-			m_pos[index1] = glm::vec3(-100,-100,-100);
-			m_vel[index1] = glm::vec3(0,0,0);
+			m_pos[index1] = glm::vec4(-100,-100,-100,1);
+			m_vel[index1] = glm::vec4(0,0,0,0);
 			//std::cout << "PARTICULE CLAMPEE !" << std::endl;
 		}
 	}
 }
 
-void SPH::addNewParticle(glm::vec3 p)
+void SPH::addNewParticle(glm::vec4 p)
 {
 	thrust::host_vector<unsigned int> *v = new thrust::host_vector<unsigned int>();
 	m_pos.push_back(p);
 	m_density.push_back(0.f);
 	m_pressure.push_back(0.f);
-	m_vel.push_back(glm::vec3(0,0,0));
-	m_forces.push_back(glm::vec3(0,0,0));
+	m_vel.push_back(glm::vec4(0,0,0,0));
+	m_forces.push_back(glm::vec4(0,0,0,0));
 	m_neighbors.push_back(v);
-	m_colors.push_back(glm::vec3(1,0,0));
+	m_colors.push_back(glm::vec4(1,0,0,1));
 	m_key.push_back(0);
 }
 
-void SPH::generateParticleCube(glm::vec3 center, glm::vec3 size)
+void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size)
 {
 	for(float x = center.x-size.x/2.f; x <= center.x+size.x/2.f; x += m_particle_radius*2 )
 	{
@@ -256,7 +256,7 @@ void SPH::generateParticleCube(glm::vec3 center, glm::vec3 size)
 		{
 			for(float z = center.z-size.z/2.f; z <= center.z+size.z/2.f; z += m_particle_radius*2 )
 			{
-				addNewParticle(glm::vec3(x,y,z));
+				addNewParticle(glm::vec4(x,y,z,1.f));
 			}
 		}
 	}
