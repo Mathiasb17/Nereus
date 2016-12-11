@@ -32,7 +32,7 @@ texture<uint, 1, cudaReadModeElementType> cellStartTex;
 texture<uint, 1, cudaReadModeElementType> cellEndTex;
 #endif
 
-__const__ SphSimParams sph_params;
+__constant__ SphSimParams sph_params;
 
 
 struct integrate_functor
