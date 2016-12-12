@@ -441,7 +441,10 @@ glm::vec4 getCamMove(GLFWwindow *win, glm::vec4 camDir, glm::vec4 camUp)
 int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
+	sim_sph->_intialize();
 	sim_sph->generateParticleCube(glm::vec4(0.f, 0.25f, 0.f,1.f), glm::vec4(0.3f, 0.3f, 0.3f, 0.f));
+
+	//exit(EXIT_SUCCESS);
 
 	//call to helper functions
 	initWindow();
@@ -450,8 +453,8 @@ int main(void)
 	initCube();
 
 	//opengl sphere buffers handling
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_pos.size() * sizeof(glm::vec4), sim_sph->m_pos.data(), GL_STATIC_DRAW);
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_colors.size() * sizeof(glm::vec4), sim_sph->m_colors.data(), GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos, GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_colors, GL_STATIC_DRAW);
 	getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
 
 	//opengl cube buffers handling
@@ -467,11 +470,13 @@ int main(void)
 	compileShaderProgram(&shader_program_basic, vs_basic, fs_basic);
 
 	glm::vec4 direction(0,0,1,0);
+
+	//sim_sph->_intialize();
 	while(!glfwWindowShouldClose(window))
 	{
 
-		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_pos.size() * sizeof(glm::vec4), sim_sph->m_pos.data(), GL_DYNAMIC_DRAW);
-		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_colors.size() * sizeof(glm::vec4), sim_sph->m_colors.data(), GL_DYNAMIC_DRAW);
+		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos, GL_DYNAMIC_DRAW);
+		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_colors, GL_DYNAMIC_DRAW);
 		getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
 		//step 1 : clear screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -491,7 +496,7 @@ int main(void)
 		glm::mat4 mv = v*m;
 
 		//step 3 : display spheres in associated shader program
-		displaySpheres(mvp, mv, shader_program_spheres, vao_spheres, vbo_spheres_pos, sim_sph->m_pos.size());
+		displaySpheres(mvp, mv, shader_program_spheres, vao_spheres, vbo_spheres_pos, sim_sph->m_numParticles);
 
 		//step 4 : display cube in associated shader program
 		displayCube(mvp, shader_program_basic, vao_cube, vbo_cube_pos, vbo_cube_color, vbo_cube_indices);
@@ -502,17 +507,15 @@ int main(void)
 		
 		if(do_simulation)
 		{
-			sim_sph->initNeighbors();
-			sim_sph->ComputeNeighbors();
-			sim_sph->ComputeDensitiesAndPressure();
-			sim_sph->ComputeInternalForces();
-			sim_sph->ComputeImplicitEulerScheme();
+			sim_sph->update();
 		}
 
 		//last step : read new events if some
 		glfwPollEvents();
 		glfwSwapBuffers(window);
 	}
+
+	sim_sph->_finalize();
 
 	glfwTerminate();
 	return 0;

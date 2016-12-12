@@ -1,13 +1,6 @@
 #ifndef SPH_KERNEL_H
 #define SPH_KERNEL_H
 
-#include <cuda_runtime.h>
-
-#ifndef GLM_SWIZZLE
-#define GLM_SWIZZLE
-#endif /* ifndef GLM_SWIZZLE */
-#include <glm/glm.hpp>
-
 #define USE_TEX 0
 #if USE_TEX
 #define FETCH(t, i) tex1Dfetch(t##Tex, i)

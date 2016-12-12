@@ -12,6 +12,8 @@
 
 #include "sph_kernel.cuh"
 
+#define MAX_PARTICLE_NUMBER 100000
+
 namespace CFD
 {
 
@@ -28,6 +30,12 @@ public:
 	static glm::vec3 Wdefault_grad(glm::vec3 r, float h);
 	static glm::vec3 Wpressure_grad(glm::vec3 r, float h);
 	static float Wviscosity_laplacian(glm::vec3 r, float h);
+
+	/**********
+	*  Initialize and finalize  *
+	**********/
+	void _intialize();
+	void _finalize();
 
 	/***************
 	*  NEIGHBORS  *
@@ -54,6 +62,11 @@ public:
 	void addNewParticle(glm::vec4 p);
 	void generateParticleCube(glm::vec4 center, glm::vec4 size);
 
+	/*********************************
+	*  PERFORM ONE SIMULATION STEP  *
+	*********************************/
+	void update();
+
 	/*************
 	 *  GETTERS  *
 	 *************/
@@ -66,9 +79,9 @@ public:
 	float getSurfaceTension() const {return m_params.surfaceTension;}
 	float getInteractionRadius() const {return m_params.interactionRadius;}
 
-	thrust::host_vector<glm::vec4> & getPos() {return m_pos;}
-	thrust::host_vector<glm::vec4> & getCol() {return m_colors;}
-	thrust::host_vector<glm::vec4> & getVel() {return m_vel;}
+	float* & getPos() {return m_pos;}
+	float* & getCol() {return m_colors;}
+	float* & getVel() {return m_vel;}
 
 	/*************
 	*  SETTERS  *
@@ -80,12 +93,33 @@ public:
 	void setSurfaceTension(float new_surfacetension){m_params.surfaceTension = new_surfacetension;}
 
 public:
-	SphSimParams m_params;
 
-	glm::vec4 m_grid_min;
-	float m_nb_cell_x;
-	float m_nb_cell_y;
-	float m_cell_size;
+	/********************
+	 *  DEVICE MEMBERS  *
+	 ********************/
+
+	float* m_dpos;
+	float* m_dvel;
+	float* m_ddensity;
+	float* m_dpressure;
+	float* m_dforces;
+	float* m_dcolors;
+
+	float *m_dSortedPos;
+	float *m_dSortedVel;
+	float *m_dSortedDens;
+	float *m_dSortedPress;
+	float *m_dSortedForces;
+	float *m_dSortedCol;
+
+	uint  *m_dGridParticleHash; // grid hash value for each particle
+	uint  *m_dGridParticleIndex;// particle index for each particle
+	uint  *m_dCellStart;        // index of start of each cell in sorted list
+	uint  *m_dCellEnd;          // index of end of cell
+
+	/******************
+	 *  HOST MEMBERS  *
+	 ******************/
 
 	uint* m_hParticleHash;
 	uint* m_hCellStart;
@@ -93,21 +127,16 @@ public:
 
 	uint   m_gridSortBits;
 
-	glm::vec4* m_dpos;
-	glm::vec4* m_dvel;
-	float* m_ddensity;
-	float* m_dpressure;
-	glm::vec4* m_dforces;
-	glm::vec4* m_dcolors;
+	float *m_pos;
+	float *m_vel;
+	float *m_density;
+	float *m_pressure;
+	float *m_forces;
+	float *m_colors;
 
-	thrust::host_vector<unsigned int> m_key;
-	thrust::host_vector<glm::vec4> m_pos;
-	thrust::host_vector<glm::vec4> m_vel;
-	thrust::host_vector<float> m_density;
-	thrust::host_vector<float> m_pressure;
-	thrust::host_vector<glm::vec4> m_forces;
-	thrust::host_vector<thrust::host_vector<unsigned int>* > m_neighbors;
-	thrust::host_vector<glm::vec4> m_colors;
+	unsigned int m_numParticles;
+
+	SphSimParams m_params;
 };
 
 } /*  CFD */ 

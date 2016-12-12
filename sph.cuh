@@ -28,7 +28,7 @@ extern "C"
 
     void copyArrayFromDevice(void *host, const void *device, struct cudaGraphicsResource **cuda_vbo_resource, int size);
     void copyArrayToDevice(void *device, const void *host, int offset, int size);
-    void registerGLBufferObject(uint vbo, struct cudaGraphicsResource **cuda_vbo_resource);
+    void registerGLBufferObject(unsigned int vbo, struct cudaGraphicsResource **cuda_vbo_resource);
     void unregisterGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
     void *mapGLBufferObject(struct cudaGraphicsResource **cuda_vbo_resource);
     void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
@@ -49,16 +49,28 @@ extern "C"
                                      unsigned int  *cellEnd,
                                      float *sortedPos,
                                      float *sortedVel,
+                                     float *sortedDens,
+                                     float *sortedPres,
+                                     float *sortedForces,
+                                     float *sortedCol,
                                      unsigned int  *gridParticleHash,
                                      unsigned int  *gridParticleIndex,
                                      float *oldPos,
                                      float *oldVel,
+                                     float *oldDens,
+                                     float *oldPres,
+                                     float *oldForces,
+                                     float *oldCol,
                                      unsigned int   numParticles,
                                      unsigned int   numCells);
 
     void collide(float *newVel,
                  float *sortedPos,
                  float *sortedVel,
+                 float *sortedDens,
+                 float *sortedPres,
+                 float *sortedForces,
+                 float *sortedCol,
                  unsigned int  *gridParticleIndex,
                  unsigned int  *cellStart,
                  unsigned int  *cellEnd,

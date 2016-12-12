@@ -181,6 +181,10 @@ extern "C"
 #if USE_TEX
 		checkCudaErrors(cudaBindTexture(0, oldPosTex, oldPos, numParticles*sizeof(float4)));
 		checkCudaErrors(cudaBindTexture(0, oldVelTex, oldVel, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldDensTex, oldDens, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldPresTex, oldPres, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldForcesTex, oldForces, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldColTex, oldCol, numParticles*sizeof(float4)));
 #endif
 
 		uint smemSize = sizeof(uint)*(numThreads+1);
@@ -207,6 +211,10 @@ extern "C"
 #if USE_TEX
 		checkCudaErrors(cudaUnbindTexture(oldPosTex));
 		checkCudaErrors(cudaUnbindTexture(oldVelTex));
+		checkCudaErrors(cudaUnbindTexture(oldDensTex));
+		checkCudaErrors(cudaUnbindTexture(oldPresTex));
+		checkCudaErrors(cudaUnbindTexture(oldForcesTex));
+		checkCudaErrors(cudaUnbindTexture(oldColTex));
 #endif
 	}
 

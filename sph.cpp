@@ -1,4 +1,6 @@
 #include "sph.h"
+#include "sph.cuh"
+#include "sph_kernel.cuh"
 
 #include <iostream>
 #include <algorithm>
@@ -12,6 +14,11 @@
 #include <thrust/tuple.h>
 #include <thrust/sort.h>
 
+#include <helper_functions.h>
+#include <helper_cuda.h>
+
+#include <cuda_runtime.h>
+
 namespace CFD
 {
 
@@ -23,7 +30,6 @@ typedef thrust::host_vector<glm::vec4>::iterator  Vec3Iterator;
 typedef thrust::host_vector<unsigned int>::iterator  UIntIterator;
 
 typedef thrust::tuple<Vec3Iterator, Vec3Iterator, FloatIterator, FloatIterator, Vec3Iterator, Vec3Iterator> IteratorTuple;
-//typedef thrust::tuple<UIntIterator, Vec3Iterator, Vec3Iterator, FloatIterator, FloatIterator, Vec3Iterator, Vec3Iterator> IteratorTuple;
 
 typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
 
@@ -34,9 +40,7 @@ static bool compareVel(glm::vec3 v1, glm::vec3 v2)
 }
 
 SPH::SPH ():
-	m_grid_min(glm::vec4(-2,-2,-2,1)),
-	m_nb_cell_x(10),
-	m_nb_cell_y(10)
+	m_gridSortBits(18)
 {
 	m_params.gasStiffness = 300.f;
 	m_params.restDensity = 998.29;
@@ -46,8 +50,16 @@ SPH::SPH ():
 	m_params.surfaceTension = 0.01f;
 	m_params.interactionRadius = 0.0457f;
 
+	m_params.worldOrigin = make_float3(-2,-2,-2);
+	m_params.gridSize = make_uint3(100,100,100);
+	m_params.cellSize = make_float3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
+	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
+
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
-	m_cell_size = m_params.interactionRadius;
+
+	_intialize();
+
+	m_numParticles = 0;
 }
 
 SPH::~SPH ()
@@ -89,115 +101,107 @@ float SPH::Wviscosity_laplacian(glm::vec3 r, float h)
 	return a*b;
 }
 
+void SPH::_intialize()
+{
+	unsigned int memSize = sizeof(float) * 4 * MAX_PARTICLE_NUMBER;
+	unsigned int memSizeFloat = sizeof(float) * MAX_PARTICLE_NUMBER;
+	unsigned int memSizeUint = sizeof(unsigned int) * m_params.numCells;
+
+	/*******************
+	 *  HOST MEM INIT  *
+	 *******************/
+	
+	cudaMallocHost((void**)&m_pos, memSize);
+	cudaMallocHost((void**)&m_vel, memSize);
+	cudaMallocHost((void**)&m_density, memSizeFloat);
+	cudaMallocHost((void**)&m_pressure, memSizeFloat);
+	cudaMallocHost((void**)&m_forces, memSize);
+	cudaMallocHost((void**)&m_colors, memSize);
+
+	cudaMallocHost((void**)&m_hParticleHash, sizeof(unsigned int)* MAX_PARTICLE_NUMBER);
+	cudaMallocHost((void**)&m_hCellStart, memSizeUint);
+	cudaMallocHost((void**)&m_hCellEnd, memSizeUint);
+
+	/******************
+	 *  GPU MEM INIT  *
+	 ******************/
+	
+	allocateArray((void **)&m_dpos, memSize);
+	allocateArray((void **)&m_dvel, memSize);
+	allocateArray((void **)&m_ddensity, memSizeFloat);
+	allocateArray((void **)&m_dpressure, memSizeFloat);
+	allocateArray((void **)&m_dforces, memSize);
+	allocateArray((void **)&m_dcolors, memSize);
+
+	allocateArray((void **)&m_dSortedPos, memSize);
+	allocateArray((void **)&m_dSortedVel, memSize);
+	allocateArray((void **)&m_dSortedDens, memSizeFloat);
+	allocateArray((void **)&m_dSortedPress, memSizeFloat);
+	allocateArray((void **)&m_dSortedForces, memSize);
+	allocateArray((void **)&m_dSortedCol, memSize);
+
+	allocateArray((void **)&m_dGridParticleHash, MAX_PARTICLE_NUMBER*sizeof(unsigned int));
+	allocateArray((void **)&m_dGridParticleIndex, MAX_PARTICLE_NUMBER*sizeof(unsigned int));
+
+	allocateArray((void **)&m_dCellStart, memSizeUint);
+	allocateArray((void **)&m_dCellEnd, memSizeUint);
+
+	setParameters(&m_params);
+}
+
+void SPH::_finalize()
+{
+
+}
+
+void SPH::update()
+{
+	cudaMemcpy(m_dpos, m_pos, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
+	setParameters(&m_params);
+
+	integrateSystem( m_dpos, m_dvel, m_params.timestep, m_numParticles);
+
+	calcHash( m_dGridParticleHash, m_dGridParticleIndex, m_dpos, m_numParticles);
+
+	sortParticles(m_dGridParticleHash, m_dGridParticleIndex, m_numParticles);
+
+	reorderDataAndFindCellStart(
+		m_dCellStart,
+		m_dCellEnd,
+		m_dSortedPos,
+		m_dSortedVel,
+		m_dSortedDens,
+		m_dSortedPress,
+		m_dSortedForces,
+		m_dSortedCol,
+		m_dGridParticleHash,
+		m_dGridParticleIndex,
+		m_dpos,
+		m_dvel,
+		m_ddensity,
+		m_dpressure,
+		m_dforces,
+		m_dcolors,
+		m_numParticles,
+		m_params.numCells);
+
+	cudaMemcpy(m_pos, m_dpos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
+}
+
 void SPH::initNeighbors()
 {
-	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
-	{
-		unsigned int index1 = i - m_pos.begin();
-
-		int k = (int)((m_pos[index1].x-m_grid_min.x)/m_cell_size);
-		int l = (int)((m_pos[index1].y-m_grid_min.y)/m_cell_size);
-		int m = (int)((m_pos[index1].z-m_grid_min.z)/m_cell_size);
-
-		int K = m_nb_cell_x;
-		int L = m_nb_cell_y;
-
-		unsigned int key = k+l*K + m*K*L;
-
-		m_key[index1] = key;
-		m_neighbors[index1]->clear();
-	}
-
-	//sort particles
-	ZipIterator iter(thrust::make_tuple(m_pos.begin(), m_vel.begin(), m_density.begin(), m_pressure.begin(),
-					   m_forces.begin(), m_colors.begin()));
-
-	thrust::sort_by_key(m_key.begin(), m_key.end(), iter);
 }
 
 void SPH::ComputeNeighbors()
 {
-	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
-	{
-		unsigned int index1 = i - m_pos.begin();
-		for (thrust::host_vector<glm::vec4>::iterator j  = m_pos.begin(); j != m_pos.end(); ++j)
-		{
-			unsigned int index2 = j - m_pos.begin();
-			float len = glm::length(*i - *j);
-			if(len > 0 && len <= m_params.interactionRadius /*&& index1 != index2*/)
-			{
-				m_neighbors[index1]->push_back(index2);
-			}
-			if(m_neighbors[index1]->size() > 40) std::cout << "nb neighbors : " << m_neighbors[index1]->size() << std::endl;
-		}
-	}
 }
 
 void SPH::ComputeDensitiesAndPressure()
 {
-	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
-	{
-		unsigned int index1 = i - m_pos.begin();
-		float dens = 0.f;
-
-		//#pragma omg parallel for
-		for (unsigned int j = 0; j < m_neighbors[index1]->size(); j++)
-		{
-			unsigned int index2 = m_neighbors[index1]->data()[j];
-			glm::vec4 p_ij = m_pos[index1] - m_pos[index2];
-			dens += m_params.particleMass * Wdefault(p_ij.xyz(), m_params.interactionRadius);
-		}
-		m_density[index1] = dens;
-		m_pressure[index1] = m_params.gasStiffness * ( powf(dens/m_params.restDensity,7) - 1 );
-
-		//std::cout << std::setw(10) << "density : " << dens << " | pressure " << pressure[index1] << std::endl;
-	}
 }
 
 void SPH::ComputeInternalForces()
 {
-	//#pragma omg parallel for
-	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
-	{
-		unsigned int index1 = i - m_pos.begin();
-		glm::vec3 pres_grad(0,0,0);
-		glm::vec3 vel_lapl(0,0,0);
-		glm::vec3 force_surf(0,0,0);
-
-		//#pragma omg parallel for
-		for (unsigned int j = 0; j < m_neighbors[index1]->size(); j++)
-		{
-			unsigned index2 = m_neighbors[index1]->data()[j];
-
-			//pres
-			glm::vec4 p_ij = m_pos[index1] - m_pos[index2];
-			float pi_rhoi2 = m_pressure[index1] / powf(m_density[index1],2);
-			float pj_rhoj2 = m_pressure[index2] / powf(m_density[index2],2);
-			pres_grad += m_params.particleMass * (pi_rhoi2 + pj_rhoj2) * Wpressure_grad(p_ij.xyz(), m_params.interactionRadius);
-
-			//visc
-			float mj_rhoj = m_params.particleMass / m_density[index2];
-			glm::vec4 v_ij = m_vel[index1] - m_vel[index2];
-			float num = glm::dot(p_ij.xyz(), Wdefault_grad(p_ij.xyz(), m_params.interactionRadius));
-			float denum = glm::dot(p_ij.xyz(), p_ij.xyz()) + 0.01f*(m_params.interactionRadius*m_params.interactionRadius);
-			vel_lapl += mj_rhoj*v_ij.xyz()*(num/denum);
-
-			//surface tension
-			glm::vec3 b = m_params.particleMass * p_ij.xyz()  * Wdefault(p_ij.xyz(), m_params.interactionRadius);
-
-			force_surf += b;
-		}
-		float a = -(m_params.surfaceTension / m_params.particleMass);
-		force_surf *= a;
-
-		pres_grad *= m_density[index1];
-		vel_lapl *= 2.f;
-
-		glm::vec3 force_pres = -(m_params.particleMass/m_density[index1]) * pres_grad;
-		glm::vec3 force_visc = (m_params.particleMass*m_params.viscosity) * vel_lapl;
-
-		m_forces[index1] = glm::vec4(force_pres + force_visc + force_surf,0);
-	}
 }
 
 void SPH::ComputeExternalForces()
@@ -212,36 +216,36 @@ void SPH::CollisionDetectionsAndResponses()
 
 void SPH::ComputeImplicitEulerScheme()
 {
-	m_params.timestep = 1E-3f;
 
-	for (thrust::host_vector<glm::vec4>::iterator i  = m_pos.begin(); i != m_pos.end(); ++i)
-	{
-		unsigned int index1 = i - m_pos.begin();
-
-		m_vel[index1] += m_params.timestep*m_forces[index1]/m_params.particleMass;
-		m_pos[index1] += m_params.timestep*m_vel[index1];
-
-		//is_nan
-		if (m_pos[index1].x != m_pos[index1].x || m_pos[index1].y != m_pos[index1].y || m_pos[index1].z != m_pos[index1].z)
-		{
-			m_pos[index1] = glm::vec4(-100,-100,-100,1);
-			m_vel[index1] = glm::vec4(0,0,0,0);
-			std::cout << "PARTICULE CLAMPEE !" << std::endl;
-		}
-	}
 }
 
 void SPH::addNewParticle(glm::vec4 p)
 {
-	thrust::host_vector<unsigned int> *v = new thrust::host_vector<unsigned int>();
-	m_pos.push_back(p);
-	m_density.push_back(0.f);
-	m_pressure.push_back(0.f);
-	m_vel.push_back(glm::vec4(0,0,0,0));
-	m_forces.push_back(glm::vec4(0,0,0,0));
-	m_neighbors.push_back(v);
-	m_colors.push_back(glm::vec4(1,0,0,1));
-	m_key.push_back(0);
+	m_pos[m_numParticles*4+0] =  p.x;
+	m_pos[m_numParticles*4+1] =  p.y;
+	m_pos[m_numParticles*4+2] =  p.z;
+	m_pos[m_numParticles*4+3] =  p.w;
+
+	m_density[m_numParticles] = 0.f;
+
+	m_pressure[m_numParticles] = 0.f;
+
+	m_vel[m_numParticles*4+0] =  0.f;
+	m_vel[m_numParticles*4+1] =  0.f;
+	m_vel[m_numParticles*4+2] =  0.f;
+	m_vel[m_numParticles*4+3] =  0.f;
+
+	m_forces[m_numParticles*4+0] =  0.f;
+	m_forces[m_numParticles*4+1] =  0.f;
+	m_forces[m_numParticles*4+2] =  0.f;
+	m_forces[m_numParticles*4+3] =  0.f;
+
+	m_colors[m_numParticles*4+0] =  1.f;
+	m_colors[m_numParticles*4+1] =  0.f;
+	m_colors[m_numParticles*4+2] =  0.f;
+	m_colors[m_numParticles*4+3] =  1.f;
+
+	m_numParticles += 1;
 }
 
 void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size)
@@ -256,7 +260,7 @@ void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size)
 			}
 		}
 	}
-	std::cout << "Il y a eu " << m_pos.size() << " particules generees." << std::endl;
+	//std::cout << "Il y a eu " << m_pos.size() << " particules generees." << std::endl;
 }
 
 } /* CFD */ 
