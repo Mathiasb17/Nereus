@@ -229,7 +229,7 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 	}
 }
 
-__device__ float collideCellDensity(int3 gridPos, float4 pos, float4 oldPos, unsigned int *cellStart, unsigned int *cellEnd)
+__device__ float collideCellDensity(int3 gridPos, unsigned int index, float4 pos, float4 oldPos, unsigned int *cellStart, unsigned int *cellEnd)
 {
     unsigned int gridHash = calcGridHash(gridPos);
 	unsigned int startIndex = FETCH(cellStart, gridHash);
@@ -240,7 +240,13 @@ __device__ float collideCellDensity(int3 gridPos, float4 pos, float4 oldPos, uns
 	{ 
 		unsigned int endIndex = FETCH(cellEnd, gridHash);
 
-		//for
+        for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			if(j != index)
+			{
+				//dens += sph_params.particleMass * pierdole;
+			}
+		}
 	}
 
 	return 0.f;

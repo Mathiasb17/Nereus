@@ -25,7 +25,7 @@ set(SOURCES ${SYSTEM_SOURCES})
 #CUDA OPTIONS
 set(CUDA_64_BIT_DEVICE_CODE ON)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_52,code=sm_52)
-set(CUDA_SOURCES sph_kernel.cuh sph_cuda.cu)
+set(CUDA_SOURCES sph_kernel.cuh sph_cuda.cu sph_kernel_impl.cuh kernels_impl.cuh)
 
 CUDA_INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
 CUDA_COMPILE(CUDA_OBJ ${CUDA_SOURCES})
