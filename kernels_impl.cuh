@@ -1,6 +1,18 @@
 #ifndef KERNELS_IMPL_CUH
 #define KERNELS_IMPL_CUH
 
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
+
+#include <helper_cuda.h>
+#include <helper_cuda_gl.h>
+
+#include <helper_functions.h>
+
+
+#include <helper_math.h>
+#include <math.h>
+
 __device__ float Wdefault(float3 r, float h)
 {
 	float l_r = length(r);
@@ -27,15 +39,15 @@ __device__ float Wdefault(float3 r, float h)
 
 //float SPH::Wdefault(glm::vec3 r, float h)
 //{
-	//}
-
-//glm::vec3 SPH::Wdefault_grad(glm::vec3 r, float h)
-//{
-	//float l_r = length(r);
-	//float a = -945/(32*M_PI*powf(h,9));
-	//float b = powf(h*h - l_r*l_r, 2);
-	//return a*r*b;
 //}
+
+float3 Wdefault_grad(float3 r, float h)
+{
+	float l_r = length(r);
+	float a = -945/(32*M_PI*powf(h,9));
+	float b = powf(h*h - l_r*l_r, 2);
+	return a*r*b;
+}
 
 //glm::vec3 SPH::Wpressure_grad(glm::vec3 r, float h)
 //{

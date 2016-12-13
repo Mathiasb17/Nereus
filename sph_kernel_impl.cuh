@@ -3,6 +3,8 @@
 
 #include "sph_kernel.cuh"
 
+#include "kernels_impl.cuh"
+
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
@@ -16,7 +18,7 @@
 
 #include <helper_math.h>
 #include <math_constants.h>
- 
+
 
 #if USE_TEX
 // textures for particle position and velocity
@@ -229,12 +231,13 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 	}
 }
 
-__device__ float collideCellDensity(int3 gridPos, unsigned int index, float4 pos, float4 oldPos, unsigned int *cellStart, unsigned int *cellEnd)
+__device__ float computeCellDensity(int3 gridPos, unsigned int index, float3 pos, float4 *oldPos, unsigned int *cellStart, unsigned int *cellEnd)
 {
     unsigned int gridHash = calcGridHash(gridPos);
 	unsigned int startIndex = FETCH(cellStart, gridHash);
 
 	float dens = 0.f;
+	float3 pos1 = make_float3(pos.x, pos.y, pos.z);
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -244,66 +247,23 @@ __device__ float collideCellDensity(int3 gridPos, unsigned int index, float4 pos
 		{
 			if(j != index)
 			{
-				//dens += sph_params.particleMass * pierdole;
+				float3 pos2 = make_float3(FETCH(oldPos, j));
+				dens += sph_params.particleMass * Wdefault(pos2-pos1, sph_params.interactionRadius);
 			}
 		}
 	}
 
-	return 0.f;
-}
-
-//iterate over  each particles in a given cell
-__device__ float3 collideCell(int3    gridPos,
-                   unsigned int    index,
-                   float3  pos,
-                   float3  vel,
-                   float4 *oldPos,
-                   float4 *oldVel,
-                   float *oldDens,
-                   float *oldPres,
-                   float4 *oldForces,
-                   float4 *oldCol,
-                   unsigned int   *cellStart,
-                   unsigned int   *cellEnd)
-{
-    unsigned int gridHash = calcGridHash(gridPos);
-
-    // get start of bucket for this cell
-    unsigned int startIndex = FETCH(cellStart, gridHash);
-
-    float3 force = make_float3(0.0f, 0.0f, 0.0f);
-
-    if (startIndex != 0xffffffff)          // cell is not empty
-    {
-        // iterate over particles in this cell
-        unsigned int endIndex = FETCH(cellEnd, gridHash);
-
-        for (unsigned int j=startIndex; j<endIndex; j++)
-        {
-            if (j != index)                // check not colliding with self
-            {
-				float3 pos2 = make_float3(FETCH(oldPos, j));
-				float3 vel2 = make_float3(FETCH(oldVel, j));
-
-				//compute density
-				//compute pressure
-
-                // collide two spheres
-                //force += collideSpheres(pos, pos2, vel, vel2, params.particleRadius, params.particleRadius, params.attraction);
-            }
-        }
-    }
-
-    return force;
+	return dens;
 }
 
 __global__
-void collideD(float4 *newVel,               // output: new velocity
+void computeDensityPressure(float *newDens,               // output: new velocity
+			  float* newPres,
               float4 *oldPos,               // input: sorted positions
               float4 *oldVel,               // input: sorted velocities
               float *oldDens,               // input: sorted velocities
               float *oldPres,               // input: sorted velocities
-              float4 *oldForces,               // input: sorted velocities
+              float4 *oldForces,            // input: sorted velocities
               float4 *oldCol,               // input: sorted velocities
               unsigned int   *gridParticleIndex,    // input: sorted particle indices
               unsigned int   *cellStart,
@@ -322,8 +282,9 @@ void collideD(float4 *newVel,               // output: new velocity
     int3 gridPos = calcGridPos(pos);
 
     // examine neighbouring cells
-    float3 force = make_float3(0.0f);
+    float dens = 0.f;
 
+	//compute pressure
     for (int z=-1; z<=1; z++)
     {
         for (int y=-1; y<=1; y++)
@@ -331,14 +292,20 @@ void collideD(float4 *newVel,               // output: new velocity
             for (int x=-1; x<=1; x++)
             {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                force += collideCell(neighbourPos, index, pos, vel, oldPos, oldVel, oldDens, oldPres, oldForces, oldCol, cellStart, cellEnd);
+                dens += computeCellDensity(neighbourPos, index, pos, oldPos, cellStart, cellEnd);
             }
         }
     }
 
+	//printf("density %5f \n", dens );
+
+	//compute Pressure
+	float pressure = sph_params.gasStiffness * (powf(dens/sph_params.restDensity, 7) -1);
+
     // write new velocity back to original unsorted location
     unsigned int originalIndex = gridParticleIndex[index];
-    newVel[originalIndex] = make_float4(vel + force, 0.0f);
+    newDens[originalIndex] = dens;
+    newPres[originalIndex] = pressure;
 }
 
 #endif /* ifndef _PARTICLES_KERNEL_IMPL_CUH */

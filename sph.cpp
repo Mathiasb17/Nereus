@@ -151,6 +151,19 @@ void SPH::update()
 		m_numParticles,
 		m_params.numCells);
 
+	computeDensityPressure(m_ddensity, m_dpressure,
+			m_dSortedPos,
+			m_dSortedVel,
+			m_dSortedDens,
+			m_dSortedPress,
+			m_dSortedForces,
+			m_dSortedCol,
+			m_dGridParticleIndex,
+			m_dCellStart,
+			m_dCellEnd,
+			m_numParticles,
+			m_params.numCells);
+
 	cudaMemcpy(m_pos, m_dpos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 }
 

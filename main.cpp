@@ -435,6 +435,25 @@ glm::vec4 getCamMove(GLFWwindow *win, glm::vec4 camDir, glm::vec4 camUp)
 }
 
 /**********************************************************************
+*                            FPS COUNTER                             *
+**********************************************************************/
+double lastTime = time(NULL);
+void displayFPS()
+{
+	static int nbFrame = 0;
+	time_t currentTime;
+	time(&currentTime);
+
+	nbFrame++;
+	if (currentTime - lastTime >= 1.0)
+	{
+		std::cout << "fps = " << (float)nbFrame << std::endl;	
+		nbFrame = 0;
+		lastTime = currentTime;
+	}
+}
+
+/**********************************************************************
  *                            MAIN PROGRAM                            *
  **********************************************************************/
 
@@ -470,10 +489,11 @@ int main(void)
 	compileShaderProgram(&shader_program_basic, vs_basic, fs_basic);
 
 	glm::vec4 direction(0,0,1,0);
-
+	
 	//sim_sph->_intialize();
 	while(!glfwWindowShouldClose(window))
 	{
+		displayFPS();
 
 		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos, GL_DYNAMIC_DRAW);
 		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_colors, GL_DYNAMIC_DRAW);

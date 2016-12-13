@@ -8,6 +8,7 @@
 
 #include <helper_cuda.h>
 #include <helper_cuda_gl.h>
+#include <helper_math.h>
 
 #include <helper_functions.h>
 #include <thrust/device_ptr.h>
@@ -218,7 +219,7 @@ extern "C"
 #endif
 	}
 
-	void collide(float *newVel,
+	void computeDensityPressure(float *newDens, float* newPres,
 			float *sortedPos,
 			float *sortedVel,
 			float *sortedDens,
@@ -247,7 +248,8 @@ extern "C"
 		computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 		// execute the kernel
-		collideD<<< numBlocks, numThreads >>>((float4 *)newVel,
+		
+		computeDensityPressure<<< numBlocks, numThreads >>>((float*)newDens, (float*)newPres,
 				(float4 *)sortedPos,
 				(float4 *)sortedVel,
 				(float *)sortedDens,

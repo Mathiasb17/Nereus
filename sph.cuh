@@ -64,7 +64,7 @@ extern "C"
                                      unsigned int   numParticles,
                                      unsigned int   numCells);
 
-    void collide(float *newVel,
+    void computeDensityPressure(float *newDens, float* newPres,
                  float *sortedPos,
                  float *sortedVel,
                  float *sortedDens,
