@@ -42,20 +42,22 @@ static bool compareVel(glm::vec3 v1, glm::vec3 v2)
 SPH::SPH ():
 	m_gridSortBits(18)
 {
-	m_params.gasStiffness = 300.f;
+	m_params.gasStiffness = 1000.f;
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1E-3f;
-	m_params.viscosity = 0.013f;
+	m_params.timestep = 1E-5f;
+	m_params.viscosity = 0.001f;
 	m_params.surfaceTension = 0.01f;
 	m_params.interactionRadius = 0.0457f;
+	m_params.particleMass = 0.02;//powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	m_params.worldOrigin = make_float3(-2,-2,-2);
-	m_params.gridSize = make_uint3(100,100,100);
+	m_params.gridSize = make_uint3(128,128,128);
 	m_params.cellSize = make_float3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
+	
 	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
-
-	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
+	
+	std::cout << "particle mass " << m_params.particleMass << std::endl;
 
 	_intialize();
 
@@ -88,6 +90,9 @@ void SPH::_intialize()
 	cudaMallocHost((void**)&m_hCellStart, memSizeUint);
 	cudaMallocHost((void**)&m_hCellEnd, memSizeUint);
 
+	memset(m_hCellStart, 0, m_params.numCells*sizeof(uint));
+    memset(m_hCellEnd, 0, m_params.numCells*sizeof(uint));
+
 	/******************
 	 *  GPU MEM INIT  *
 	 ******************/
@@ -112,6 +117,20 @@ void SPH::_intialize()
 	allocateArray((void **)&m_dCellStart, memSizeUint);
 	allocateArray((void **)&m_dCellEnd, memSizeUint);
 
+	cudaMemset(m_dpos, 0, memSize);
+	cudaMemset(m_dvel, 0, memSize);
+	cudaMemset(m_ddensity, 0, memSizeFloat);
+	cudaMemset(m_dpressure, 0, memSizeFloat);
+	cudaMemset(m_dforces, 0, memSize);
+	cudaMemset(m_dcolors, 0, memSize);
+
+	cudaMemset(m_dSortedPos, 0, memSize);
+	cudaMemset(m_dSortedVel, 0, memSize);
+	cudaMemset(m_dSortedDens, 0, memSizeFloat);
+	cudaMemset(m_dSortedPress, 0, memSizeFloat);
+	cudaMemset(m_dSortedForces, 0, memSize);
+	cudaMemset(m_dSortedCol, 0, memSize);
+
 	setParameters(&m_params);
 }
 
@@ -124,8 +143,6 @@ void SPH::update()
 {
 	cudaMemcpy(m_dpos, m_pos, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	setParameters(&m_params);
-
-	integrateSystem( m_dpos, m_dvel, m_params.timestep, m_numParticles);
 
 	calcHash( m_dGridParticleHash, m_dGridParticleIndex, m_dpos, m_numParticles);
 
@@ -151,7 +168,7 @@ void SPH::update()
 		m_numParticles,
 		m_params.numCells);
 
-	computeDensityPressure(m_ddensity, m_dpressure,
+	computeDensityPressure(m_ddensity, m_dpressure, m_dforces,
 			m_dSortedPos,
 			m_dSortedVel,
 			m_dSortedDens,
@@ -164,7 +181,11 @@ void SPH::update()
 			m_numParticles,
 			m_params.numCells);
 
+	integrateSystem( m_dpos, m_dvel, m_dforces, m_params.timestep, m_numParticles);
+
 	cudaMemcpy(m_pos, m_dpos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
+
+	//exit(EXIT_SUCCESS);
 }
 
 void SPH::initNeighbors()
@@ -239,7 +260,7 @@ void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size)
 			}
 		}
 	}
-	//std::cout << "Il y a eu " << m_pos.size() << " particules generees." << std::endl;
+	std::cout << "Il y a eu " << m_numParticles << " particules generees." << std::endl;
 }
 
 } /* CFD */ 

@@ -37,6 +37,7 @@ extern "C"
 
     void integrateSystem(float *pos,
                          float *vel,
+                         float *forces,
                          float deltaTime,
                          unsigned int numParticles);
 
@@ -64,7 +65,7 @@ extern "C"
                                      unsigned int   numParticles,
                                      unsigned int   numCells);
 
-    void computeDensityPressure(float *newDens, float* newPres,
+    void computeDensityPressure(float *newDens, float* newPres, float* newForces,
                  float *sortedPos,
                  float *sortedVel,
                  float *sortedDens,

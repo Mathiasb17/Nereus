@@ -61,7 +61,7 @@ extern "C"
 		checkCudaErrors(cudaMemcpy((char *) device + offset, host, size, cudaMemcpyHostToDevice));
 	}
 
-	void registerGLBufferObject(uint vbo, struct cudaGraphicsResource **cuda_vbo_resource)
+	void registerGLBufferObject(unsigned int vbo, struct cudaGraphicsResource **cuda_vbo_resource)
 	{
 		checkCudaErrors(cudaGraphicsGLRegisterBuffer(cuda_vbo_resource, vbo,
 					cudaGraphicsMapFlagsNone));
@@ -110,13 +110,13 @@ extern "C"
 	}
 
 	//Round a / b to nearest higher integer value
-	uint iDivUp(uint a, uint b)
+	unsigned int iDivUp(unsigned int a, unsigned int b)
 	{
 		return (a % b != 0) ? (a / b + 1) : (a / b);
 	}
 
 	// compute grid and thread block size for a given number of elements
-	void computeGridSize(uint n, uint blockSize, uint &numBlocks, uint &numThreads)
+	void computeGridSize(unsigned int n, unsigned int blockSize, unsigned int &numBlocks, unsigned int &numThreads)
 	{
 		numThreads = min(blockSize, n);
 		numBlocks = iDivUp(n, numThreads);
@@ -124,24 +124,26 @@ extern "C"
 
 	void integrateSystem(float *pos,
 			float *vel,
+			float *forces,
 			float deltaTime,
-			uint numParticles)
+			unsigned int numParticles)
 	{
 		thrust::device_ptr<float4> d_pos4((float4 *)pos);
 		thrust::device_ptr<float4> d_vel4((float4 *)vel);
+		thrust::device_ptr<float4> d_forces4((float4 *)forces);
 
 		thrust::for_each(
-				thrust::make_zip_iterator(thrust::make_tuple(d_pos4, d_vel4)),
-				thrust::make_zip_iterator(thrust::make_tuple(d_pos4+numParticles, d_vel4+numParticles)),
+				thrust::make_zip_iterator(thrust::make_tuple(d_pos4, d_vel4, d_forces4)),
+				thrust::make_zip_iterator(thrust::make_tuple(d_pos4+numParticles, d_vel4+numParticles, d_forces4+numParticles)),
 				integrate_functor(deltaTime));
 	}
 
-	void calcHash(uint  *gridParticleHash,
-			uint  *gridParticleIndex,
+	void calcHash(unsigned int  *gridParticleHash,
+			unsigned int  *gridParticleIndex,
 			float *pos,
 			int    numParticles)
 	{
-		uint numThreads, numBlocks;
+		unsigned int numThreads, numBlocks;
 		computeGridSize(numParticles, 256, numBlocks, numThreads);
 
 		// execute the kernel
@@ -154,30 +156,30 @@ extern "C"
 		getLastCudaError("Kernel execution failed");
 	}
 
-	void reorderDataAndFindCellStart(uint  *cellStart,
-			uint  *cellEnd,
+	void reorderDataAndFindCellStart(unsigned int  *cellStart,
+			unsigned int  *cellEnd,
 			float *sortedPos,
 			float *sortedVel,
 			float *sortedDens,
 			float *sortedPres,
 			float *sortedForces,
 			float *sortedCol,
-			uint  *gridParticleHash,
-			uint  *gridParticleIndex,
+			unsigned int  *gridParticleHash,
+			unsigned int  *gridParticleIndex,
 			float *oldPos,
 			float *oldVel,
 			float *oldDens,
 			float *oldPres,
 			float *oldForces,
 			float *oldCol,
-			uint   numParticles,
-			uint   numCells)
+			unsigned int   numParticles,
+			unsigned int   numCells)
 	{
-		uint numThreads, numBlocks;
+		unsigned int numThreads, numBlocks;
 		computeGridSize(numParticles, 256, numBlocks, numThreads);
 
 		// set all cells to empty
-		checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(uint)));
+		checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(unsigned int)));
 
 #if USE_TEX
 		checkCudaErrors(cudaBindTexture(0, oldPosTex, oldPos, numParticles*sizeof(float4)));
@@ -188,7 +190,7 @@ extern "C"
 		checkCudaErrors(cudaBindTexture(0, oldColTex, oldCol, numParticles*sizeof(float4)));
 #endif
 
-		uint smemSize = sizeof(uint)*(numThreads+1);
+		unsigned int smemSize = sizeof(unsigned int)*(numThreads+1);
 		reorderDataAndFindCellStartD<<< numBlocks, numThreads, smemSize>>>(
 				cellStart,
 				cellEnd,
@@ -219,32 +221,32 @@ extern "C"
 #endif
 	}
 
-	void computeDensityPressure(float *newDens, float* newPres,
+	void computeDensityPressure(float *newDens, float* newPres, float* newForces,
 			float *sortedPos,
 			float *sortedVel,
 			float *sortedDens,
 			float *sortedPres,
 			float *sortedForces,
 			float *sortedCol,
-			uint  *gridParticleIndex,
-			uint  *cellStart,
-			uint  *cellEnd,
-			uint   numParticles,
-			uint   numCells)
+			unsigned int  *gridParticleIndex,
+			unsigned int  *cellStart,
+			unsigned int  *cellEnd,
+			unsigned int   numParticles,
+			unsigned int   numCells)
 	{
 #if USE_TEX
 		checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
 		checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
-		checkCudaErrors(cudaBindTexture(0, oldDensTex, sortedVel, numParticles*sizeof(float)));
-		checkCudaErrors(cudaBindTexture(0, oldPresTex, sortedVel, numParticles*sizeof(float)));
-		checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedVel, numParticles*sizeof(float4)));
-		checkCudaErrors(cudaBindTexture(0, oldColTex, sortedVel, numParticles*sizeof(float4)));
-		checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(uint)));
-		checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(uint)));
+		checkCudaErrors(cudaBindTexture(0, oldDensTex, sortedDens, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldPresTex, sortedPres, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForces, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldColTex, sortedCol, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
+		checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
 #endif
 
 		// thread per particle
-		uint numThreads, numBlocks;
+		unsigned int numThreads, numBlocks;
 		computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 		// execute the kernel
@@ -260,6 +262,21 @@ extern "C"
 				cellStart,
 				cellEnd,
 				numParticles);
+
+		cudaDeviceSynchronize();
+
+		computeForces<<< numBlocks, numThreads >>>((float4*) newForces,               // output: new forces
+			  (float4*) sortedPos,               // input: sorted positions
+			  (float4*) sortedVel,               // input: sorted velocities
+			  (float*) newDens,               // input: sorted velocities
+			  (float*) newPres,               // input: sorted velocities
+			  (float4*) sortedForces,            // input: sorted velocities
+			  (float4*) sortedCol,               // input: sorted velocities
+			  gridParticleIndex,    // input: sorted particle indices
+			  cellStart,
+			  cellEnd,
+			  numParticles);
+
 
 		// check if kernel invocation generated an error
 		getLastCudaError("Kernel execution failed");
@@ -277,11 +294,11 @@ extern "C"
 	}
 
 
-	void sortParticles(uint *dGridParticleHash, uint *dGridParticleIndex, uint numParticles)
+	void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles)
 	{
-		thrust::sort_by_key(thrust::device_ptr<uint>(dGridParticleHash),
-				thrust::device_ptr<uint>(dGridParticleHash + numParticles),
-				thrust::device_ptr<uint>(dGridParticleIndex));
+		thrust::sort_by_key(thrust::device_ptr<unsigned int>(dGridParticleHash),
+				thrust::device_ptr<unsigned int>(dGridParticleHash + numParticles),
+				thrust::device_ptr<unsigned int>(dGridParticleIndex));
 	}
 
 }

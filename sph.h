@@ -12,7 +12,7 @@
 
 #include "sph_kernel.cuh"
 
-#define MAX_PARTICLE_NUMBER 100000
+#define MAX_PARTICLE_NUMBER 500000
 
 namespace CFD
 {
@@ -112,20 +112,20 @@ public:
 	float *m_dSortedForces;
 	float *m_dSortedCol;
 
-	uint  *m_dGridParticleHash; // grid hash value for each particle
-	uint  *m_dGridParticleIndex;// particle index for each particle
-	uint  *m_dCellStart;        // index of start of each cell in sorted list
-	uint  *m_dCellEnd;          // index of end of cell
+	unsigned int *m_dGridParticleHash; // grid hash value for each particle
+	unsigned int *m_dGridParticleIndex;// particle index for each particle
+	unsigned int *m_dCellStart;        // index of start of each cell in sorted list
+	unsigned int *m_dCellEnd;          // index of end of cell
 
 	/******************
 	 *  HOST MEMBERS  *
 	 ******************/
 
-	uint* m_hParticleHash;
-	uint* m_hCellStart;
-	uint* m_hCellEnd;
+	unsigned int* m_hParticleHash;
+	unsigned int* m_hCellStart;
+	unsigned int* m_hCellEnd;
 
-	uint   m_gridSortBits;
+	unsigned int  m_gridSortBits;
 
 	float *m_pos;
 	float *m_vel;

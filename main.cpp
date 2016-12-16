@@ -461,9 +461,7 @@ int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.f, 0.25f, 0.f,1.f), glm::vec4(0.3f, 0.3f, 0.3f, 0.f));
-
-	//exit(EXIT_SUCCESS);
+	sim_sph->generateParticleCube(glm::vec4(0.f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f));
 
 	//call to helper functions
 	initWindow();
@@ -495,9 +493,10 @@ int main(void)
 	{
 		displayFPS();
 
-		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos, GL_DYNAMIC_DRAW);
-		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_colors, GL_DYNAMIC_DRAW);
-		getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo_spheres_pos);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos);
+		//glBufferData(vbo_spheres_pos, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos, GL_STATIC_DRAW);
+
 		//step 1 : clear screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
