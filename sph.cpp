@@ -42,14 +42,14 @@ static bool compareVel(glm::vec3 v1, glm::vec3 v2)
 SPH::SPH ():
 	m_gridSortBits(18)
 {
-	m_params.gasStiffness = 1000.f;
+	m_params.gasStiffness = 1.f;
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1E-5f;
-	m_params.viscosity = 0.001f;
+	m_params.timestep = 1E-3f;
+	m_params.viscosity = 0.0001f;
 	m_params.surfaceTension = 0.01f;
 	m_params.interactionRadius = 0.0457f;
-	m_params.particleMass = 0.02;//powf(m_params.interactionRadius, 3)*m_params.restDensity;
+	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	m_params.worldOrigin = make_float3(-2,-2,-2);
 	m_params.gridSize = make_uint3(128,128,128);
@@ -168,7 +168,7 @@ void SPH::update()
 		m_numParticles,
 		m_params.numCells);
 
-	computeDensityPressure(m_ddensity, m_dpressure, m_dforces,
+	computeDensityPressure(
 			m_dSortedPos,
 			m_dSortedVel,
 			m_dSortedDens,
@@ -181,11 +181,9 @@ void SPH::update()
 			m_numParticles,
 			m_params.numCells);
 
-	integrateSystem( m_dpos, m_dvel, m_dforces, m_params.timestep, m_numParticles);
+	integrateSystem( m_dSortedPos, m_dSortedVel, m_dSortedForces, m_params.timestep, m_numParticles);
 
-	cudaMemcpy(m_pos, m_dpos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
-
-	//exit(EXIT_SUCCESS);
+	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 }
 
 void SPH::initNeighbors()

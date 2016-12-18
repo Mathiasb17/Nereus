@@ -65,7 +65,7 @@ extern "C"
                                      unsigned int   numParticles,
                                      unsigned int   numCells);
 
-    void computeDensityPressure(float *newDens, float* newPres, float* newForces,
+    void computeDensityPressure(
                  float *sortedPos,
                  float *sortedVel,
                  float *sortedDens,

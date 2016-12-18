@@ -262,8 +262,7 @@ __device__ float computeCellDensity(int3 gridPos, unsigned int index, float3 pos
 }
 
 __global__
-void computeDensityPressure(float *newDens,               // output: new velocity
-			  float* newPres,
+void computeDensityPressure(
               float4 *oldPos,               // input: sorted positions
               float4 *oldVel,               // input: sorted velocities
               float *oldDens,               // input: sorted velocities
@@ -278,6 +277,8 @@ void computeDensityPressure(float *newDens,               // output: new velocit
     unsigned int index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
 
     if (index >= numParticles) return;
+
+	unsigned int originalIndex = gridParticleIndex[index];
 
     // read particle data from sorted arrays
     float3 pos = make_float3(FETCH(oldPos, index));
@@ -305,12 +306,9 @@ void computeDensityPressure(float *newDens,               // output: new velocit
 	//compute Pressure
 	float pressure = sph_params.gasStiffness * (powf(dens/sph_params.restDensity, 7) -1);
 
-	if(pressure != pressure) pressure = 0.f;
-
     // write new velocity back to original unsorted location
-	unsigned int originalIndex = gridParticleIndex[index];
-    newDens[index] = dens;
-    newPres[index] = pressure;
+    oldDens[index] = dens;
+    oldPres[index] = pressure;
 
 	//printf("newDens[originalIndex] %5f\n", newDens[originalIndex] );
 }
@@ -319,7 +317,7 @@ void computeDensityPressure(float *newDens,               // output: new velocit
 *                           COMPUTE FORCES                           *
 **********************************************************************/
 
-__device__ float3 computeCellForces(int3 gridPos, unsigned int index, float3 pos, float3 vel, float dens, float pres, float4* oldPos, float *oldDens, float* oldPres, float4* oldVel, unsigned int *cellStart, unsigned int *cellEnd)
+__device__ void computeCellForces(float3 *fpres, float3 *fvisc, float3 *fsurf, int3 gridPos, unsigned int index, float3 pos, float3 vel, float dens, float pres, float4* oldPos, float *oldDens, float* oldPres, float4* oldVel, unsigned int *cellStart, unsigned int *cellEnd)
 {
     unsigned int gridHash = calcGridHash(gridPos);
 	unsigned int startIndex = FETCH(cellStart, gridHash);
@@ -339,39 +337,39 @@ __device__ float3 computeCellForces(int3 gridPos, unsigned int index, float3 pos
 			if(j != index)
 			{
 				float m2 = sph_params.particleMass;
+				float ir = sph_params.interactionRadius;
 
 				float3 pos2 = make_float3(FETCH(oldPos, j));
 				float dens2 = FETCH(oldDens, j);
 				float pres2 = FETCH(oldPres, j);
 				float3 vel2 = make_float3(FETCH(oldVel, j));
 
-				float3 p1p2 = pos2-pos1;
-				float3 v1v2 = vel2-vel1;
+				float3 p1p2 = pos1-pos2;
+				float3 v1v2 = vel1-vel2;
 
 				float d1sq = dens*dens;
 				float d2sq = dens2*dens2;
 
-				float kdefault = Wdefault(p1p2, sph_params.interactionRadius);
-				float3 kdefault_grad = Wdefault_grad(p1p2, sph_params.interactionRadius);
-				//float3 kpressure_grad = Wpressure_grad(p1p2, sph_params.interactionRadius);
-				//float kvisc_lapl = Wviscosity_laplacian(p1p2, sph_params.interactionRadius);
+				float kdefault = Wdefault(p1p2, ir);
+				float3 kdefault_grad = Wdefault_grad(p1p2, ir);
 
-				if (length(p1p2) < sph_params.interactionRadius)
+				if (length(p1p2) < ir)
 				{
-					forces_pres = forces_pres + m2 * ( pres/d1sq + pres2/d2sq ) *kdefault_grad;
-					//if(forces_pres.x != forces_pres.x || forces_pres.y != forces_pres.y || forces_pres.z != forces_pres.z)
-						//printf("m2 %5f\n", pres );
-						//printf("kdefault_grad %5f %5f %5f\n", forces_pres.x, forces_pres.y, forces_pres.z );
+					*fpres = *fpres + m2 * ( pres/d1sq + pres2/d2sq ) *kdefault_grad;
+
+					float a = dot(p1p2, kdefault_grad);
+					float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
+					*fvisc = *fvisc + m2/dens2  * v1v2 * (a/b);
+
+					*fsurf = *fsurf + p1p2 * Wdefault(p1p2, ir);
 				}
 			}
 		}
 	}
-
-	return forces_pres;
 }
 
 __global__
-void computeForces(float4 *newForces,               // output: new velocity
+void computeForces(
               float4 *oldPos,               // input: sorted positions
               float4 *oldVel,               // input: sorted velocities
               float *oldDens,               // input: sorted velocities
@@ -395,11 +393,7 @@ void computeForces(float4 *newForces,               // output: new velocity
 	float dens = FETCH(oldDens, index);
 	float pres = FETCH(oldPres, index);
 
-	//printf("dens? %5f\n", dens );
-
-	//if(dens >0) printf("dens? %5f\n", dens );
-	
-	//printf("dens %5f\n", dens );
+	float m1 = sph_params.particleMass;
 
 	//grid address
     int3 gridPos = calcGridPos(pos);
@@ -407,15 +401,7 @@ void computeForces(float4 *newForces,               // output: new velocity
 	//accumulators
 	float3 fpres = make_float3(0.f, 0.f, 0.f);
 	float3 fvisc = make_float3(0.f, 0.f, 0.f);
-
-	if (pres > 0.f)
-	{
-		//printf("pres %5f\n", pres );
-	}
-
-	if (dens > 0.f) {
-		//printf("dens %5f\n", dens );
-	}
+	float3 fsurf = make_float3(0.f, 0.f, 0.f);
 
 	for (int z=-1; z<=1; z++)
 	{
@@ -424,24 +410,24 @@ void computeForces(float4 *newForces,               // output: new velocity
 			for (int x=-1; x<=1; x++)
 			{
 				int3 neighbourPos = gridPos + make_int3(x, y, z);
-				fpres = fpres + computeCellForces(neighbourPos, index, pos, vel, dens, pres, oldPos, oldDens, oldPres, oldVel, cellStart, cellEnd);
+				computeCellForces(&fpres, &fvisc, &fsurf, neighbourPos, index, pos, vel, dens, pres, oldPos, oldDens, oldPres, oldVel, cellStart, cellEnd);
 			}
 		}
 	}
 
-
 	//finishing gradient and laplacian computations
 	fpres = fpres * dens;
-	//fvisc = -(1.f/dens) * fvisc;
+	fvisc = 2.f * fvisc;
+	fsurf = -(sph_params.surfaceTension/m1) * fsurf;
 
 	//computing forces
-	fpres = -(sph_params.particleMass / dens) * fpres;
-	//fvisc = (sph_params.particleMass*sph_params.viscosity) * fvisc;
+	fpres = -(m1 / dens) * fpres;
+	fvisc = (m1*sph_params.viscosity) * fvisc;
 
-	float3 f = fpres;
+	float3 f = fpres;// + fvisc + fsurf;
 
 	float4 res = make_float4(f.x, f.y, f.z, 0);
-	newForces[originalIndex] = res;
+	oldForces[index] = res;
 }
 
 

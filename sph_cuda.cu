@@ -221,7 +221,7 @@ extern "C"
 #endif
 	}
 
-	void computeDensityPressure(float *newDens, float* newPres, float* newForces,
+	void computeDensityPressure(
 			float *sortedPos,
 			float *sortedVel,
 			float *sortedDens,
@@ -251,7 +251,7 @@ extern "C"
 
 		// execute the kernel
 		
-		computeDensityPressure<<< numBlocks, numThreads >>>((float*)newDens, (float*)newPres,
+		computeDensityPressure<<< numBlocks, numThreads >>>(
 				(float4 *)sortedPos,
 				(float4 *)sortedVel,
 				(float *)sortedDens,
@@ -265,11 +265,11 @@ extern "C"
 
 		cudaDeviceSynchronize();
 
-		computeForces<<< numBlocks, numThreads >>>((float4*) newForces,               // output: new forces
+		computeForces<<< numBlocks, numThreads >>>(
 			  (float4*) sortedPos,               // input: sorted positions
 			  (float4*) sortedVel,               // input: sorted velocities
-			  (float*) newDens,               // input: sorted velocities
-			  (float*) newPres,               // input: sorted velocities
+			  (float*) sortedDens,               // input: sorted velocities
+			  (float*) sortedPres,               // input: sorted velocities
 			  (float4*) sortedForces,            // input: sorted velocities
 			  (float4*) sortedCol,               // input: sorted velocities
 			  gridParticleIndex,    // input: sorted particle indices
