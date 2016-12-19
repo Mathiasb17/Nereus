@@ -13,41 +13,44 @@
 #include <helper_math.h>
 #include <math.h>
 
-__device__ float Wdefault(float3 r, float h)
+__device__ float Wdefault(float3 r, float h, float kpoly)
 {
 	float l_r = length(r);
-	if (l_r > h) return 0.f ;
-	float a = 315 / (64 * M_PI * pow(h, 9));
+
+	if (l_r > h || l_r == 0)
+	{
+		return 0.f ;
+	}
+
 	float b = pow((h * h - l_r * l_r), 3);
-	return (a * b);
+	return (kpoly * b);
 }
 
-__device__ float3 Wdefault_grad(float3 r, float h)
+__device__ float3 Wdefault_grad(float3 r, float h, float kpoly_grad)
 {
 	float l_r = length(r);
-	float a = -945.f/(32.f*M_PI*powf(h,9));
+
 	float b = powf(h*h - l_r*l_r, 2);
-	return a*r*b;
+
+	return kpoly_grad*r*b;
 }
 
-/*__device__ float3 Wpressure_grad(float3 r, float h)*/
-//{
-	//float l_r = length(r);
-	//if(l_r > h) return make_float3(0.f,0.f,0.f);
-	//float a = -(45.f/ (M_PI * powf(h,6.f)));
-	//float3 b = r / l_r;
-	//float c = (h-l_r)*(h-l_r);
-	//return a*b*c;
-//}
+__device__ float3 Wpressure_grad(float3 r, float h, float kpress_grad)
+{
+	float l_r = length(r);
 
-//__device__ float Wviscosity_laplacian(float3 r, float h)
-//{
-	//float l_r = length(r);
-	//if(l_r > h) return 0.f;
-	//float a = 45.f / (M_PI * powf(h,6));
-	//float b = h-l_r;
-	////printf("Wdefault %5f\n", a);
-	//return a*b;
-/*}*/
+	float c = (h - l_r)*(h - l_r);
+
+	return kpress_grad * (r/l_r) * c;
+}
+
+__device__ float3 Wviscosity_grad(float3 r, float h, float kvisc_grad, float kvisc_denum)
+{
+	float l_r = length(r);
+
+	float c = -(3*l_r / kvisc_denum ) + ( 2/(h*h) ) - ( h / (2*l_r*l_r*l_r));
+
+	return kvisc_grad * r * c;
+}
 
 #endif /* ifndef KERNELS_IMPL_CUH */

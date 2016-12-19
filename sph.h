@@ -12,7 +12,7 @@
 
 #include "sph_kernel.cuh"
 
-#define MAX_PARTICLE_NUMBER 500000
+#define MAX_PARTICLE_NUMBER 150000
 
 namespace CFD
 {
@@ -59,8 +59,8 @@ public:
 	/********************
 	 *  GENERATE FLUID  *
 	 ********************/
-	void addNewParticle(glm::vec4 p);
-	void generateParticleCube(glm::vec4 center, glm::vec4 size);
+	void addNewParticle(glm::vec4 p, glm::vec4 v);
+	void generateParticleCube(glm::vec4 center, glm::vec4 size, glm::vec4 vel);
 
 	/*********************************
 	*  PERFORM ONE SIMULATION STEP  *
@@ -112,19 +112,17 @@ public:
 	float *m_dSortedForces;
 	float *m_dSortedCol;
 
-	unsigned int *m_dGridParticleHash; // grid hash value for each particle
-	unsigned int *m_dGridParticleIndex;// particle index for each particle
-	unsigned int *m_dCellStart;        // index of start of each cell in sorted list
-	unsigned int *m_dCellEnd;          // index of end of cell
+	unsigned int *m_dGridParticleHash; 
+	unsigned int *m_dGridParticleIndex;
+	unsigned int *m_dCellStart;
+	unsigned int *m_dCellEnd;
 
 	/******************
 	 *  HOST MEMBERS  *
 	 ******************/
-
 	unsigned int* m_hParticleHash;
 	unsigned int* m_hCellStart;
 	unsigned int* m_hCellEnd;
-
 	unsigned int  m_gridSortBits;
 
 	float *m_pos;
@@ -137,6 +135,19 @@ public:
 	unsigned int m_numParticles;
 
 	SphSimParams m_params;
+
+	/*****************************
+	*  OpenGL INTEROPERABILITY  *
+	*****************************/
+	uint   m_posVbo;            // vertex buffer object for particle positions
+	uint   m_colorVBO;          // vertex buffer object for colors
+
+	float *m_cudaPosVBO;        // these are the CUDA deviceMem Pos
+	float *m_cudaColorVBO;      // these are the CUDA deviceMem Color
+
+	struct cudaGraphicsResource *m_cuda_posvbo_resource; // handles OpenGL-CUDA exchange
+	struct cudaGraphicsResource *m_cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
+	
 };
 
 } /*  CFD */ 

@@ -176,7 +176,7 @@ extern "C"
 			unsigned int   numCells)
 	{
 		unsigned int numThreads, numBlocks;
-		computeGridSize(numParticles, 256, numBlocks, numThreads);
+		computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 		// set all cells to empty
 		checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(unsigned int)));

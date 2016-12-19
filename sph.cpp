@@ -42,25 +42,38 @@ static bool compareVel(glm::vec3 v1, glm::vec3 v2)
 SPH::SPH ():
 	m_gridSortBits(18)
 {
-	m_params.gasStiffness = 1.f;
+	/********************
+	*  SPH PARAMETERS  *
+	********************/
+	m_params.gasStiffness = 550.f;
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1E-3f;
-	m_params.viscosity = 0.0001f;
-	m_params.surfaceTension = 0.01f;
+	m_params.timestep = 1.8E-4f;
+	m_params.viscosity = 0.0015f;
+	m_params.surfaceTension = 0.001f;
 	m_params.interactionRadius = 0.0457f;
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.worldOrigin = make_float3(-2,-2,-2);
-	m_params.gridSize = make_uint3(128,128,128);
+	/*********************
+	*  GRID PARAMETERS  *
+	*********************/
+	m_params.worldOrigin = make_float3(-1.1,-1.1,-1.1); //slight offset to avoid particles off the domain
+	m_params.gridSize = make_uint3(64,64,64); // power of 2
 	m_params.cellSize = make_float3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
-	
 	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
+
+
+	/****************************************
+	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
+	****************************************/
+	m_params.kpoly = 315.f / (64.f * M_PI * powf(m_params.interactionRadius, 9.f));
+	m_params.kpoly_grad = -945.f/(32.f*M_PI*powf(m_params.interactionRadius, 9.f));
+	m_params.kpress_grad = -45.f/(M_PI*powf(m_params.interactionRadius, 6.f));
+
+	m_params.kvisc_grad = 15.f / (2*M_PI*powf(m_params.interactionRadius, 3.f));
+	m_params.kvisc_denum = 2.f*powf(m_params.interactionRadius, 3.f);
 	
-	std::cout << "particle mass " << m_params.particleMass << std::endl;
-
 	_intialize();
-
 	m_numParticles = 0;
 }
 
@@ -142,6 +155,7 @@ void SPH::_finalize()
 void SPH::update()
 {
 	cudaMemcpy(m_dpos, m_pos, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
+	cudaMemcpy(m_dvel, m_vel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	setParameters(&m_params);
 
 	calcHash( m_dGridParticleHash, m_dGridParticleIndex, m_dpos, m_numParticles);
@@ -184,6 +198,7 @@ void SPH::update()
 	integrateSystem( m_dSortedPos, m_dSortedVel, m_dSortedForces, m_params.timestep, m_numParticles);
 
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
+	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 }
 
 void SPH::initNeighbors()
@@ -217,7 +232,7 @@ void SPH::ComputeImplicitEulerScheme()
 
 }
 
-void SPH::addNewParticle(glm::vec4 p)
+void SPH::addNewParticle(glm::vec4 p, glm::vec4 v)
 {
 	m_pos[m_numParticles*4+0] =  p.x;
 	m_pos[m_numParticles*4+1] =  p.y;
@@ -228,10 +243,10 @@ void SPH::addNewParticle(glm::vec4 p)
 
 	m_pressure[m_numParticles] = 0.f;
 
-	m_vel[m_numParticles*4+0] =  0.f;
-	m_vel[m_numParticles*4+1] =  0.f;
-	m_vel[m_numParticles*4+2] =  0.f;
-	m_vel[m_numParticles*4+3] =  0.f;
+	m_vel[m_numParticles*4+0] =  v.x;
+	m_vel[m_numParticles*4+1] =  v.y;
+	m_vel[m_numParticles*4+2] =  v.z;
+	m_vel[m_numParticles*4+3] =  v.w;
 
 	m_forces[m_numParticles*4+0] =  0.f;
 	m_forces[m_numParticles*4+1] =  0.f;
@@ -246,7 +261,7 @@ void SPH::addNewParticle(glm::vec4 p)
 	m_numParticles += 1;
 }
 
-void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size)
+void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size, glm::vec4 vel)
 {
 	for(float x = center.x-size.x/2.f; x <= center.x+size.x/2.f; x += m_params.particleRadius*2 )
 	{
@@ -254,7 +269,7 @@ void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size)
 		{
 			for(float z = center.z-size.z/2.f; z <= center.z+size.z/2.f; z += m_params.particleRadius*2 )
 			{
-				addNewParticle(glm::vec4(x,y,z,1.f));
+				addNewParticle(glm::vec4(x,y,z,1.f), vel);
 			}
 		}
 	}

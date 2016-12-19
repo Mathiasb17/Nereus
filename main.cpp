@@ -21,8 +21,8 @@
 
 GLFWwindow* window;
 
-int width = 1024;
-int height = 768;
+int width = 1920;
+int height = 1080;
 
 /**********************************************************************
  *                           BASIC SHADERS                            *
@@ -40,7 +40,7 @@ const char* vertex_shader_spheres =
 "void main() {"
 "  vec3 posEye = vec3(MVP*vec4(vp));"
 "  float dist = length(posEye);"
-"  gl_PointSize = 0.02 * (pointScale/dist);"
+"  gl_PointSize = 0.018 * (pointScale/dist);"
 "  gl_Position = MVP*vec4(vp);"
 "  fcol = col;"
 "}";
@@ -94,14 +94,14 @@ glm::vec4 cube_points[8];glm::vec4 cube_colors[8]; unsigned int cube_indices[36]
 
 void initCube()
 {
-	cube_points[0] = glm::vec4(-0.5,-0.5,0.5,1.f);
-	cube_points[1] = glm::vec4(-0.5,-0.5,-0.5,1.f);
-	cube_points[2] = glm::vec4(-0.5,0.5,-0.5,1.f);
-	cube_points[3] = glm::vec4(-0.5,0.5,0.5,1.f);
-	cube_points[4] = glm::vec4(0.5,-0.5,0.5,1.f);
-	cube_points[5] = glm::vec4(0.5,-0.5,-0.5,1.f);
-	cube_points[6] = glm::vec4(0.5,0.5,-0.5,1.f);
-	cube_points[7] = glm::vec4(0.5,0.5,0.5,1.f);
+	cube_points[0] = glm::vec4(-1,-1,1,1.f);
+	cube_points[1] = glm::vec4(-1,-1,-1,1.f);
+	cube_points[2] = glm::vec4(-1,1,-1,1.f);
+	cube_points[3] = glm::vec4(-1,1,1,1.f);
+	cube_points[4] = glm::vec4(1,-1,1,1.f);
+	cube_points[5] = glm::vec4(1,-1,-1,1.f);
+	cube_points[6] = glm::vec4(1,1,-1,1.f);
+	cube_points[7] = glm::vec4(1,1,1,1.f);
 
 	cube_colors[0] = glm::vec4(1,0,0,1);
 	cube_colors[1] = glm::vec4(1,0,0,1);
@@ -317,8 +317,8 @@ void move_camera_direction(GLFWwindow* win, glm::vec4* dir)
 	int mouse_left_state = glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT);
 	if (mouse_left_state == GLFW_PRESS || mouse_left_state == GLFW_REPEAT)
 	{
-		double xcenter = 1024. / 2.;
-		double ycenter = 768. / 2.;
+		double xcenter = width / 2.;
+		double ycenter = height / 2.;
 		double xpos, ypos;
 		glfwGetCursorPos(win, &xpos, &ypos);
 
@@ -342,7 +342,7 @@ void move_camera_direction(GLFWwindow* win, glm::vec4* dir)
 			dir->y -= 0.01f;
 		}
 
-		glfwSetCursorPos(win, 1024/2, 768/2);
+		glfwSetCursorPos(win, width/2, height/2);
 	}
 }
 
@@ -354,8 +354,8 @@ void move_camera_rotate(GLFWwindow * win, glm::mat4 *mvp)
 	int mouse_left_state = glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT);
 	if (mouse_left_state == GLFW_PRESS || mouse_left_state == GLFW_REPEAT)
 	{
-		double xcenter = 1024. / 2.;
-		double ycenter = 768. / 2.;
+		double xcenter = width / 2.;
+		double ycenter = height / 2.;
 		double xpos, ypos;
 		glfwGetCursorPos(win, &xpos, &ypos);
 
@@ -381,7 +381,7 @@ void move_camera_rotate(GLFWwindow * win, glm::mat4 *mvp)
 		}
 		 
 
-		glfwSetCursorPos(win, 1024/2, 768/2);
+		glfwSetCursorPos(win, width/2, height/2);
 	}
 	*mvp = glm::rotate(*mvp, rotateAroundY, glm::vec3(0,1,0));
 	*mvp = glm::rotate(*mvp, rotateAroundX, glm::vec3(1,0,0));
@@ -397,37 +397,37 @@ glm::vec4 getCamMove(GLFWwindow *win, glm::vec4 camDir, glm::vec4 camUp)
 	int stateA = glfwGetKey(win, GLFW_KEY_A);
 	if (stateA == GLFW_PRESS || stateA == GLFW_REPEAT)
 	{
-		res -= 0.0001f * right;
+		res -= 0.001f * right;
 	}
 
 	int stateD = glfwGetKey(win, GLFW_KEY_D);
 	if (stateD == GLFW_PRESS || stateD == GLFW_REPEAT)
 	{
-		res += 0.0001f * right;
+		res += 0.001f * right;
 	}
 
 	int stateW = glfwGetKey(win, GLFW_KEY_W);
 	if (stateW == GLFW_PRESS || stateW == GLFW_REPEAT)
 	{
-		res -= 0.0001f * camDir;
+		res -= 0.001f * camDir;
 	}
 
 	int stateS = glfwGetKey(win, GLFW_KEY_S);
 	if (stateS == GLFW_PRESS || stateS == GLFW_REPEAT)
 	{
-		res += 0.0001f * camDir;
+		res += 0.001f * camDir;
 	}
 
 	int stateSp = glfwGetKey(win, GLFW_KEY_SPACE);
 	if (stateSp == GLFW_PRESS || stateSp == GLFW_REPEAT)
 	{
-		res += glm::vec4(0, 0.0001f, 0, 0);
+		res += glm::vec4(0, 0.001f, 0, 0);
 	}
 
 	int stateC = glfwGetKey(win, GLFW_KEY_C);
 	if (stateC == GLFW_PRESS || stateSp == GLFW_REPEAT)
 	{
-		res += glm::vec4(0, -0.0001f, 0, 0);
+		res += glm::vec4(0, -0.001f, 0, 0);
 	}
 
 
@@ -461,7 +461,9 @@ int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f));
+	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.f,1.f), glm::vec4(2.0f, 1.6f, 2.0f, 0.f), glm::vec4(0,0,0,0));
+	//sim_sph->generateParticleCube(glm::vec4(-0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
+	//sim_sph->generateParticleCube(glm::vec4(0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 
 	//call to helper functions
 	initWindow();

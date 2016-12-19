@@ -62,47 +62,47 @@ struct integrate_functor
 		float3 accel = dt*frc/m1;
 
 		vel = vel+accel;
-		pos = pos + dt*accel;
+		pos = pos + dt*vel;
 
         #if 1
 
-        /*if (pos.x > 1.0f - sph_params.particleRadius)*/
-        //{
-            //pos.x = 1.0f - sph_params.particleRadius;
-            //vel.x *= 0.45f;
-        //}
+		if (pos.x > 1.0f - sph_params.particleRadius)
+		{
+			pos.x = 1.0f - sph_params.particleRadius;
+			vel.x = 0.45f * -vel.x;
+		}
 
-        //if (pos.x < -1.0f + sph_params.particleRadius)
-        //{
-            //pos.x = -1.0f + sph_params.particleRadius;
-            //vel.x *= 0.45f;
-        //}
+		if (pos.x < -1.0f + sph_params.particleRadius)
+		{
+			pos.x = -1.0f + sph_params.particleRadius;
+			vel.x = 0.45f * -vel.x;
+		}
 
-        //if (pos.y > 1.0f - sph_params.particleRadius)
-        //{
-            //pos.y = 1.0f - sph_params.particleRadius;
-            //vel.y *= 0.45f;
-        //}
+		if (pos.y > 1.0f - sph_params.particleRadius)
+		{
+			pos.y = 1.0f - sph_params.particleRadius;
+			vel.y = 0.45f * -vel.y;
+		}
 
-        //if (pos.z > 1.0f - sph_params.particleRadius)
-        //{
-            //pos.z = 1.0f - sph_params.particleRadius;
-            //vel.z *= 0.45f;
-        //}
+		if (pos.z > 1.0f - sph_params.particleRadius)
+		{
+			pos.z = 1.0f - sph_params.particleRadius;
+			vel.z = 0.45f * -vel.z;
+		}
 
-        //if (pos.z < -1.0f + sph_params.particleRadius)
-        //{
-            //pos.z = -1.0f + sph_params.particleRadius;
-            //vel.z *= 0.45f;
-        //}
+		if (pos.z < -1.0f + sph_params.particleRadius)
+		{
+			pos.z = -1.0f + sph_params.particleRadius;
+			vel.z = 0.45f * -vel.z;
+		}
 
 #endif
 
-        /*if (pos.y < -1.0f + sph_params.particleRadius)*/
-        //{
-            //pos.y = -1.0f + sph_params.particleRadius;
-            //vel.y *= 0.45f;
-        /*}*/
+		if (pos.y < -1.0f + sph_params.particleRadius)
+		{
+			pos.y = -1.0f + sph_params.particleRadius;
+			vel.y = 0.45f * -vel.y;
+		}
 
         // store new position and velocity
         thrust::get<0>(t) = make_float4(pos, posData.w);
@@ -215,17 +215,17 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 		unsigned int sortedIndex = gridParticleIndex[index];
 		float4 pos = FETCH(oldPos, sortedIndex);       // macro does either global read or texture fetch
 		float4 vel = FETCH(oldVel, sortedIndex);       // see particles_kernel.cuh
-		float dens = FETCH(oldDens, sortedIndex);
-		float pres = FETCH(oldPres, sortedIndex);
-		float4 forces = FETCH(oldForces, sortedIndex);
-		float4 col = FETCH(oldCol, sortedIndex);
+		/*float dens = FETCH(oldDens, sortedIndex);*/
+		//float pres = FETCH(oldPres, sortedIndex);
+		//float4 forces = FETCH(oldForces, sortedIndex);
+		/*float4 col = FETCH(oldCol, sortedIndex);*/
 
 		sortedPos[index] = pos;
 		sortedVel[index] = vel;
-		sortedDens[index] = dens;
-		sortedPres[index] = pres;
-		sortedForces[index] = forces;
-		sortedCol[index] = col;
+		/*sortedDens[index] = dens;*/
+		//sortedPres[index] = pres;
+		//sortedForces[index] = forces;
+		/*sortedCol[index] = col;*/
 	}
 }
 
@@ -233,7 +233,7 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 *                      COMPUTE DENSITY PRESSURE                      *
 **********************************************************************/
 
-__device__ float computeCellDensity(int3 gridPos, unsigned int index, float3 pos, float4 *oldPos, unsigned int *cellStart, unsigned int *cellEnd)
+__device__ float computeCellDensity(int *nb, int3 gridPos, unsigned int index, float3 pos, float4 *oldPos, unsigned int *cellStart, unsigned int *cellEnd)
 {
     unsigned int gridHash = calcGridHash(gridPos);
 	unsigned int startIndex = FETCH(cellStart, gridHash);
@@ -252,10 +252,13 @@ __device__ float computeCellDensity(int3 gridPos, unsigned int index, float3 pos
 			if(j != index)
 			{
 				float3 pos2 = make_float3(FETCH(oldPos, j));
-				if(length(pos2-pos1) < sph_params.interactionRadius)
-					dens += sph_params.particleMass * Wdefault(pos2-pos1, sph_params.interactionRadius);
+				if(length(pos1-pos2) < sph_params.interactionRadius)
+				{
+					dens += sph_params.particleMass * Wdefault(pos1-pos2, sph_params.interactionRadius, sph_params.kpoly);
+					//*nb = *nb + 1;
+				}
 			}
-			k++;
+			//k++;
 		}
 	}
 	return dens;
@@ -281,14 +284,16 @@ void computeDensityPressure(
 	unsigned int originalIndex = gridParticleIndex[index];
 
     // read particle data from sorted arrays
-    float3 pos = make_float3(FETCH(oldPos, index));
-    float3 vel = make_float3(FETCH(oldVel, index));
+    float3 pos = make_float3(FETCH(oldPos, originalIndex));
+    float3 vel = make_float3(FETCH(oldVel, originalIndex));
 
     // get address in grid
     int3 gridPos = calcGridPos(pos);
 
     // examine neighbouring cells
     float dens = 0.f;
+
+	int nbVois = 0;
 
 	//compute pressure
     for (int z=-1; z<=1; z++)
@@ -298,19 +303,20 @@ void computeDensityPressure(
             for (int x=-1; x<=1; x++)
             {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-                dens += computeCellDensity(neighbourPos, index, pos, oldPos, cellStart, cellEnd);
+				//a optimiser !!!
+				dens += computeCellDensity(&nbVois, neighbourPos, originalIndex, pos, oldPos, cellStart, cellEnd);
             }
         }
     }
+
+	//if (nbVois > 40) printf("nbVois too large : %5d\n", nbVois ); ;
 
 	//compute Pressure
 	float pressure = sph_params.gasStiffness * (powf(dens/sph_params.restDensity, 7) -1);
 
     // write new velocity back to original unsorted location
-    oldDens[index] = dens;
-    oldPres[index] = pressure;
-
-	//printf("newDens[originalIndex] %5f\n", newDens[originalIndex] );
+    oldDens[originalIndex] = dens;
+    oldPres[originalIndex] = pressure;
 }
 
 /**********************************************************************
@@ -350,18 +356,20 @@ __device__ void computeCellForces(float3 *fpres, float3 *fvisc, float3 *fsurf, i
 				float d1sq = dens*dens;
 				float d2sq = dens2*dens2;
 
-				float kdefault = Wdefault(p1p2, ir);
-				float3 kdefault_grad = Wdefault_grad(p1p2, ir);
+				float kdefault = Wdefault(p1p2, ir, sph_params.kpoly);
+				float3 kdefault_grad = Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
+				float3 kpressure_grad = Wpressure_grad(p1p2, ir, sph_params.kpress_grad);
+				float3 kvisco_grad = Wviscosity_grad(p1p2, ir, sph_params.kvisc_grad, sph_params.kvisc_denum);
 
 				if (length(p1p2) < ir)
 				{
-					*fpres = *fpres + m2 * ( pres/d1sq + pres2/d2sq ) *kdefault_grad;
+					*fpres = *fpres + m2 * ( pres/d1sq + pres2/d2sq ) *kpressure_grad;
 
-					float a = dot(p1p2, kdefault_grad);
+					float a = dot(p1p2, kvisco_grad);
 					float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
 					*fvisc = *fvisc + m2/dens2  * v1v2 * (a/b);
 
-					*fsurf = *fsurf + p1p2 * Wdefault(p1p2, ir);
+					*fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;
 				}
 			}
 		}
@@ -388,10 +396,10 @@ void computeForces(
 	unsigned int originalIndex = gridParticleIndex[index];
 
     // read particle data from sorted arrays
-    float3 pos = make_float3(FETCH(oldPos, index));
-    float3 vel = make_float3(FETCH(oldVel, index));
-	float dens = FETCH(oldDens, index);
-	float pres = FETCH(oldPres, index);
+    float3 pos = make_float3(FETCH(oldPos, originalIndex));
+    float3 vel = make_float3(FETCH(oldVel, originalIndex));
+	float dens = FETCH(oldDens, originalIndex);
+	float pres = FETCH(oldPres, originalIndex);
 
 	float m1 = sph_params.particleMass;
 
@@ -410,13 +418,14 @@ void computeForces(
 			for (int x=-1; x<=1; x++)
 			{
 				int3 neighbourPos = gridPos + make_int3(x, y, z);
-				computeCellForces(&fpres, &fvisc, &fsurf, neighbourPos, index, pos, vel, dens, pres, oldPos, oldDens, oldPres, oldVel, cellStart, cellEnd);
+				//a optimiser !!!
+				computeCellForces(&fpres, &fvisc, &fsurf, neighbourPos, originalIndex, pos, vel, dens, pres, oldPos, oldDens, oldPres, oldVel, cellStart, cellEnd);
 			}
 		}
 	}
 
 	//finishing gradient and laplacian computations
-	fpres = fpres * dens;
+	fpres = dens * fpres;
 	fvisc = 2.f * fvisc;
 	fsurf = -(sph_params.surfaceTension/m1) * fsurf;
 
@@ -424,11 +433,10 @@ void computeForces(
 	fpres = -(m1 / dens) * fpres;
 	fvisc = (m1*sph_params.viscosity) * fvisc;
 
-	float3 f = fpres;// + fvisc + fsurf;
+	float3 f = fpres + fvisc + m1*make_float3(0,-9.81,0) + fsurf;
 
 	float4 res = make_float4(f.x, f.y, f.z, 0);
-	oldForces[index] = res;
+	oldForces[originalIndex] = res;
 }
-
 
 #endif /* ifndef _PARTICLES_KERNEL_IMPL_CUH */
