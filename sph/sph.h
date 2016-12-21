@@ -37,25 +37,6 @@ public:
 	void _intialize();
 	void _finalize();
 
-	/***************
-	*  NEIGHBORS  *
-	***************/
-	void initNeighbors();
-	void ComputeNeighbors();
-
-	/**********************
-	*  SPH CALCULATIONS  *
-	**********************/
-	void ComputeDensitiesAndPressure();
-	void ComputeInternalForces();
-	void ComputeExternalForces();
-
-	/******************************
-	 *  COLLISIONS AND ADVECTION  *
-	 ******************************/
-	void CollisionDetectionsAndResponses();
-	void ComputeImplicitEulerScheme();
-
 	/********************
 	 *  GENERATE FLUID  *
 	 ********************/
@@ -93,7 +74,6 @@ public:
 	void setSurfaceTension(float new_surfacetension){m_params.surfaceTension = new_surfacetension;}
 
 public:
-
 	/********************
 	 *  DEVICE MEMBERS  *
 	 ********************/
@@ -135,19 +115,6 @@ public:
 	unsigned int m_numParticles;
 
 	SphSimParams m_params;
-
-	/*****************************
-	*  OpenGL INTEROPERABILITY  *
-	*****************************/
-	uint   m_posVbo;            // vertex buffer object for particle positions
-	uint   m_colorVBO;          // vertex buffer object for colors
-
-	float *m_cudaPosVBO;        // these are the CUDA deviceMem Pos
-	float *m_cudaColorVBO;      // these are the CUDA deviceMem Color
-
-	struct cudaGraphicsResource *m_cuda_posvbo_resource; // handles OpenGL-CUDA exchange
-	struct cudaGraphicsResource *m_cuda_colorvbo_resource; // handles OpenGL-CUDA exchange
-	
 };
 
 } /*  CFD */ 

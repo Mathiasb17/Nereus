@@ -22,35 +22,18 @@
 namespace CFD
 {
 
-typedef thrust::host_vector<int>::iterator   IntIterator;
-typedef thrust::host_vector<float>::iterator FloatIterator;
-typedef thrust::host_vector<char>::iterator  CharIterator;
-typedef thrust::host_vector<double>::iterator  DoubleIterator;
-typedef thrust::host_vector<glm::vec4>::iterator  Vec3Iterator;
-typedef thrust::host_vector<unsigned int>::iterator  UIntIterator;
-
-typedef thrust::tuple<Vec3Iterator, Vec3Iterator, FloatIterator, FloatIterator, Vec3Iterator, Vec3Iterator> IteratorTuple;
-
-typedef thrust::zip_iterator<IteratorTuple> ZipIterator;
-
-
-static bool compareVel(glm::vec3 v1, glm::vec3 v2)
-{
-	return glm::length(v1) < glm::length(v2);
-}
-
 SPH::SPH ():
 	m_gridSortBits(18)
 {
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 550.f;
+	m_params.gasStiffness = 250.f;
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1.8E-4f;
-	m_params.viscosity = 0.0015f;
-	m_params.surfaceTension = 0.001f;
+	m_params.timestep = 1E-4f;
+	m_params.viscosity = 0.002f;
+	m_params.surfaceTension = 0.10;
 	m_params.interactionRadius = 0.0457f;
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
@@ -61,7 +44,6 @@ SPH::SPH ():
 	m_params.gridSize = make_uint3(64,64,64); // power of 2
 	m_params.cellSize = make_float3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
 	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
-
 
 	/****************************************
 	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
@@ -199,37 +181,6 @@ void SPH::update()
 
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
-}
-
-void SPH::initNeighbors()
-{
-}
-
-void SPH::ComputeNeighbors()
-{
-}
-
-void SPH::ComputeDensitiesAndPressure()
-{
-}
-
-void SPH::ComputeInternalForces()
-{
-}
-
-void SPH::ComputeExternalForces()
-{
-
-}
-
-void SPH::CollisionDetectionsAndResponses()
-{
-
-}
-
-void SPH::ComputeImplicitEulerScheme()
-{
-
 }
 
 void SPH::addNewParticle(glm::vec4 p, glm::vec4 v)

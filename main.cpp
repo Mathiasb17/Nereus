@@ -21,8 +21,8 @@
 
 GLFWwindow* window;
 
-int width = 1920;
-int height = 1080;
+int width = 1024;
+int height = 768;
 
 /**********************************************************************
  *                           BASIC SHADERS                            *
@@ -461,7 +461,7 @@ int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.f,1.f), glm::vec4(2.0f, 1.6f, 2.0f, 0.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(glm::vec4(0.5f, -.2f, 0.5f,1.f), glm::vec4(1.0f, 1.6f, 1.0f, 0.f), glm::vec4(0,0,0,0));
 	//sim_sph->generateParticleCube(glm::vec4(-0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 	//sim_sph->generateParticleCube(glm::vec4(0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 
@@ -489,8 +489,7 @@ int main(void)
 	compileShaderProgram(&shader_program_basic, vs_basic, fs_basic);
 
 	glm::vec4 direction(0,0,1,0);
-	
-	//sim_sph->_intialize();
+
 	while(!glfwWindowShouldClose(window))
 	{
 		displayFPS();
@@ -525,7 +524,7 @@ int main(void)
 		//step 5 : sph computations
 		
 		cube_points[0].x = cube_points[0].x - 0.01;
-		
+
 		if(do_simulation)
 		{
 			sim_sph->update();

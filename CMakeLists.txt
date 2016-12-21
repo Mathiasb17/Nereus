@@ -9,6 +9,7 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++-4.9")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
+#maybe copy used files in project to avoid doing this horror
 include_directories(/usr/local/cuda-7.5/include/)
 include_directories(/usr/local/cuda-7.5/samples/common/inc)
 
@@ -18,19 +19,22 @@ find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(CUDA REQUIRED)
 
-file(GLOB SYSTEM_SOURCES sph.h sph.cpp sph_cuda.cu)
+#include project subdirs
+include(${CMAKE_CURRENT_SOURCE_DIR}/sph/CMakeLists.txt)
+include(${CMAKE_CURRENT_SOURCE_DIR}/common/CMakeLists.txt)
 
-set(SOURCES ${SYSTEM_SOURCES})
+#project sources
+set(SOURCES ${SPH_FILES})
 
 #CUDA OPTIONS
 set(CUDA_64_BIT_DEVICE_CODE ON)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_52,code=sm_52)
-set(CUDA_SOURCES sph_kernel.cuh sph_cuda.cu sph_kernel_impl.cuh kernels_impl.cuh)
+set(CUDA_SOURCES ${CUDA_COMMON_FILES} ${CUDA_SPH_FILES})
 
 CUDA_INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
-CUDA_COMPILE(CUDA_OBJ ${CUDA_SOURCES})
+CUDA_COMPILE(CUDA_OBJ ${CUDA_SPH_FILES})
 
-add_executable(sph main.cpp ${SOURCES} ${CUDA_OBJ})
+add_executable(sph main.cpp ${SPH_FILES} ${CUDA_OBJ})
 
 #target_include_directories(sph ${OPENGL_INCLUDE_DIR})
 target_link_libraries(sph ${OPENGL_gl_LIBRARY})
