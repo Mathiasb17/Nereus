@@ -1,5 +1,7 @@
 #define GLM_FORCE_RADIANS
 
+#include "common/colored_output.h"
+
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
@@ -538,7 +540,5 @@ int main(void)
 	sim_sph->_finalize();
 
 	glfwTerminate();
-	return 0;
-
 	exit(EXIT_SUCCESS);
 }
