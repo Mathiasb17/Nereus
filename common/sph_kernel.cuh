@@ -12,6 +12,9 @@
 
 struct SphSimParams
 {
+	/*********************
+	*  GRID PARAMETERS  *
+	*********************/
     uint3 gridSize;
     unsigned int numCells;
     float3 worldOrigin;
@@ -19,7 +22,10 @@ struct SphSimParams
 
     unsigned int numBodies;
     unsigned int maxParticlesPerCell;
-
+	
+	/************************
+	*  PHYSICS PARAMETERS  *
+	************************/
 	float gasStiffness;
     float viscosity;
     float surfaceTension;
@@ -30,6 +36,9 @@ struct SphSimParams
     float particleRadius;
     float3 gravity;
 
+	/***********************************
+	*  SPH KERNELS PRE-COMPUTED PART  *
+	***********************************/
 	float kpoly;
 	float kpoly_grad;
 	float kpress_grad;

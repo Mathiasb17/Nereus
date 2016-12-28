@@ -28,11 +28,16 @@ set(SOURCES ${SPH_FILES})
 
 #CUDA OPTIONS
 set(CUDA_64_BIT_DEVICE_CODE ON)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -gencode arch=compute_52,code=sm_52)
-set(CUDA_SOURCES ${CUDA_COMMON_FILES} ${CUDA_SPH_FILES})
+#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-gencode arch=compute_52,code=sm_52 ") 
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-gencode arch=compute_52,code=sm_52 --use_fast_math --maxrregcount 192") 
+
+message(${CUDA_NVCC_FLAGS})
 
 CUDA_INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR})
-CUDA_COMPILE(CUDA_OBJ ${CUDA_SPH_FILES})
+
+##COMPILE SIMULATION KERNELS
+set(CUDA_SOURCES  ${CUDA_SPH_FILES})
+CUDA_COMPILE(CUDA_OBJ ${CUDA_SOURCES}) 
 
 add_executable(sph main.cpp ${SPH_FILES} ${CUDA_OBJ})
 

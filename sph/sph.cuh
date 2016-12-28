@@ -35,6 +35,8 @@ extern "C"
 
     void setParameters(SphSimParams *hostParams);
 
+	void computeGridSize(unsigned int n, unsigned int blockSize, unsigned int &numBlocks, unsigned int &numThreads);
+
     void integrateSystem(float *pos,
                          float *vel,
                          float *forces,
@@ -77,6 +79,26 @@ extern "C"
                  unsigned int  *cellEnd,
                  unsigned int   numParticles,
                  unsigned int   numCells);
+
+	void computePciDensityPressure(
+			float* sortedPos,
+			float* sortedVel,
+			float* sortedDens,
+			float* sortedPres,
+			float* sortedForces,
+			float* sortedCol,
+			float* sortedPosStar,
+			float* sortedVelStar,
+			float* sortedDensStar,
+			float* sortedDensError,
+			unsigned int  *gridParticleIndex,
+			unsigned int  *cellStart,
+			unsigned int  *cellEnd,
+			unsigned int   numParticles,
+			unsigned int   numCells);
+
+
+	float maxDensity(float* dDensities, unsigned int numParticles);
 
     void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles);
 }

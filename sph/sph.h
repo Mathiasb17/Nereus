@@ -23,24 +23,16 @@ public:
 	SPH ();
 	virtual ~SPH ();
 
-	/*************
-	*  Kernels  *
-	*************/
-	static float Wdefault(glm::vec3 r, float h);
-	static glm::vec3 Wdefault_grad(glm::vec3 r, float h);
-	static glm::vec3 Wpressure_grad(glm::vec3 r, float h);
-	static float Wviscosity_laplacian(glm::vec3 r, float h);
-
 	/**********
 	*  Initialize and finalize  *
 	**********/
-	void _intialize();
-	void _finalize();
+	virtual void _intialize();
+	virtual void _finalize();
 
 	/********************
 	 *  GENERATE FLUID  *
 	 ********************/
-	void addNewParticle(glm::vec4 p, glm::vec4 v);
+	virtual void addNewParticle(glm::vec4 p, glm::vec4 v);
 	void generateParticleCube(glm::vec4 center, glm::vec4 size, glm::vec4 vel);
 
 	/*********************************
@@ -64,6 +56,11 @@ public:
 	float* & getCol() {return m_colors;}
 	float* & getVel() {return m_vel;}
 
+	float* getHostPos() const {return m_pos;}
+	float* getHostCol() const {return m_colors;}
+
+	unsigned int getNumParticles() const {return m_numParticles;}
+
 	/*************
 	*  SETTERS  *
 	*************/
@@ -73,7 +70,7 @@ public:
 	void setViscosity(float new_viscosity){m_params.viscosity = new_viscosity;}
 	void setSurfaceTension(float new_surfacetension){m_params.surfaceTension = new_surfacetension;}
 
-public:
+protected:
 	/********************
 	 *  DEVICE MEMBERS  *
 	 ********************/

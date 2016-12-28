@@ -13,7 +13,10 @@
 #include <helper_math.h>
 #include <math.h>
 
-__device__ float Wdefault(float3 r, float h, float kpoly)
+extern "C"
+{
+
+__device__ __host__ float Wdefault(float3 r, float h, float kpoly)
 {
 	float l_r = length(r);
 
@@ -26,7 +29,7 @@ __device__ float Wdefault(float3 r, float h, float kpoly)
 	return (kpoly * b);
 }
 
-__device__ float3 Wdefault_grad(float3 r, float h, float kpoly_grad)
+__device__ __host__ float3 Wdefault_grad(float3 r, float h, float kpoly_grad)
 {
 	float l_r = length(r);
 
@@ -35,7 +38,7 @@ __device__ float3 Wdefault_grad(float3 r, float h, float kpoly_grad)
 	return kpoly_grad*r*b;
 }
 
-__device__ float3 Wpressure_grad(float3 r, float h, float kpress_grad)
+__device__ __host__ float3 Wpressure_grad(float3 r, float h, float kpress_grad)
 {
 	float l_r = length(r);
 
@@ -44,13 +47,15 @@ __device__ float3 Wpressure_grad(float3 r, float h, float kpress_grad)
 	return kpress_grad * (r/l_r) * c;
 }
 
-__device__ float3 Wviscosity_grad(float3 r, float h, float kvisc_grad, float kvisc_denum)
+__device__ __host__ float3 Wviscosity_grad(float3 r, float h, float kvisc_grad, float kvisc_denum)
 {
 	float l_r = length(r);
 
 	float c = -(3*l_r / kvisc_denum ) + ( 2/(h*h) ) - ( h / (2*l_r*l_r*l_r));
 
 	return kvisc_grad * r * c;
+}
+
 }
 
 #endif /* ifndef KERNELS_IMPL_CUH */

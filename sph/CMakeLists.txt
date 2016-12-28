@@ -1,10 +1,10 @@
 include_directories(./sph/)
+include(${CMAKE_CURRENT_SOURCE_DIR}/sph/pcisph/CMakeLists.txt)
 
 set(CUDA_SPH_FILES 
-	./sph/sph.cuh
 	./sph/sph_cuda.cu
-	./sph/sph_kernel_impl.cuh)
+	${CUDA_PCISPH_FILES})
 
 set(SPH_FILES
-	./sph/sph.h
-	./sph/sph.cpp)
+	./sph/sph.cpp
+	${PCISPH_FILES})

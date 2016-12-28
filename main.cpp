@@ -463,7 +463,7 @@ int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.5f, -.2f, 0.5f,1.f), glm::vec4(1.0f, 1.6f, 1.0f, 0.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(glm::vec4(0.0f, -.2f, 0.0f,1.f), glm::vec4(1.0f, 1.6f, 2.0f, 0.f), glm::vec4(0,0,0,0));
 	//sim_sph->generateParticleCube(glm::vec4(-0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 	//sim_sph->generateParticleCube(glm::vec4(0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 
@@ -474,8 +474,8 @@ int main(void)
 	initCube();
 
 	//opengl sphere buffers handling
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos, GL_STATIC_DRAW);
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_colors, GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostCol(), GL_STATIC_DRAW);
 	getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
 
 	//opengl cube buffers handling
@@ -497,8 +497,8 @@ int main(void)
 		displayFPS();
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo_spheres_pos);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos);
-		//glBufferData(vbo_spheres_pos, sim_sph->m_numParticles * sizeof(glm::vec4), sim_sph->m_pos, GL_STATIC_DRAW);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos());
+		//glBufferData(vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
 
 		//step 1 : clear screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -518,7 +518,7 @@ int main(void)
 		glm::mat4 mv = v*m;
 
 		//step 3 : display spheres in associated shader program
-		displaySpheres(mvp, mv, shader_program_spheres, vao_spheres, vbo_spheres_pos, sim_sph->m_numParticles);
+		displaySpheres(mvp, mv, shader_program_spheres, vao_spheres, vbo_spheres_pos, sim_sph->getNumParticles());
 
 		//step 4 : display cube in associated shader program
 		displayCube(mvp, shader_program_basic, vao_cube, vbo_cube_pos, vbo_cube_color, vbo_cube_indices);

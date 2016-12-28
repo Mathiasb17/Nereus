@@ -15,6 +15,8 @@
 #include <thrust/for_each.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/sort.h>
+#include <thrust/extrema.h>
+#include <thrust/execution_policy.h>
 
 #include "sph_kernel.cuh"
 #include "sph_kernel_impl.cuh"
@@ -156,6 +158,9 @@ extern "C"
 		getLastCudaError("Kernel execution failed");
 	}
 
+	/*********************
+	*  REORDERING CALL  *
+	*********************/
 	void reorderDataAndFindCellStart(unsigned int  *cellStart,
 			unsigned int  *cellEnd,
 			float *sortedPos,
@@ -221,6 +226,9 @@ extern "C"
 #endif
 	}
 
+	/******************************
+	*  SPH COMPUTATION WITH EOS  *
+	******************************/
 	void computeDensityPressure(
 			float *sortedPos,
 			float *sortedVel,
@@ -290,10 +298,124 @@ extern "C"
 		checkCudaErrors(cudaUnbindTexture(oldColTex));
 		checkCudaErrors(cudaUnbindTexture(cellStartTex));
 		checkCudaErrors(cudaUnbindTexture(cellEndTex));
+
+#endif
+	}
+
+	/**************************
+	*  COMPUTE PCISPH STUFF  *
+	**************************/
+	void computePciDensityPressure(
+			float* sortedPos,
+			float* sortedVel,
+			float* sortedDens,
+			float* sortedPres,
+			float* sortedForces,
+			float* sortedCol,
+			float* sortedPosStar,
+			float* sortedVelStar,
+			float* sortedDensStar,
+			float* sortedDensError,
+			unsigned int  *gridParticleIndex,
+			unsigned int  *cellStart,
+			unsigned int  *cellEnd,
+			unsigned int   numParticles,
+			unsigned int   numCells)
+	{
+
+		//faire des cuda memcpy sur les accumulateurs
+
+#if USE_TEX
+		checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldDensTex, sortedDens, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldPresTex, sortedPres, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForces, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldColTex, sortedCol, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
+		checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
+		checkCudaErrors(cudaBindTexture(0, oldPosStarTex, sortedPosStar, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldVelStarTex, sortedVelStar, numParticles*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldDensStarTex, sortedDensStar, numParticles*sizeof(float)));
+		checkCudaErrors(cudaBindTexture(0, oldDensErrorTex, sortedDensError, numParticles*sizeof(float)));
+#endif
+
+		//float eta = 1000.f;
+
+		unsigned int numThreads, numBlocks;
+		computeGridSize(numParticles, 64, numBlocks, numThreads);
+
+		PciPredictPosVel<<<numBlocks, numThreads>>>(
+				(float4*)sortedPos,
+				(float4*)sortedVel,
+				sortedDens,
+				sortedPres,
+				(float4*)sortedForces,
+				(float4*)sortedCol,
+				(float4*)sortedPosStar,
+				(float4*)sortedVelStar,
+				sortedDensStar,
+				sortedDensError,
+				gridParticleIndex,
+				cellStart,
+				cellEnd,
+				numParticles
+		);
+
+		float eta = 10.f;
+		float maxError = 0.f;
+
+		do {
+			
+		computeDensityPressure<<<numBlocks, numThreads>>>(
+				(float4*)sortedPosStar,               // input: sorted positions
+				(float4*)sortedVelStar,               // input: sorted velocities
+				sortedDensStar,               // input: sorted velocities
+				sortedPres,               // input: sorted velocities
+				(float4*)sortedForces,            // input: sorted velocities
+				(float4*)sortedCol,               // input: sorted velocities
+				gridParticleIndex,    // input: sorted particle indices
+				cellStart,
+				cellEnd,
+				numParticles);
+
+		} while (maxError > eta);
+
+
+
+
+#if USE_TEX
+		checkCudaErrors(cudaUnbindTexture(oldPosTex));
+		checkCudaErrors(cudaUnbindTexture(oldVelTex));
+		checkCudaErrors(cudaUnbindTexture(oldDensTex));
+		checkCudaErrors(cudaUnbindTexture(oldPresTex));
+		checkCudaErrors(cudaUnbindTexture(oldForcesTex));
+		checkCudaErrors(cudaUnbindTexture(oldColTex));
+		checkCudaErrors(cudaUnbindTexture(cellStartTex));
+		checkCudaErrors(cudaUnbindTexture(cellEndTex));
+		checkCudaErrors(cudaUnbindTexture(oldPosStarTex));
+		checkCudaErrors(cudaUnbindTexture(oldVelStarTex));
+		checkCudaErrors(cudaUnbindTexture(oldDensStarTex));
+		checkCudaErrors(cudaUnbindTexture(oldDensErrorTex));
 #endif
 	}
 
 
+	/********************************
+	*  SORT AND THRUST REDUCTIONS  *
+	********************************/
+
+	float maxDensity(float* dDensities, unsigned int numParticles)
+	{
+		
+		float res = *thrust::max_element(thrust::device, 
+				thrust::device_ptr<float>(dDensities),
+				thrust::device_ptr<float>(dDensities+numParticles)
+				);
+
+		return res;
+	}
+	
 	void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles)
 	{
 		thrust::sort_by_key(thrust::device_ptr<unsigned int>(dGridParticleHash),

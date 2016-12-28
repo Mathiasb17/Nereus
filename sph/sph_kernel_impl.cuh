@@ -29,13 +29,19 @@ texture<float, 1, cudaReadModeElementType> oldPresTex;
 texture<float4, 1, cudaReadModeElementType> oldForcesTex;
 texture<float4, 1, cudaReadModeElementType> oldColTex;
 
+//texture for pcisph
+texture<float4, 1, cudaReadModeElementType> oldPosStarTex;
+texture<float4, 1, cudaReadModeElementType> oldVelStarTex;
+texture<float, 1, cudaReadModeElementType> oldDensStarTex;
+texture<float, 1, cudaReadModeElementType> oldDensErrorTex;
+
 texture<unsigned int, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellStartTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellEndTex;
+
 #endif
 
 __constant__ SphSimParams sph_params;
-
 
 struct integrate_functor
 {
@@ -64,7 +70,7 @@ struct integrate_functor
 		vel = vel+accel;
 		pos = pos + dt*vel;
 
-        #if 1
+#if 1
 
 		if (pos.x > 1.0f - sph_params.particleRadius)
 		{
@@ -134,7 +140,7 @@ __global__ void calcHashD(unsigned int   *gridParticleHash,  // output
                float4 *pos,               // input: positions
                unsigned int    numParticles)
 {
-    unsigned int index = __umul24(blockIdx.x, blockDim.x) + threadIdx.x;
+    unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if (index >= numParticles) return;
 
@@ -168,7 +174,7 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
                                   unsigned int    numParticles)
 {
     extern __shared__ unsigned int sharedHash[];    // blockSize + 1 elements
-    unsigned int index = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
 
     unsigned int hash;
 
@@ -215,17 +221,9 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 		unsigned int sortedIndex = gridParticleIndex[index];
 		float4 pos = FETCH(oldPos, sortedIndex);       // macro does either global read or texture fetch
 		float4 vel = FETCH(oldVel, sortedIndex);       // see particles_kernel.cuh
-		/*float dens = FETCH(oldDens, sortedIndex);*/
-		//float pres = FETCH(oldPres, sortedIndex);
-		//float4 forces = FETCH(oldForces, sortedIndex);
-		/*float4 col = FETCH(oldCol, sortedIndex);*/
-
+		
 		sortedPos[index] = pos;
 		sortedVel[index] = vel;
-		/*sortedDens[index] = dens;*/
-		//sortedPres[index] = pres;
-		//sortedForces[index] = forces;
-		/*sortedCol[index] = col;*/
 	}
 }
 
@@ -241,8 +239,6 @@ __device__ float computeCellDensity(int *nb, int3 gridPos, unsigned int index, f
 	float dens = 0.f;
 	float3 pos1 = make_float3(pos.x, pos.y, pos.z);
 
-	int k = 0;
-
 	if (startIndex != 0xffffffff)
 	{ 
 		unsigned int endIndex = FETCH(cellEnd, gridHash);
@@ -255,10 +251,8 @@ __device__ float computeCellDensity(int *nb, int3 gridPos, unsigned int index, f
 				if(length(pos1-pos2) < sph_params.interactionRadius)
 				{
 					dens += sph_params.particleMass * Wdefault(pos1-pos2, sph_params.interactionRadius, sph_params.kpoly);
-					//*nb = *nb + 1;
 				}
 			}
-			//k++;
 		}
 	}
 	return dens;
@@ -277,7 +271,7 @@ void computeDensityPressure(
               unsigned int   *cellEnd,
               unsigned int    numParticles)
 {
-    unsigned int index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if (index >= numParticles) return;
 
@@ -307,7 +301,7 @@ void computeDensityPressure(
 				dens += computeCellDensity(&nbVois, neighbourPos, originalIndex, pos, oldPos, cellStart, cellEnd);
             }
         }
-    }
+    } 
 
 	//if (nbVois > 40) printf("nbVois too large : %5d\n", nbVois ); ;
 
@@ -389,7 +383,7 @@ void computeForces(
               unsigned int   *cellEnd,
               unsigned int    numParticles)
 {
-	unsigned int index = __mul24(blockIdx.x,blockDim.x) + threadIdx.x;
+    unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if (index >= numParticles) return;
 
@@ -439,4 +433,176 @@ void computeForces(
 	oldForces[originalIndex] = res;
 }
 
+/*******************
+*  PCISPH COMPUTE  *
+********************/
+
+__device__ float PciComputeCellDensity(int3 gridPos, unsigned int index, float3 pos, float4 *oldPos, unsigned int *cellStart, unsigned int *cellEnd)
+{
+    unsigned int gridHash = calcGridHash(gridPos);
+	unsigned int startIndex = FETCH(cellStart, gridHash);
+
+	float dens = 0.f;
+	float3 pos1 = make_float3(pos.x, pos.y, pos.z);
+
+	if (startIndex != 0xffffffff)
+	{ 
+		unsigned int endIndex = FETCH(cellEnd, gridHash);
+
+        for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			if(j != index)
+			{
+				float3 pos2 = make_float3(FETCH(oldPos, j));
+				if(length(pos1-pos2) < sph_params.interactionRadius)
+				{
+					dens += sph_params.particleMass * Wdefault(pos1-pos2, sph_params.interactionRadius, sph_params.kpoly);
+				}
+			}
+		}
+	}
+	return dens;
+}
+
+__device__ float3 PciComputeViscCell(
+		int3 gridPos,
+		unsigned int index,
+		float3  pos,
+		float3  vel,
+		float   dens,
+		float4* oldPos,
+		float*  oldDens,
+		float4* oldVel,
+		unsigned int *cellStart,
+		unsigned int *cellEnd
+		)
+{
+	unsigned int gridHash = calcGridHash(gridPos);
+	unsigned int startIndex = FETCH(cellStart, gridHash);
+
+	float3 pos1 = pos;
+	float3 vel1 = vel;
+	float3 viscCell = make_float3(0.f,0.f,0.f);
+
+	if (startIndex != 0xffffffff)
+	{ 
+		unsigned int endIndex = FETCH(cellEnd, gridHash);
+
+        for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			if(j != index)
+			{
+				float m2 = sph_params.particleMass;
+				float ir = sph_params.interactionRadius;
+
+				float3 pos2 = make_float3(FETCH(oldPos, j));
+				float dens2 = FETCH(oldDens, j);
+				float pres2 = FETCH(oldPres, j);
+				float3 vel2 = make_float3(FETCH(oldVel, j));
+
+				float3 p1p2 = pos1-pos2;
+				float3 v1v2 = vel1-vel2;
+
+				float3 kvisco_grad = Wviscosity_grad(p1p2, ir, sph_params.kvisc_grad, sph_params.kvisc_denum);
+
+				if (length(p1p2) < ir)
+				{
+					float a = dot(p1p2, kvisco_grad);
+					float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
+					viscCell = viscCell + m2/dens2  * v1v2 * (a/b);
+				}
+			}
+		}
+	}
+	return viscCell;
+}
+
+__global__ void PciPredictPosVel(
+		float4 *oldPos,
+		float4 *oldVel,
+		float *oldDens,
+		float *oldPres,
+		float4 *oldForces,
+		float4 *oldCol,
+		float4 *oldPosStar,
+		float4 *oldVelStar,
+		float *oldDensStar,
+		float *oldDensError,
+		unsigned int  *gridParticleIndex,
+		unsigned int  *cellStart,
+		unsigned int  *cellEnd,
+		unsigned int   numParticles
+		)
+{
+	unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if (index >= numParticles) return;
+
+	unsigned int originalIndex = gridParticleIndex[index];
+
+    // read particle data from sorted arrays
+    float3 pos = make_float3(FETCH(oldPos, originalIndex));
+    float3 vel = make_float3(FETCH(oldVel, originalIndex));
+	float m1 = sph_params.particleMass;
+	float dt = sph_params.timestep;
+
+    // get address in grid
+    int3 gridPos = calcGridPos(pos);
+
+    /*********************
+	*  conpute density  *
+	*********************/
+    float dens = 0.f;
+    for (int z=-1; z<=1; z++)
+    {
+        for (int y=-1; y<=1; y++)
+        {
+            for (int x=-1; x<=1; x++)
+            {
+                int3 neighbourPos = gridPos + make_int3(x, y, z);
+				dens += PciComputeCellDensity(neighbourPos, originalIndex, pos, oldPos, cellStart, cellEnd);
+            }
+        }
+    } 
+
+    // write new velocity back to original unsorted location
+    oldDens[originalIndex] = dens;
+	__syncthreads();
+
+	/***********************
+	*  compute viscosity  *
+	***********************/
+	float3 fvisc = make_float3(0.f, 0.f, 0.f);
+	for (int z=-1; z<=1; z++)
+    {
+        for (int y=-1; y<=1; y++)
+        {
+            for (int x=-1; x<=1; x++)
+            {
+                int3 neighbourPos = gridPos + make_int3(x, y, z);
+				fvisc = fvisc + PciComputeViscCell(neighbourPos, originalIndex, pos, vel, dens, oldPos, oldDens, oldVel, cellStart, cellEnd);
+            }
+        }
+    } 
+
+	__syncthreads();
+
+	/***************************
+	*  COMPUTE POS* and VEL*  *
+	***************************/
+	//external forces
+	float3 fext = m1*make_float3(0.f,-9.81f,0.f);
+	oldForces[originalIndex] = make_float4(fext.x, fext.y, fext.z, 0.f);
+
+	//intermediate vel and pos
+	float3 vs = make_float3(oldVel[originalIndex]) + dt* ( (fext+fvisc) / m1);
+	oldVelStar[originalIndex] = make_float4(vs.x, vs.y, vs.z, 0.f);
+
+	float3 accs = dt*vs;
+	float3 posstar = make_float3(oldPos[originalIndex]) + accs;
+	oldPosStar[originalIndex] = make_float4(posstar.x, posstar.y, posstar.z, 0.f);
+}
+
 #endif /* ifndef _PARTICLES_KERNEL_IMPL_CUH */
+
+
