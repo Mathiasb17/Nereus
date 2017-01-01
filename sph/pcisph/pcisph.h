@@ -35,6 +35,11 @@ private:
 	float* m_dposstar;
 	float* m_ddensstar;
 	float* m_ddenserror;
+
+	float* m_dSortedVelstar;
+	float* m_dSortedPosstar;
+	float* m_dSortedDensstar;
+	float* m_dSortedDenserror;
 };
 
 } /* CFD */ 

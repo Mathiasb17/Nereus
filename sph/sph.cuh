@@ -81,6 +81,7 @@ extern "C"
                  unsigned int   numCells);
 
 	void computePciDensityPressure(
+			SphSimParams *hostParams,
 			float* sortedPos,
 			float* sortedVel,
 			float* sortedDens,
@@ -96,7 +97,6 @@ extern "C"
 			unsigned int  *cellEnd,
 			unsigned int   numParticles,
 			unsigned int   numCells);
-
 
 	float maxDensity(float* dDensities, unsigned int numParticles);
 

@@ -73,7 +73,6 @@ void SPH::_intialize()
 	/*******************
 	 *  HOST MEM INIT  *
 	 *******************/
-	
 	cudaMallocHost((void**)&m_pos, memSize);
 	cudaMallocHost((void**)&m_vel, memSize);
 	cudaMallocHost((void**)&m_density, memSizeFloat);
@@ -91,7 +90,6 @@ void SPH::_intialize()
 	/******************
 	 *  GPU MEM INIT  *
 	 ******************/
-	
 	allocateArray((void **)&m_dpos, memSize);
 	allocateArray((void **)&m_dvel, memSize);
 	allocateArray((void **)&m_ddensity, memSizeFloat);

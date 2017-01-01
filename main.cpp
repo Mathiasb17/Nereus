@@ -16,6 +16,7 @@
 #include <iostream>
 
 #include "sph.h"
+#include "pcisph.h"
 
 /**********************************************************************
  *                WINDOW AND MOUSE/KEYBOARD PARAMETERS                *
@@ -175,7 +176,7 @@ void glEnableCapabilities()
 	glEnable(GL_POINT_SPRITE);
 	glEnable(GL_SMOOTH);
 	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);
-	glClearColor(0,0,0,1);
+	glClearColor(1,1,1,1);
 }
 
 void getNewVbo(GLenum target, GLuint *newVbo, unsigned int bufferSize, const GLvoid* data, GLenum usage)
@@ -463,7 +464,7 @@ int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.0f, -.2f, 0.0f,1.f), glm::vec4(1.0f, 1.6f, 2.0f, 0.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(glm::vec4(0.0f, -.2f, 0.0f,1.f), glm::vec4(0.2f, 0.2f, 0.2f, 0.f), glm::vec4(0,0,0,0));
 	//sim_sph->generateParticleCube(glm::vec4(-0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 	//sim_sph->generateParticleCube(glm::vec4(0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 
@@ -498,7 +499,6 @@ int main(void)
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo_spheres_pos);
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos());
-		//glBufferData(vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
 
 		//step 1 : clear screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

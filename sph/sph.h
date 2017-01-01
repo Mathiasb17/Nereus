@@ -74,7 +74,6 @@ protected:
 	/********************
 	 *  DEVICE MEMBERS  *
 	 ********************/
-
 	float* m_dpos;
 	float* m_dvel;
 	float* m_ddensity;

@@ -1,4 +1,3 @@
-
 #include <cstdlib>
 #include <cstdio>
 #include <string.h>
@@ -23,6 +22,28 @@
 
 extern "C"
 {
+
+	/********************************
+	*  SORT AND THRUST REDUCTIONS  *
+	********************************/
+	float maxDensity(float* dDensities, unsigned int numParticles)
+	{
+		
+		float res = *thrust::max_element(thrust::device, 
+				thrust::device_ptr<float>(dDensities),
+				thrust::device_ptr<float>(dDensities+numParticles)
+				);
+
+		return res;
+	}
+	
+	void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles)
+	{
+		thrust::sort_by_key(thrust::device_ptr<unsigned int>(dGridParticleHash),
+				thrust::device_ptr<unsigned int>(dGridParticleHash + numParticles),
+				thrust::device_ptr<unsigned int>(dGridParticleIndex));
+	}
+
 	void cudaInit(int argc, char **argv)
 	{
 		int devID;
@@ -306,6 +327,7 @@ extern "C"
 	*  COMPUTE PCISPH STUFF  *
 	**************************/
 	void computePciDensityPressure(
+			SphSimParams *hostParams,
 			float* sortedPos,
 			float* sortedVel,
 			float* sortedDens,
@@ -322,8 +344,9 @@ extern "C"
 			unsigned int   numParticles,
 			unsigned int   numCells)
 	{
-
-		//faire des cuda memcpy sur les accumulateurs
+		//faire des cuda memset sur les accumulateurs
+		cudaMemset(sortedDensError, 0, sizeof(float)*numParticles);
+		cudaMemset(sortedDensStar, 0, sizeof(float)*numParticles);
 
 #if USE_TEX
 		checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
@@ -339,12 +362,10 @@ extern "C"
 		checkCudaErrors(cudaBindTexture(0, oldDensStarTex, sortedDensStar, numParticles*sizeof(float)));
 		checkCudaErrors(cudaBindTexture(0, oldDensErrorTex, sortedDensError, numParticles*sizeof(float)));
 #endif
-
-		//float eta = 1000.f;
-
 		unsigned int numThreads, numBlocks;
 		computeGridSize(numParticles, 64, numBlocks, numThreads);
 
+		//1- first prediction using only external and viscosity forces
 		PciPredictPosVel<<<numBlocks, numThreads>>>(
 				(float4*)sortedPos,
 				(float4*)sortedVel,
@@ -365,24 +386,50 @@ extern "C"
 		float eta = 10.f;
 		float maxError = 0.f;
 
+		unsigned int nbIter = 0;
+
+		/*2- while error > treshold, recompute positions :*/
 		do {
-			
-		computeDensityPressure<<<numBlocks, numThreads>>>(
-				(float4*)sortedPosStar,               // input: sorted positions
-				(float4*)sortedVelStar,               // input: sorted velocities
-				sortedDensStar,               // input: sorted velocities
-				sortedPres,               // input: sorted velocities
-				(float4*)sortedForces,            // input: sorted velocities
-				(float4*)sortedCol,               // input: sorted velocities
-				gridParticleIndex,    // input: sorted particle indices
-				cellStart,
-				cellEnd,
-				numParticles);
+			cudaMemset(sortedDensStar, 0, sizeof(float)*numParticles);
 
-		} while (maxError > eta);
+		   /* compute temporary densities and pressures*/
+			computeDensityPressure<<<numBlocks, numThreads>>>(
+					(float4*)sortedPosStar,               // input: sorted positions
+					(float4*)sortedVelStar,               // input: sorted velocities
+					sortedDensStar,               // input: sorted velocities
+					sortedPres,               // input: sorted velocities
+					(float4*)sortedForces,            // input: sorted velocities
+					(float4*)sortedCol,               // input: sorted velocities
+					gridParticleIndex,    // input: sorted particle indices
+					cellStart,
+					cellEnd,
+					numParticles);
 
+			//get max density error
+			float maxD = maxDensity(sortedDensStar, numParticles);
+			maxError = fabs(maxD-hostParams->restDensity);
 
+			/*recompute positions*/
+			PciPressurePosVelUpdate<<<numBlocks, numThreads>>>(
+					(float4*)sortedPos,
+					(float4*)sortedVel,
+					sortedDens,
+					sortedPres,
+					(float4*)sortedForces,
+					(float4*)sortedCol,
+					(float4*)sortedPosStar,
+					(float4*)sortedVelStar,
+					sortedDensStar,
+					sortedDensError,
+					gridParticleIndex,
+					cellStart,
+					cellEnd,
+					numParticles); 
+			nbIter++;
 
+		} while (maxError > eta && nbIter != 3);
+
+		//copy velocity and positions
 
 #if USE_TEX
 		checkCudaErrors(cudaUnbindTexture(oldPosTex));
@@ -398,29 +445,12 @@ extern "C"
 		checkCudaErrors(cudaUnbindTexture(oldDensStarTex));
 		checkCudaErrors(cudaUnbindTexture(oldDensErrorTex));
 #endif
+
+		cudaMemcpy(sortedPos,sortedPosStar,numParticles*sizeof(float4),cudaMemcpyDeviceToDevice);
+		cudaMemcpy(sortedVel,sortedVelStar,numParticles*sizeof(float4),cudaMemcpyDeviceToDevice);
+
+		/*printf("PERDOLIE\n");*/
 	}
 
-
-	/********************************
-	*  SORT AND THRUST REDUCTIONS  *
-	********************************/
-
-	float maxDensity(float* dDensities, unsigned int numParticles)
-	{
-		
-		float res = *thrust::max_element(thrust::device, 
-				thrust::device_ptr<float>(dDensities),
-				thrust::device_ptr<float>(dDensities+numParticles)
-				);
-
-		return res;
-	}
 	
-	void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles)
-	{
-		thrust::sort_by_key(thrust::device_ptr<unsigned int>(dGridParticleHash),
-				thrust::device_ptr<unsigned int>(dGridParticleHash + numParticles),
-				thrust::device_ptr<unsigned int>(dGridParticleIndex));
-	}
-
 }
