@@ -144,9 +144,6 @@ void PCISPH::update()
 	cudaMemcpy(m_dvel, m_vel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	setParameters(&m_params);
 
-	std::cout << " update pcisph !" << std::endl;
-	
-
 	calcHash( m_dGridParticleHash, m_dGridParticleIndex, m_dpos, m_numParticles);
 
 	sortParticles(m_dGridParticleHash, m_dGridParticleIndex, m_numParticles);
@@ -171,37 +168,37 @@ void PCISPH::update()
 		m_numParticles,
 		m_params.numCells);
 
-	computePciDensityPressure(
-			&m_params,
-			m_dSortedPos,
-			m_dSortedVel,
-			m_dSortedDens,
-			m_dSortedPress,
-			m_dSortedForces,
-			m_dSortedCol,
-			m_dSortedPosstar,
-			m_dSortedVelstar,
-			m_dSortedDensstar,
-			m_dSortedDenserror,
-			m_dGridParticleIndex,
-			m_dCellStart,
-			m_dCellEnd,
-			m_numParticles,
-			m_params.numCells);
-
-
-   /* computeDensityPressure(*/
+	//computePciDensityPressure(
+			//&m_params,
 			//m_dSortedPos,
 			//m_dSortedVel,
 			//m_dSortedDens,
 			//m_dSortedPress,
 			//m_dSortedForces,
 			//m_dSortedCol,
+			//m_dSortedPosstar,
+			//m_dSortedVelstar,
+			//m_dSortedDensstar,
+			//m_dSortedDenserror,
 			//m_dGridParticleIndex,
 			//m_dCellStart,
 			//m_dCellEnd,
 			//m_numParticles,
 			//m_params.numCells);
+
+
+	computeDensityPressure(
+			m_dSortedPos,
+			m_dSortedVel,
+			m_dSortedDens,
+			m_dSortedPress,
+			m_dSortedForces,
+			m_dSortedCol,
+			m_dGridParticleIndex,
+			m_dCellStart,
+			m_dCellEnd,
+			m_numParticles,
+			m_params.numCells);
 
 	integrateSystem( m_dSortedPos, m_dSortedVel, m_dSortedForces, m_params.timestep, m_numParticles);
 
