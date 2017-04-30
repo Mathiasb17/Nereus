@@ -28,7 +28,7 @@ SPH::SPH ():
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 250.f;
+	m_params.gasStiffness = 100.f;
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1E-4f;
@@ -137,6 +137,9 @@ void SPH::update()
 	cudaMemcpy(m_dpos, m_pos, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvel, m_vel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	setParameters(&m_params);
+
+	std::cout << " update sph !" << std::endl;
+	
 
 	calcHash( m_dGridParticleHash, m_dGridParticleIndex, m_dpos, m_numParticles);
 

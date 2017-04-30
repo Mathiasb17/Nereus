@@ -44,6 +44,9 @@ texture<unsigned int, 1, cudaReadModeElementType> cellEndTex;
 
 __constant__ SphSimParams sph_params;
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 struct integrate_functor
 {
     float deltaTime;
@@ -115,6 +118,9 @@ struct integrate_functor
     }
 };
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __device__ int3 calcGridPos(float3 p)
 {
     int3 gridPos;
@@ -125,6 +131,9 @@ __device__ int3 calcGridPos(float3 p)
     return gridPos;
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __device__ unsigned int calcGridHash(int3 gridPos)
 {
     gridPos.x = gridPos.x & (sph_params.gridSize.x-1);  // wrap grid, assumes size is power of 2
@@ -154,6 +163,9 @@ __global__ void calcHashD(unsigned int   *gridParticleHash,  // output
     gridParticleIndex[index] = index;
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        // output: cell start index
                                   unsigned int   *cellEnd,          // output: cell end index
                                   float4 *sortedPos,        // output: sorted positions
@@ -230,6 +242,9 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 *                      COMPUTE DENSITY PRESSURE                      *
 **********************************************************************/
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __device__ float computeCellDensity(int *nb, int3 gridPos, unsigned int index, float3 pos, float4 *oldPos, unsigned int *cellStart, unsigned int *cellEnd)
 {
     unsigned int gridHash = calcGridHash(gridPos);
@@ -257,6 +272,9 @@ __device__ float computeCellDensity(int *nb, int3 gridPos, unsigned int index, f
 	return dens;
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __global__
 void computeDensityPressure(
               float4 *oldPos,               // input: sorted positions
@@ -316,6 +334,9 @@ void computeDensityPressure(
 *                           COMPUTE FORCES                           *
 **********************************************************************/
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __device__ void computeCellForces(float3 *fpres, float3 *fvisc, float3 *fsurf, int3 gridPos, unsigned int index, float3 pos, float3 vel, float dens, float pres, float4* oldPos, float *oldDens, float* oldPres, float4* oldVel, unsigned int *cellStart, unsigned int *cellEnd)
 {
     unsigned int gridHash = calcGridHash(gridPos);
@@ -369,6 +390,9 @@ __device__ void computeCellForces(float3 *fpres, float3 *fvisc, float3 *fsurf, i
 	}
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __global__
 void computeForces(
               float4 *oldPos,               // input: sorted positions
@@ -436,6 +460,9 @@ void computeForces(
 *  PCISPH COMPUTE  *
 ********************/
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __device__ float PciComputeCellDensity(int3 gridPos, unsigned int index, float3 pos, float4 *oldPos, unsigned int *cellStart, unsigned int *cellEnd)
 {
     unsigned int gridHash = calcGridHash(gridPos);
@@ -463,6 +490,9 @@ __device__ float PciComputeCellDensity(int3 gridPos, unsigned int index, float3 
 	return dens;
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __device__ float3 PciComputeViscCell(
 		int3 gridPos,
 		unsigned int index,
@@ -498,7 +528,7 @@ __device__ float3 PciComputeViscCell(
 
 				float3 pos2 = make_float3(FETCH(oldPos, j));
 				float dens2 = FETCH(oldDens, j);
-				float pres2 = FETCH(oldPres, j);
+				/*float pres2 = FETCH(oldPres, j);*/
 				float3 vel2 = make_float3(FETCH(oldVel, j));
 
 				float3 p1p2 = pos1-pos2;
@@ -519,6 +549,9 @@ __device__ float3 PciComputeViscCell(
 	return viscCell;
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __global__ void PciPredictPosVel(
 		float4 *oldPos,
 		float4 *oldVel,
@@ -618,12 +651,14 @@ __global__ void PciPredictPosVel(
 	float3 accs = make_float3(dt*vs.x, dt*vs.y, dt*vs.z);
 	
 	float3 posstar = pos + accs;
-	float radius = sph_params.particleRadius;
 
 	oldVelStar[originalIndex] = make_float4(vs.x, vs.y, vs.z, 0.f);
 	oldPosStar[originalIndex] = make_float4(posstar.x, posstar.y, posstar.z, 1.f);
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __device__ float3 PciComputePresCell(
 		int3 gridPos,
 		unsigned int index,
@@ -676,6 +711,9 @@ __device__ float3 PciComputePresCell(
 	return presCell;
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 __global__ void PciPressurePosVelUpdate(
 		float4 *oldPos,
 		float4 *oldVel,

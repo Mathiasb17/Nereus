@@ -389,47 +389,48 @@ extern "C"
 		unsigned int nbIter = 0;
 
 		/*2- while error > treshold, recompute positions :*/
-		do {
-			cudaMemset(sortedDensStar, 0, sizeof(float)*numParticles);
+		/*do {*/
+			/*cudaMemset(sortedDensStar, 0, sizeof(float)*numParticles);*/
 
-		   /* compute temporary densities and pressures*/
-			computeDensityPressure<<<numBlocks, numThreads>>>(
-					(float4*)sortedPosStar,               // input: sorted positions
-					(float4*)sortedVelStar,               // input: sorted velocities
-					sortedDensStar,               // input: sorted velocities
-					sortedPres,               // input: sorted velocities
-					(float4*)sortedForces,            // input: sorted velocities
-					(float4*)sortedCol,               // input: sorted velocities
-					gridParticleIndex,    // input: sorted particle indices
-					cellStart,
-					cellEnd,
-					numParticles);
+		   /*[> compute temporary densities and pressures<]*/
+			/*computeDensityPressure<<<numBlocks, numThreads>>>(*/
+					/*(float4*)sortedPosStar,               // input: sorted positions*/
+					/*(float4*)sortedVelStar,               // input: sorted velocities*/
+					/*sortedDensStar,               // input: sorted velocities*/
+					/*sortedPres,               // input: sorted velocities*/
+					/*(float4*)sortedForces,            // input: sorted velocities*/
+					/*(float4*)sortedCol,               // input: sorted velocities*/
+					/*gridParticleIndex,    // input: sorted particle indices*/
+					/*cellStart,*/
+					/*cellEnd,*/
+					/*numParticles);*/
 
-			//get max density error
-			float maxD = maxDensity(sortedDensStar, numParticles);
-			maxError = fabs(maxD-hostParams->restDensity);
+			/*//get max density error*/
+			/*float maxD = maxDensity(sortedDensStar, numParticles);*/
+			/*maxError = fabs(maxD-hostParams->restDensity);*/
 
-			/*recompute positions*/
-			PciPressurePosVelUpdate<<<numBlocks, numThreads>>>(
-					(float4*)sortedPos,
-					(float4*)sortedVel,
-					sortedDens,
-					sortedPres,
-					(float4*)sortedForces,
-					(float4*)sortedCol,
-					(float4*)sortedPosStar,
-					(float4*)sortedVelStar,
-					sortedDensStar,
-					sortedDensError,
-					gridParticleIndex,
-					cellStart,
-					cellEnd,
-					numParticles); 
-			nbIter++;
+			/*[>recompute positions<]*/
+			/*PciPressurePosVelUpdate<<<numBlocks, numThreads>>>(*/
+					/*(float4*)sortedPos,*/
+					/*(float4*)sortedVel,*/
+					/*sortedDens,*/
+					/*sortedPres,*/
+					/*(float4*)sortedForces,*/
+					/*(float4*)sortedCol,*/
+					/*(float4*)sortedPosStar,*/
+					/*(float4*)sortedVelStar,*/
+					/*sortedDensStar,*/
+					/*sortedDensError,*/
+					/*gridParticleIndex,*/
+					/*cellStart,*/
+					/*cellEnd,*/
+					/*numParticles); */
+			/*nbIter++;*/
 
-		} while (maxError > eta && nbIter != 3);
+		/*} while (maxError > eta && nbIter != 3);*/
 
 		//copy velocity and positions
+		
 
 #if USE_TEX
 		checkCudaErrors(cudaUnbindTexture(oldPosTex));
