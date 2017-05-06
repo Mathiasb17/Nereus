@@ -1,0 +1,3 @@
+/home/mathias/Documents/sph_opengl/build/CMakeFiles/rebuild_cache.dir
+/home/mathias/Documents/sph_opengl/build/CMakeFiles/edit_cache.dir
+/home/mathias/Documents/sph_opengl/build/CMakeFiles/sph.dir

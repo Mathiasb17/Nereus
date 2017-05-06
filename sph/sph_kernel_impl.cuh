@@ -314,12 +314,12 @@ void computeDensityPressure(
             for (int x=-1; x<=1; x++)
             {
                 int3 neighbourPos = gridPos + make_int3(x, y, z);
-				//a optimiser !!!
 				dens += computeCellDensity(&nbVois, neighbourPos, originalIndex, pos, oldPos, cellStart, cellEnd);
             }
         }
     } 
 
+	/*printf("dens = %f\n", dens);*/
 	//if (nbVois > 40) printf("nbVois too large : %5d\n", nbVois ); ;
 
 	//compute Pressure
@@ -501,7 +501,6 @@ __device__ float3 PciComputeViscCell(
 		float   dens,
 		float4* oldPos,
 		float*  oldDens,
-		float*  oldPres,
 		float4* oldVel,
 		unsigned int *cellStart,
 		unsigned int *cellEnd
@@ -543,10 +542,89 @@ __device__ float3 PciComputeViscCell(
 
 					viscCell = viscCell + m2/dens2  * v1v2 * (a/b);
 				}
+				/*printf("viscCell = %8f %8f %8f\n", viscCell.x, viscCell.y, viscCell.z);*/
 			}
 		}
 	}
 	return viscCell;
+}
+
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__global__ void computeViscAndGravity(
+		float4* oldPos,
+		float4* oldVel,
+		float* oldDens,
+		float4* oldForces,
+		float4* oldCol,
+		float4* oldVelStar,
+		unsigned int *gridParticleIndex,
+		unsigned int *cellStart,
+		unsigned int *cellEnd,
+		unsigned int numParticles)
+{
+	unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    if (index >= numParticles) return;
+
+	unsigned int originalIndex = gridParticleIndex[index];
+
+	
+	/*******************
+	*  RETRIEVE DATA  *
+	*******************/
+    float3 pos = make_float3(FETCH(oldPos, originalIndex));
+    float3 vel = make_float3(FETCH(oldVel, originalIndex));
+    float dens = (FETCH(oldDens, originalIndex));
+
+	float m        = sph_params.particleMass;
+	float3 gravity = sph_params.gravity;
+	float dt       = sph_params.timestepl
+
+    int3 gridPos = calcGridPos(pos);
+
+	/*************************
+	*  1 - compute gravity  *
+	*************************/
+	/*printf("m = %f\n", m);*/
+	float3 force_gravity = m*gravity;
+	
+	/***************************
+	*  2 - compute viscosity  *
+	***************************/
+	float3 force_viscosity = make_float3(0.f, 0.f, 0.f);
+	for (int z=-1; z<=1; z++)
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				int3 neighbourPos = gridPos + make_int3(x, y, z);
+				force_viscosity += PciComputeViscCell(
+						gridPos,
+						originalIndex,
+						pos,
+						vel,
+						dens,
+						oldPos,
+						oldDens,
+						oldVel,
+						cellStart,
+						cellEnd
+						);
+			}
+		}
+	}
+
+	float3 f = force_gravity + force_viscosity;
+	float3 vel_temp = vel + dt*(f/m);
+
+	/*******************
+	*  WRITE RESULTS  *
+	*******************/
+	//TODO
+	float4 res = make_float4(f.x, f.y, f.z, 0);
+	oldForces[originalIndex] = res;
 }
 
 //====================================================================================================  
@@ -579,6 +657,8 @@ __global__ void PciPredictPosVel(
     // read particle data from sorted arrays
     float3 pos = make_float3(FETCH(oldPos, originalIndex));
     float3 vel = make_float3(FETCH(oldVel, originalIndex));
+    float dens = (FETCH(oldDens, originalIndex));
+    float pres = (FETCH(oldPres, originalIndex));
 
 	if (vel.x != vel.x || vel.y != vel.y || vel.z != vel.z)
 	{
@@ -587,73 +667,39 @@ __global__ void PciPredictPosVel(
 
 	float m1 = sph_params.particleMass;
 	float dt = sph_params.timestep;
+	float mu = sph_params.viscosity;
 
     // get address in grid
     int3 gridPos = calcGridPos(pos);
 
-    /*********************
-	*  compute density  *
-	*********************/
-    float dens = 0.f;
-    for (int z=-1; z<=1; z++)
-    {
-        for (int y=-1; y<=1; y++)
-        {
-            for (int x=-1; x<=1; x++)
-            {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);
-				dens += PciComputeCellDensity(neighbourPos, originalIndex, pos, oldPos, cellStart, cellEnd);
-            }
-        }
-    } 
-
-    // write new velocity back to original unsorted location
-    oldDens[originalIndex] = dens;
-	__syncthreads();
-
-	/***********************
-	*  compute viscosity  *
-	***********************/
+	/***********************************
+	*  TODO compute VISCOSITY FORCES  *
+	***********************************/
+	float3 fpres = make_float3(0.f, 0.f, 0.f);
 	float3 fvisc = make_float3(0.f, 0.f, 0.f);
+	float3 fsurf = make_float3(0.f, 0.f, 0.f);
+
 	for (int z=-1; z<=1; z++)
-    {
-        for (int y=-1; y<=1; y++)
-        {
-            for (int x=-1; x<=1; x++)
-            {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);
-				fvisc = fvisc + PciComputeViscCell(neighbourPos, originalIndex, pos, vel, dens, oldPos, oldDens, oldPres, oldVel, cellStart, cellEnd);
-            }
-        }
-    } 
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				int3 neighbourPos = gridPos + make_int3(x, y, z);
+				//a optimiser !!!
+				computeCellForces(&fpres, &fvisc, &fsurf, neighbourPos, originalIndex, pos, vel, dens, pres, oldPos, oldDens, oldPres, oldVel, cellStart, cellEnd);
+			}
+		}
+	}
 
-	fvisc = fvisc * 2.f;
-	fvisc = fvisc * sph_params.particleMass*sph_params.viscosity;
+	/*********************************
+	*  TODO compute GRAVITY FORCES  *
+	*********************************/
 
-	/*printf("dens = %5f\n", dens);*/
+	/**************************
+	*  TODO compute VELSTAR  *
+	**************************/
 
-	__syncthreads();
-
-	/***************************
-	*  COMPUTE POS* and VEL*  *
-	***************************/
-
-	/*printf("pos %5f %5f %5f\n", pos.x, pos.y, pos.z );*/
-
-	//external forces
-	float3 fext = m1*make_float3(0.f,-9.81f,0.f);
-	oldForces[originalIndex] = make_float4(fext.x, fext.y, fext.z, 0.f);
-
-	//intermediate vel and pos
-	float3 vs = vel + dt* ( (fext+fvisc) / m1);
-	oldForces[originalIndex] += make_float4(vs.x, vs.y, vs.z, 0.f);
-
-	float3 accs = make_float3(dt*vs.x, dt*vs.y, dt*vs.z);
-	
-	float3 posstar = pos + accs;
-
-	oldVelStar[originalIndex] = make_float4(vs.x, vs.y, vs.z, 0.f);
-	oldPosStar[originalIndex] = make_float4(posstar.x, posstar.y, posstar.z, 1.f);
 }
 
 //====================================================================================================  

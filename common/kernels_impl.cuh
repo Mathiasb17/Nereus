@@ -27,8 +27,6 @@ __device__ __host__ float Wdefault(float3 r, float h, float kpoly)
 
 	float b = pow((h * h - l_r * l_r), 3);
 
-	/*printf("%5.5f\n", kpoly*b );*/
-
 	return (kpoly * b);
 }
 

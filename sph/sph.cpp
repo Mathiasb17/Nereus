@@ -35,6 +35,9 @@ SPH::SPH ():
 	m_params.viscosity = 0.002f;
 	m_params.surfaceTension = 0.10;
 	m_params.interactionRadius = 0.0457f;
+	m_params.gravity.x = 0.f;
+	m_params.gravity.y = -9.81f;
+	m_params.gravity.z = 0.f;
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	/*********************

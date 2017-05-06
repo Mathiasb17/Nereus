@@ -26,6 +26,10 @@ extern "C"
 	/********************************
 	*  SORT AND THRUST REDUCTIONS  *
 	********************************/
+
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	float maxDensity(float* dDensities, unsigned int numParticles)
 	{
 		
@@ -37,6 +41,9 @@ extern "C"
 		return res;
 	}
 	
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles)
 	{
 		thrust::sort_by_key(thrust::device_ptr<unsigned int>(dGridParticleHash),
@@ -44,6 +51,9 @@ extern "C"
 				thrust::device_ptr<unsigned int>(dGridParticleIndex));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void cudaInit(int argc, char **argv)
 	{
 		int devID;
@@ -58,43 +68,67 @@ extern "C"
 		}
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void cudaGLInit(int argc, char **argv)
 	{
 		// use command-line specified CUDA device, otherwise use device with highest Gflops/s
 		findCudaGLDevice(argc, (const char **)argv);
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void allocateArray(void **devPtr, size_t size)
 	{
 		checkCudaErrors(cudaMalloc(devPtr, size));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void freeArray(void *devPtr)
 	{
 		checkCudaErrors(cudaFree(devPtr));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void threadSync()
 	{
 		checkCudaErrors(cudaDeviceSynchronize());
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void copyArrayToDevice(void *device, const void *host, int offset, int size)
 	{
 		checkCudaErrors(cudaMemcpy((char *) device + offset, host, size, cudaMemcpyHostToDevice));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void registerGLBufferObject(unsigned int vbo, struct cudaGraphicsResource **cuda_vbo_resource)
 	{
 		checkCudaErrors(cudaGraphicsGLRegisterBuffer(cuda_vbo_resource, vbo,
 					cudaGraphicsMapFlagsNone));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void unregisterGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource)
 	{
 		checkCudaErrors(cudaGraphicsUnregisterResource(cuda_vbo_resource));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void *mapGLBufferObject(struct cudaGraphicsResource **cuda_vbo_resource)
 	{
 		void *ptr;
@@ -105,11 +139,17 @@ extern "C"
 		return ptr;
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource)
 	{
 		checkCudaErrors(cudaGraphicsUnmapResources(1, &cuda_vbo_resource, 0));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void copyArrayFromDevice(void *host, const void *device,
 			struct cudaGraphicsResource **cuda_vbo_resource, int size)
 	{
@@ -126,18 +166,27 @@ extern "C"
 		}
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void setParameters(SphSimParams *hostParams)
 	{
 		// copy parameters to constant memory
 		checkCudaErrors(cudaMemcpyToSymbol(sph_params, hostParams, sizeof(SphSimParams)));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	//Round a / b to nearest higher integer value
 	unsigned int iDivUp(unsigned int a, unsigned int b)
 	{
 		return (a % b != 0) ? (a / b + 1) : (a / b);
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	// compute grid and thread block size for a given number of elements
 	void computeGridSize(unsigned int n, unsigned int blockSize, unsigned int &numBlocks, unsigned int &numThreads)
 	{
@@ -145,6 +194,9 @@ extern "C"
 		numBlocks = iDivUp(n, numThreads);
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void integrateSystem(float *pos,
 			float *vel,
 			float *forces,
@@ -161,6 +213,9 @@ extern "C"
 				integrate_functor(deltaTime));
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	void calcHash(unsigned int  *gridParticleHash,
 			unsigned int  *gridParticleIndex,
 			float *pos,
@@ -179,6 +234,9 @@ extern "C"
 		getLastCudaError("Kernel execution failed");
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	/*********************
 	*  REORDERING CALL  *
 	*********************/
@@ -247,6 +305,9 @@ extern "C"
 #endif
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	/******************************
 	*  SPH COMPUTATION WITH EOS  *
 	******************************/
@@ -323,6 +384,9 @@ extern "C"
 #endif
 	}
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 	/**************************
 	*  COMPUTE PCISPH STUFF  *
 	**************************/
@@ -344,10 +408,6 @@ extern "C"
 			unsigned int   numParticles,
 			unsigned int   numCells)
 	{
-		//faire des cuda memset sur les accumulateurs
-		cudaMemset(sortedDensError, 0, sizeof(float)*numParticles);
-		cudaMemset(sortedDensStar, 0, sizeof(float)*numParticles);
-
 #if USE_TEX
 		checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
 		checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
@@ -361,76 +421,70 @@ extern "C"
 		checkCudaErrors(cudaBindTexture(0, oldVelStarTex, sortedVelStar, numParticles*sizeof(float4)));
 		checkCudaErrors(cudaBindTexture(0, oldDensStarTex, sortedDensStar, numParticles*sizeof(float)));
 		checkCudaErrors(cudaBindTexture(0, oldDensErrorTex, sortedDensError, numParticles*sizeof(float)));
+
 #endif
+
+		// thread per particle
 		unsigned int numThreads, numBlocks;
 		computeGridSize(numParticles, 64, numBlocks, numThreads);
 
-		//1- first prediction using only external and viscosity forces
-		PciPredictPosVel<<<numBlocks, numThreads>>>(
-				(float4*)sortedPos,
-				(float4*)sortedVel,
-				sortedDens,
-				sortedPres,
-				(float4*)sortedForces,
-				(float4*)sortedCol,
-				(float4*)sortedPosStar,
-				(float4*)sortedVelStar,
-				sortedDensStar,
-				sortedDensError,
+		// execute the kernel
+		computeDensityPressure<<< numBlocks, numThreads >>>(
+				(float4 *)sortedPos,
+				(float4 *)sortedVel,
+				(float *)sortedDens,
+				(float *)sortedPres,
+				(float4 *)sortedForces,
+				(float4 *)sortedCol,
 				gridParticleIndex,
 				cellStart,
 				cellEnd,
-				numParticles
-		);
+				numParticles);
 
-		float eta = 10.f;
-		float maxError = 0.f;
+		cudaDeviceSynchronize();
 
-		unsigned int nbIter = 0;
+		/***********************************************
+		 *  2 - COMPUTE FORCES EXCEPT PRESSURE FORCES  *
+		 ***********************************************/
+		computeViscAndGravity<<< numBlocks, numThreads >>>(
+				(float4*)sortedPos,
+				(float4*)sortedVel,
+				sortedDens,
+				(float4*)sortedForces,
+				(float4*)sortedCol,
+				gridParticleIndex,
+				cellStart,
+				cellEnd,
+				numParticles);
 
-		/*2- while error > treshold, recompute positions :*/
-		/*do {*/
-			/*cudaMemset(sortedDensStar, 0, sizeof(float)*numParticles);*/
+		/*******************************************
+		 * 3- COMPUTE NEW DENSITY AND SOLVE FOR PPE *
+		 *******************************************/
 
-		   /*[> compute temporary densities and pressures<]*/
-			/*computeDensityPressure<<<numBlocks, numThreads>>>(*/
-					/*(float4*)sortedPosStar,               // input: sorted positions*/
-					/*(float4*)sortedVelStar,               // input: sorted velocities*/
-					/*sortedDensStar,               // input: sorted velocities*/
-					/*sortedPres,               // input: sorted velocities*/
-					/*(float4*)sortedForces,            // input: sorted velocities*/
-					/*(float4*)sortedCol,               // input: sorted velocities*/
-					/*gridParticleIndex,    // input: sorted particle indices*/
-					/*cellStart,*/
-					/*cellEnd,*/
-					/*numParticles);*/
+		/*********************************
+		 *  4 - COMPUTE PRESSURE FORCES  *
+		 *********************************/
 
-			/*//get max density error*/
-			/*float maxD = maxDensity(sortedDensStar, numParticles);*/
-			/*maxError = fabs(maxD-hostParams->restDensity);*/
+		/*******************
+		 *  5 - INTEGRATE  *
+		 *******************/
 
-			/*[>recompute positions<]*/
-			/*PciPressurePosVelUpdate<<<numBlocks, numThreads>>>(*/
-					/*(float4*)sortedPos,*/
-					/*(float4*)sortedVel,*/
-					/*sortedDens,*/
-					/*sortedPres,*/
-					/*(float4*)sortedForces,*/
-					/*(float4*)sortedCol,*/
-					/*(float4*)sortedPosStar,*/
-					/*(float4*)sortedVelStar,*/
-					/*sortedDensStar,*/
-					/*sortedDensError,*/
-					/*gridParticleIndex,*/
-					/*cellStart,*/
-					/*cellEnd,*/
-					/*numParticles); */
-			/*nbIter++;*/
 
-		/*} while (maxError > eta && nbIter != 3);*/
+		/*computeForces<<< numBlocks, numThreads >>>(*/
+			  /*(float4*) sortedPos,               // input: sorted positions*/
+			  /*(float4*) sortedVel,               // input: sorted velocities*/
+			  /*(float*) sortedDens,               // input: sorted velocities*/
+			  /*(float*) sortedPres,               // input: sorted velocities*/
+			  /*(float4*) sortedForces,            // input: sorted velocities*/
+			  /*(float4*) sortedCol,               // input: sorted velocities*/
+			  /*gridParticleIndex,    // input: sorted particle indices*/
+			  /*cellStart,*/
+			  /*cellEnd,*/
+			  /*numParticles);*/
 
-		//copy velocity and positions
-		
+
+		// check if kernel invocation generated an error
+		getLastCudaError("Kernel execution failed");
 
 #if USE_TEX
 		checkCudaErrors(cudaUnbindTexture(oldPosTex));
@@ -445,13 +499,10 @@ extern "C"
 		checkCudaErrors(cudaUnbindTexture(oldVelStarTex));
 		checkCudaErrors(cudaUnbindTexture(oldDensStarTex));
 		checkCudaErrors(cudaUnbindTexture(oldDensErrorTex));
+
 #endif
-
-		cudaMemcpy(sortedPos,sortedPosStar,numParticles*sizeof(float4),cudaMemcpyDeviceToDevice);
-		cudaMemcpy(sortedVel,sortedVelStar,numParticles*sizeof(float4),cudaMemcpyDeviceToDevice);
-
-		/*printf("PERDOLIE\n");*/
 	}
-
-	
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 }
