@@ -463,7 +463,7 @@ int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(1.0f, 1.0f, 1.0f, 0.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(glm::vec4(0.5f, 0.0f, 0.0f,1.f), glm::vec4(1.0f, 2.0f, 2.0f, 0.f), glm::vec4(0,0,0,0));
 	//sim_sph->generateParticleCube(glm::vec4(-0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 	//sim_sph->generateParticleCube(glm::vec4(0.45f, 0.0f, 0.f,1.f), glm::vec4(0.4f, 0.4f, 0.4f, 0.f), glm::vec4(0,0,0,0));
 

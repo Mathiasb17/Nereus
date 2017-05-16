@@ -28,7 +28,8 @@ set(SOURCES ${SPH_FILES})
 
 #CUDA OPTIONS
 set(CUDA_64_BIT_DEVICE_CODE ON)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-gencode arch=compute_35,code=sm_35 -gencode arch=compute_52,code=sm_52 --use_fast_math --maxrregcount 192") 
+set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -D_FORCE_INLINES)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-gencode arch=compute_35,code=sm_35 -gencode arch=compute_52,code=sm_52 --use_fast_math -Xptxas -O3 --maxrregcount 40") 
 
 message(${CUDA_NVCC_FLAGS})
 

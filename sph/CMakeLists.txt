@@ -6,4 +6,5 @@ set(CUDA_SPH_FILES
 
 set(SPH_FILES
 	./sph/sph.cpp
+	./sph/iisph/iisph.cpp
 	)

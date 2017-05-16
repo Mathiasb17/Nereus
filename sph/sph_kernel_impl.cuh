@@ -247,24 +247,25 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 //====================================================================================================  
 __device__ float computeCellDensity(int *nb, int3 gridPos, unsigned int index, float3 pos, float4 *oldPos, unsigned int *cellStart, unsigned int *cellEnd)
 {
-    unsigned int gridHash = calcGridHash(gridPos);
-	unsigned int startIndex = FETCH(cellStart, gridHash);
+    const unsigned int gridHash = calcGridHash(gridPos);
+	const unsigned int startIndex = FETCH(cellStart, gridHash);
 
 	float dens = 0.f;
-	float3 pos1 = make_float3(pos.x, pos.y, pos.z);
+	const float3 pos1 = make_float3(pos.x, pos.y, pos.z);
 
 	if (startIndex != 0xffffffff)
 	{ 
-		unsigned int endIndex = FETCH(cellEnd, gridHash);
+		const unsigned int endIndex = FETCH(cellEnd, gridHash);
 
         for (unsigned int j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
 			{
-				float3 pos2 = make_float3(FETCH(oldPos, j));
-				if(length(pos1-pos2) < sph_params.interactionRadius)
+				const float3 pos2 = make_float3(FETCH(oldPos, j));
+				const float3 p1p2 = pos1 - pos2;
+				if(length(p1p2) < sph_params.interactionRadius)
 				{
-					dens += sph_params.particleMass * Wdefault(pos1-pos2, sph_params.interactionRadius, sph_params.kpoly);
+					dens += sph_params.particleMass * Wdefault(p1p2, sph_params.interactionRadius, sph_params.kpoly);
 				}
 			}
 		}
@@ -288,22 +289,21 @@ void computeDensityPressure(
               unsigned int   *cellEnd,
               unsigned int    numParticles)
 {
-    unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if (index >= numParticles) return;
 
-	unsigned int originalIndex = gridParticleIndex[index];
+	const unsigned int originalIndex = gridParticleIndex[index];
 
     // read particle data from sorted arrays
-    float3 pos = make_float3(FETCH(oldPos, originalIndex));
-    float3 vel = make_float3(FETCH(oldVel, originalIndex));
+    const float3 pos = make_float3(FETCH(oldPos, originalIndex));
+    const float3 vel = make_float3(FETCH(oldVel, originalIndex));
 
     // get address in grid
-    int3 gridPos = calcGridPos(pos);
+    const int3 gridPos = calcGridPos(pos);
 
     // examine neighbouring cells
     float dens = 0.f;
-
 	int nbVois = 0;
 
 	//compute pressure
@@ -313,7 +313,7 @@ void computeDensityPressure(
         {
             for (int x=-1; x<=1; x++)
             {
-                int3 neighbourPos = gridPos + make_int3(x, y, z);
+                const int3 neighbourPos = gridPos + make_int3(x, y, z);
 				dens += computeCellDensity(&nbVois, neighbourPos, originalIndex, pos, oldPos, cellStart, cellEnd);
             }
         }
@@ -323,7 +323,7 @@ void computeDensityPressure(
 	//if (nbVois > 40) printf("nbVois too large : %5d\n", nbVois ); ;
 
 	//compute Pressure
-	float pressure = sph_params.gasStiffness * (powf(dens/sph_params.restDensity, 7) -1);
+	const float pressure = sph_params.gasStiffness * (powf(dens/sph_params.restDensity, 7) -1);
 
     // write new velocity back to original unsorted location
     oldDens[originalIndex] = dens;
@@ -339,48 +339,49 @@ void computeDensityPressure(
 //====================================================================================================  
 __device__ void computeCellForces(float3 *fpres, float3 *fvisc, float3 *fsurf, int3 gridPos, unsigned int index, float3 pos, float3 vel, float dens, float pres, float4* oldPos, float *oldDens, float* oldPres, float4* oldVel, unsigned int *cellStart, unsigned int *cellEnd)
 {
-    unsigned int gridHash = calcGridHash(gridPos);
-	unsigned int startIndex = FETCH(cellStart, gridHash);
+    const unsigned int gridHash = calcGridHash(gridPos);
+	const unsigned int startIndex = FETCH(cellStart, gridHash);
+
+	const float3 pos1 = make_float3(pos.x, pos.y, pos.z);
+	const float3 vel1 = make_float3(vel.x, vel.y, vel.z);
 
 	float3 forces = make_float3(0.f, 0.f, 0.f);
 	float3 forces_pres = make_float3(0.f, 0.f, 0.f);
 	float3 forces_visc = make_float3(0.f, 0.f, 0.f);
-	float3 pos1 = make_float3(pos.x, pos.y, pos.z);
-	float3 vel1 = make_float3(vel.x, vel.y, vel.z);
 
 	if (startIndex != 0xffffffff)
 	{ 
-		unsigned int endIndex = FETCH(cellEnd, gridHash);
+		const unsigned int endIndex = FETCH(cellEnd, gridHash);
 
         for (unsigned int j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
 			{
-				float m2 = sph_params.particleMass;
-				float ir = sph_params.interactionRadius;
+				const float m2 = sph_params.particleMass;
+				const float ir = sph_params.interactionRadius;
 
-				float3 pos2 = make_float3(FETCH(oldPos, j));
-				float dens2 = FETCH(oldDens, j);
-				float pres2 = FETCH(oldPres, j);
-				float3 vel2 = make_float3(FETCH(oldVel, j));
+				const float3 pos2 = make_float3(FETCH(oldPos, j));
+				const float dens2 = FETCH(oldDens, j);
+				const float pres2 = FETCH(oldPres, j);
+				const float3 vel2 = make_float3(FETCH(oldVel, j));
 
-				float3 p1p2 = pos1-pos2;
-				float3 v1v2 = vel1-vel2;
+				const float3 p1p2 = pos1-pos2;
+				const float3 v1v2 = vel1-vel2;
 
-				float d1sq = dens*dens;
-				float d2sq = dens2*dens2;
+				const float d1sq = dens*dens;
+				const float d2sq = dens2*dens2;
 
-				float kdefault = Wdefault(p1p2, ir, sph_params.kpoly);
-				float3 kdefault_grad = Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
-				float3 kpressure_grad = Wpressure_grad(p1p2, ir, sph_params.kpress_grad);
-				float3 kvisco_grad = Wviscosity_grad(p1p2, ir, sph_params.kvisc_grad, sph_params.kvisc_denum);
+				const float kdefault = Wdefault(p1p2, ir, sph_params.kpoly);
+				const float3 kdefault_grad = Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
+				const float3 kpressure_grad = Wpressure_grad(p1p2, ir, sph_params.kpress_grad);
+				const float3 kvisco_grad = Wviscosity_grad(p1p2, ir, sph_params.kvisc_grad, sph_params.kvisc_denum);
 
 				if (length(p1p2) < ir)
 				{
 					*fpres = *fpres + m2 * ( pres/d1sq + pres2/d2sq ) *kpressure_grad;
 
-					float a = dot(p1p2, kvisco_grad);
-					float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
+					const float a = dot(p1p2, kvisco_grad);
+					const float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
 					*fvisc = *fvisc + m2/dens2  * v1v2 * (a/b);
 
 					*fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;
@@ -406,22 +407,22 @@ void computeForces(
               unsigned int   *cellEnd,
               unsigned int    numParticles)
 {
-    unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if (index >= numParticles) return;
 
-	unsigned int originalIndex = gridParticleIndex[index];
+	const unsigned int originalIndex = gridParticleIndex[index];
 
     // read particle data from sorted arrays
-    float3 pos = make_float3(FETCH(oldPos, originalIndex));
-    float3 vel = make_float3(FETCH(oldVel, originalIndex));
-	float dens = FETCH(oldDens, originalIndex);
-	float pres = FETCH(oldPres, originalIndex);
+    const float3 pos = make_float3(FETCH(oldPos, originalIndex));
+    const float3 vel = make_float3(FETCH(oldVel, originalIndex));
+	const float dens = FETCH(oldDens, originalIndex);
+	const float pres = FETCH(oldPres, originalIndex);
 
-	float m1 = sph_params.particleMass;
+	const float m1 = sph_params.particleMass;
 
 	//grid address
-    int3 gridPos = calcGridPos(pos);
+    const int3 gridPos = calcGridPos(pos);
 
 	//accumulators
 	float3 fpres = make_float3(0.f, 0.f, 0.f);
@@ -434,7 +435,7 @@ void computeForces(
 		{
 			for (int x=-1; x<=1; x++)
 			{
-				int3 neighbourPos = gridPos + make_int3(x, y, z);
+				const int3 neighbourPos = gridPos + make_int3(x, y, z);
 				//a optimiser !!!
 				computeCellForces(&fpres, &fvisc, &fsurf, neighbourPos, originalIndex, pos, vel, dens, pres, oldPos, oldDens, oldPres, oldVel, cellStart, cellEnd);
 			}
@@ -451,13 +452,44 @@ void computeForces(
 	fvisc = (m1*sph_params.viscosity) * fvisc;
 
 	float3 f = fpres + fvisc + m1*make_float3(0,-9.81,0) + fsurf;
-
 	float4 res = make_float4(f.x, f.y, f.z, 0);
+
 	oldForces[originalIndex] = res;
 }
 
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+
+__global__ void iisph_compute_displacement_factor()
+{
+
+}
+
+__global__ void iisph_compute_advection_factor()
+{
+
+}
+
+__global__ void compute_sum_pressure_movement()
+{
+
+}
+
+__global__ void compute_pressure()
+{
+
+}
+
+__global__ void compute_predicted_density()
+{
+
+}
+
+__global__ void compute_density_error()
+{
+
+}
 
 #endif /* ifndef _PARTICLES_KERNEL_IMPL_CUH */
-
-
 
