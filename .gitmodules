@@ -1,0 +1,3 @@
+[submodule "external/sph_boundary_particles"]
+	path = external/sph_boundary_particles
+	url = https://github.com/mathiasb17/sph_boundary_particles

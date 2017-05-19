@@ -451,7 +451,7 @@ void computeForces(
 	fpres = -(m1 / dens) * fpres;
 	fvisc = (m1*sph_params.viscosity) * fvisc;
 
-	float3 f = fpres + fvisc + m1*make_float3(0,-9.81,0) + fsurf;
+	float3 f = fpres + fvisc + m1*sph_params.gravity + fsurf;
 	float4 res = make_float4(f.x, f.y, f.z, 0);
 
 	oldForces[originalIndex] = res;
