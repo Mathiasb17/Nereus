@@ -5,6 +5,21 @@ project(sph)
 set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_COMPILER "/usr/bin/g++-4.9")
 
+
+#BEGIN SUBMODULES DEPENDENCIES
+if (NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/sph_boundary_particles/src")
+  message(FATAL_ERROR "The sph boundary particles dependency repositories (GLFW, etc.) are missing! "
+    "You probably did not clone the project with --recursive. It is possible to recover "
+    "by calling \"git submodule update --init --recursive\"")
+endif()
+
+include_directories(./external/sph_boundary_particles/include)
+
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/external/sph_boundary_particles" "ext_build/sph_boundary_particles")
+
+#END SUBMODULES DEPENDENCIES
+
+
 #for autocomplete database
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -41,9 +56,9 @@ CUDA_COMPILE(CUDA_OBJ ${CUDA_SOURCES})
 
 add_executable(sph main.cpp ${SPH_FILES} ${CUDA_OBJ})
 
-#target_include_directories(sph ${OPENGL_INCLUDE_DIR})
 target_link_libraries(sph ${OPENGL_gl_LIBRARY})
 target_link_libraries(sph ${OPENGL_LIBRARIES})
 target_link_libraries(sph glfw ${GLFW_LIBRARIES})
 target_link_libraries(sph ${GLEW_LIBRARIES})
 target_link_libraries(sph ${CUDA_LIBRARIES})
+target_link_libraries(sph ss)

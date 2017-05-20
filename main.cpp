@@ -1,6 +1,11 @@
 #define GLM_FORCE_RADIANS
 
+#include "sph.h"
 #include "common/colored_output.h"
+
+#include <iostream>
+#include <sstream>
+#include <vector>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -11,11 +16,10 @@
 #endif /* ifndef GLM_SWIZZLE */
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/glm.hpp>
-
 #include <glm/gtc/matrix_transform.hpp>
-#include <iostream>
 
-#include "sph.h"
+#include <sph_boundary_particles/ss.h>
+#include <sph_boundary_particles/boundary_forces.h>
 
 /**********************************************************************
  *                WINDOW AND MOUSE/KEYBOARD PARAMETERS                *
@@ -440,7 +444,7 @@ glm::vec4 getCamMove(GLFWwindow *win, glm::vec4 camDir, glm::vec4 camUp)
 *                            FPS COUNTER                             *
 **********************************************************************/
 double lastTime = time(NULL);
-void displayFPS()
+void displayFPS(GLFWwindow *window)
 {
 	static int nbFrame = 0;
 	time_t currentTime;
@@ -449,7 +453,10 @@ void displayFPS()
 	nbFrame++;
 	if (currentTime - lastTime >= 1.0)
 	{
-		std::cout << "fps = " << (float)nbFrame << std::endl;	
+		std::ostringstream ss;
+		ss << "SPH Simulator - FPS = " << (float)nbFrame;
+		//std::cout << "fps = " << (float)nbFrame << std::endl;	
+		glfwSetWindowTitle(window, ss.str().c_str());
 		nbFrame = 0;
 		lastTime = currentTime;
 	}
@@ -464,6 +471,32 @@ int main(void)
 	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
 	sim_sph->generateParticleCube(glm::vec4(0.5f, 0.0f, 0.0f,1.f), glm::vec4(1.0f, 1.0f, 1.0f, 0.f), glm::vec4(0,0,0,0));
+
+	//make boundary particles
+	std::vector<glm::vec4> bi;
+	std::vector<float> vbi;
+
+	std::cout << "boundary particles number " << bi.size() << std::endl;
+
+	sample_spheres::ss::sampleBox(bi, glm::vec3(-1, -1, -1), glm::vec3(2.f, 2.f, 2.f), 0.02 );
+	sample_spheres::boundary_forces::getVbi(vbi, bi, sim_sph->getInteractionRadius());
+
+	sim_sph->setBi((float*)bi.data());
+	sim_sph->setVbi(vbi.data());
+
+	sim_sph->updateGpuBoundaries();
+
+	for (auto i : vbi) 
+	{
+		if (i > 0.01) 
+		{
+			std::cout << i << std::endl;
+		}
+		
+	}
+
+	std::cout << "boundary particles number " << bi.size() << std::endl;
+	
 
 	//call to helper functions
 	initWindow();
@@ -492,7 +525,7 @@ int main(void)
 
 	while(!glfwWindowShouldClose(window))
 	{
-		displayFPS();
+		displayFPS(window);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo_spheres_pos);
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos());

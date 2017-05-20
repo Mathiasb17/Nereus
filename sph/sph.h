@@ -70,6 +70,11 @@ public:
 	void setViscosity(float new_viscosity){m_params.viscosity = new_viscosity;}
 	void setSurfaceTension(float new_surfacetension){m_params.surfaceTension = new_surfacetension;}
 
+	void setBi(float* bi){m_bi = bi;}
+	void setVbi(float* vbi){m_vbi = vbi;}
+
+	void updateGpuBoundaries();
+
 protected:
 	/********************
 	 *  DEVICE MEMBERS  *
@@ -93,6 +98,9 @@ protected:
 	unsigned int *m_dCellStart;
 	unsigned int *m_dCellEnd;
 
+	float* m_dbi;//gpu boundaries
+	float* m_dvbi;
+
 	/******************
 	 *  HOST MEMBERS  *
 	 ******************/
@@ -111,6 +119,9 @@ protected:
 	unsigned int m_numParticles;
 
 	SphSimParams m_params;
+
+	float* m_bi; //boundary particles
+	float* m_vbi;//boundary particles volume
 };
 
 } /*  CFD */ 
