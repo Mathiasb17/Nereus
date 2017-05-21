@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.5.1)
-project(sph)
 
-#c++ 11
+#c++ 11, always before project to avoid infinite loop
 set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_COMPILER "/usr/bin/g++-4.9")
 
+project(sph)
 
 #BEGIN SUBMODULES DEPENDENCIES
 if (NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/sph_boundary_particles/src")
@@ -13,9 +13,8 @@ if (NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/sph_boundary_particle
     "by calling \"git submodule update --init --recursive\"")
 endif()
 
+add_subdirectory("./external/sph_boundary_particles" "ext_build/sph_boundary_particles")
 include_directories(./external/sph_boundary_particles/include)
-
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/external/sph_boundary_particles" "ext_build/sph_boundary_particles")
 
 #END SUBMODULES DEPENDENCIES
 
@@ -25,6 +24,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 #maybe copy used files in project to avoid doing this horror
+
 include_directories(/usr/local/cuda-7.5/include/)
 include_directories(/usr/local/cuda-7.5/samples/common/inc)
 
