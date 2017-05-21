@@ -73,7 +73,9 @@ public:
 	void setBi(float* bi){m_bi = bi;}
 	void setVbi(float* vbi){m_vbi = vbi;}
 
-	void updateGpuBoundaries();
+	void setNumBoundaries(unsigned int nb){m_num_boundaries = nb;}
+
+	void updateGpuBoundaries(unsigned int nb_boundary_spheres);
 
 protected:
 	/********************
@@ -101,6 +103,13 @@ protected:
 	float* m_dbi;//gpu boundaries
 	float* m_dvbi;
 
+	float* m_dSortedbi;
+	float* m_dSortedVbi;
+
+	unsigned int* m_dGridBoundaryHash, *m_dGridBoundaryIndex;
+	unsigned int *m_dBoundaryCellStart;
+	unsigned int *m_dBoundaryCellEnd;
+
 	/******************
 	 *  HOST MEMBERS  *
 	 ******************/
@@ -122,6 +131,7 @@ protected:
 
 	float* m_bi; //boundary particles
 	float* m_vbi;//boundary particles volume
+	unsigned int m_num_boundaries;
 };
 
 } /*  CFD */ 

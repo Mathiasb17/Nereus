@@ -48,6 +48,18 @@ extern "C"
                   float *pos,
                   int    numParticles);
 
+	void reorderDataAndFindCellStartDBoundary(unsigned int *cellStart,
+											unsigned int *cellEnd,
+											float *sortedPos,
+											float *sortedVbi,
+											unsigned int *gridParticleHash,
+											unsigned int *gridParticleIndex,
+											float *oldPos,
+											float *oldVbi,
+											unsigned int numBoundaries,
+											unsigned int numCells
+											);
+
     void reorderDataAndFindCellStart(unsigned int  *cellStart,
                                      unsigned int  *cellEnd,
                                      float *sortedPos,

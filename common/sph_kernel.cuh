@@ -1,7 +1,7 @@
 #ifndef SPH_KERNEL_H
 #define SPH_KERNEL_H
 
-#define USE_TEX 0
+#define USE_TEX 1
 #if USE_TEX
 #define FETCH(t, i) tex1Dfetch(t##Tex, i)
 #else

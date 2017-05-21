@@ -34,9 +34,9 @@ SPH::SPH ():
 	m_params.gasStiffness = 200.f;
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1E-3f;
-	m_params.viscosity = 0.003f;
-	m_params.surfaceTension = 0.f;
+	m_params.timestep = 5E-4f;
+	m_params.viscosity = 0.002f;
+	m_params.surfaceTension = 0.000f;
 	m_params.interactionRadius = 0.0557f; //ref : 0.0457f
 
 	m_params.gravity.x = 0.f;
@@ -255,10 +255,27 @@ void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size, glm::vec4 vel)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void SPH::updateGpuBoundaries()
+void SPH::updateGpuBoundaries(unsigned int nb_boundary_spheres)
 {
 	cudaFree(m_dbi);
 	cudaFree(m_dvbi);
+
+	cudaMalloc((void**)&m_dSortedbi, 4*sizeof(float)*nb_boundary_spheres);
+	cudaMalloc((void**)&m_dSortedVbi, sizeof(float)*nb_boundary_spheres);
+
+	cudaMalloc((void**)&m_dbi, 4*sizeof(float)*nb_boundary_spheres);
+	cudaMalloc((void**)&m_dvbi, sizeof(float)*nb_boundary_spheres);
+
+	cudaMalloc((void**)&m_dGridBoundaryIndex, sizeof(unsigned int)*nb_boundary_spheres);
+	cudaMalloc((void**)&m_dGridBoundaryHash, sizeof(unsigned int)*nb_boundary_spheres);
+
+	cudaMemcpy(m_dbi, m_bi, 4*sizeof(float)*nb_boundary_spheres, cudaMemcpyHostToDevice);
+	cudaMemcpy(m_dvbi, m_vbi, sizeof(float)*nb_boundary_spheres, cudaMemcpyHostToDevice);
+
+	calcHash( m_dGridBoundaryHash, m_dGridBoundaryIndex, m_dbi, m_num_boundaries);
+	sortParticles(m_dGridBoundaryHash, m_dGridBoundaryIndex, m_num_boundaries);
+
+	//appeler le kernel de tri des particules de bord
 }
 
 } /* CFD */ 

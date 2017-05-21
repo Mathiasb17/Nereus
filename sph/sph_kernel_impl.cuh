@@ -36,9 +36,17 @@ texture<float, 1, cudaReadModeElementType> oldDensStarTex;
 texture<float, 1, cudaReadModeElementType> oldPresStarTex;
 texture<float, 1, cudaReadModeElementType> oldDensErrorTex;
 
+//boundaries
+texture<float4, 1, cudaReadModeElementType> oldBoundaryPosTex;
+texture<float, 1, cudaReadModeElementType> oldBoundaryVbiTex;
+
 texture<unsigned int, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellStartTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellEndTex;
+
+texture<unsigned int, 1, cudaReadModeElementType> gridBoundaryHashTex;
+texture<unsigned int, 1, cudaReadModeElementType> cellBoundaryStartTex;
+texture<unsigned int, 1, cudaReadModeElementType> cellBoundaryEndTex;
 
 #endif
 
@@ -161,6 +169,75 @@ __global__ void calcHashD(unsigned int   *gridParticleHash,  // output
     // store grid hash and particle index
     gridParticleHash[index] = hash;
     gridParticleIndex[index] = index;
+}
+
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__global__ void reorderDataAndFindCellStartDBoundary(unsigned int *cellBoundaryStart,
+												unsigned int * cellBoundaryEnd,
+												float4* sortedBoundaryPos,
+												float* sortedBoundaryVbi,
+												unsigned int *gridBoundaryHash,
+												unsigned int *gridBoundaryIndex,
+												float4* oldBoundaryPos,
+												float*  oldBoundaryVbi,
+												unsigned int numBoundaries)
+{
+	extern __shared__ unsigned int sharedHash[];
+	unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
+
+	unsigned int hash;
+
+	if (index < numBoundaries) 
+	{
+		hash = gridBoundaryHash[index];
+
+		// Load hash data into shared memory so that we can look
+		// at neighboring particle's hash value without loading
+		// two hash values per thread
+		sharedHash[threadIdx.x+1] = hash;
+
+		if (index > 0 && threadIdx.x == 0)
+		{
+			// first thread in block must load neighbor particle hash
+			sharedHash[0] = gridBoundaryHash[index-1];
+		}
+	}
+
+	__syncthreads();
+
+
+	if (index < numBoundaries)
+	{
+		//// If this particle has a different cell index to the previous
+        //// particle then it must be the first particle in the cell,
+        //// so store the index of this particle in the cell.
+        //// As it isn't the first particle, it must also be the cell end of
+        //// the previous particle's cell
+		
+		if (index == 0 || hash != sharedHash[threadIdx.x])
+		{
+			cellBoundaryStart[hash] = index;
+
+			if (index > 0)
+				cellBoundaryEnd[sharedHash[threadIdx.x]] = index;
+		}
+
+		if (index == numBoundaries - 1)
+		{
+			cellBoundaryEnd[hash] = index + 1;
+		}
+
+		// Now use the sorted index to reorder the pos and vel data
+		unsigned int sortedIndex = gridBoundaryIndex[index];
+		//TODO
+		float4 pos = FETCH(oldBoundaryPos, sortedIndex);       // macro does either global read or texture fetch
+		float vbi = FETCH(oldBoundaryVbi, sortedIndex);       // see particles_kernel.cuh
+		
+		/*sortedPos[index] = pos;*/
+		/*sortedVbi[index] = vbi;*/
+	}
 }
 
 //====================================================================================================  

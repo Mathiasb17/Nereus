@@ -470,7 +470,7 @@ int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.5f, 0.0f, 0.0f,1.f), glm::vec4(1.0f, 1.0f, 1.0f, 0.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(1.0f, 1.0f, 1.0f, 0.f), glm::vec4(0,0,0,0));
 
 	//make boundary particles
 	std::vector<glm::vec4> bi;
@@ -481,23 +481,15 @@ int main(void)
 	sample_spheres::ss::sampleBox(bi, glm::vec3(-1, -1, -1), glm::vec3(2.f, 2.f, 2.f), 0.02 );
 	sample_spheres::boundary_forces::getVbi(vbi, bi, sim_sph->getInteractionRadius());
 
+	sim_sph->setNumBoundaries(bi.size());
+
 	sim_sph->setBi((float*)bi.data());
 	sim_sph->setVbi(vbi.data());
 
-	sim_sph->updateGpuBoundaries();
-
-	for (auto i : vbi) 
-	{
-		if (i > 0.01) 
-		{
-			std::cout << i << std::endl;
-		}
-		
-	}
+	sim_sph->updateGpuBoundaries(bi.size());
 
 	std::cout << "boundary particles number " << bi.size() << std::endl;
 	
-
 	//call to helper functions
 	initWindow();
 	glfwSetKeyCallback(window, key_callback);
