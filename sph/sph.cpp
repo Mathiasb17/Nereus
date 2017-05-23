@@ -190,11 +190,17 @@ void SPH::update()
 			m_dSortedPress,
 			m_dSortedForces,
 			m_dSortedCol,
+			m_dSortedbi,
+			m_dSortedVbi,
 			m_dGridParticleIndex,
 			m_dCellStart,
 			m_dCellEnd,
+			m_dGridBoundaryIndex,
+			m_dBoundaryCellStart,
+			m_dBoundaryCellEnd,
 			m_numParticles,
-			m_params.numCells);
+			m_params.numCells,
+			m_num_boundaries);
 
 	integrateSystem( m_dSortedPos, m_dSortedVel, m_dSortedForces, m_params.timestep, m_numParticles);
 

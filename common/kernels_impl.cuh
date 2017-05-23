@@ -20,7 +20,7 @@ __device__ __host__ float Wdefault(float3 r, float h, float kpoly)
 {
 	float l_r = length(r);
 
-	if (l_r > h || l_r == 0)
+	if (l_r > h)
 	{
 		return 0.f ;
 	}

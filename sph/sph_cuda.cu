@@ -335,11 +335,17 @@ extern "C"
 			float *sortedPres,
 			float *sortedForces,
 			float *sortedCol,
+			float *sortedBoundaryPos,
+			float *sortedBoundaryVbi,
 			unsigned int  *gridParticleIndex,
 			unsigned int  *cellStart,
 			unsigned int  *cellEnd,
+			unsigned int *gridBoundaryIndex,
+			unsigned int *cellBoundaryStart,
+			unsigned int *cellBoundaryEnd,
 			unsigned int   numParticles,
-			unsigned int   numCells)
+			unsigned int   numCells,
+			unsigned int   numBoundaries)
 	{
 #if USE_TEX
 		checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
@@ -348,8 +354,16 @@ extern "C"
 		checkCudaErrors(cudaBindTexture(0, oldPresTex, sortedPres, numParticles*sizeof(float)));
 		checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForces, numParticles*sizeof(float4)));
 		checkCudaErrors(cudaBindTexture(0, oldColTex, sortedCol, numParticles*sizeof(float4)));
+
 		checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
 		checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
+
+		checkCudaErrors(cudaBindTexture(0, oldBoundaryPosTex, sortedBoundaryPos, numBoundaries*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldBoundaryVbiTex, sortedBoundaryVbi, numBoundaries*sizeof(float)));
+
+		//TODO missing cudamalloc in updateBoundary
+		/*checkCudaErrors(cudaBindTexture(0, cellBoundaryStartTex, cellBoundaryStart, numCells*sizeof(unsigned int)));*/
+		/*checkCudaErrors(cudaBindTexture(0, cellBoundaryEndTex, cellBoundaryEnd, numCells*sizeof(unsigned int)));*/
 #endif
 
 		// thread per particle
@@ -357,18 +371,35 @@ extern "C"
 		computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 		// execute the kernel
-		
-		computeDensityPressure<<< numBlocks, numThreads >>>(
+		computeDensityPressure<<<numBlocks, numThreads>>>(
 				(float4 *)sortedPos,
 				(float4 *)sortedVel,
-				(float *)sortedDens,
-				(float *)sortedPres,
+				(float  *)sortedDens,
+				(float  *)sortedPres,
 				(float4 *)sortedForces,
 				(float4 *)sortedCol,
-				gridParticleIndex,
+				(float4 *)sortedBoundaryPos,
+				(float  *)sortedBoundaryVbi,
+				gridParticleIndex,    // input: sorted particle indices
 				cellStart,
 				cellEnd,
-				numParticles);
+				gridBoundaryIndex,
+				cellBoundaryStart,
+				cellBoundaryEnd,
+				numParticles
+		);
+		
+		/*computeDensityPressure<<< numBlocks, numThreads >>>(*/
+				/*(float4 *)sortedPos,*/
+				/*(float4 *)sortedVel,*/
+				/*(float *)sortedDens,*/
+				/*(float *)sortedPres,*/
+				/*(float4 *)sortedForces,*/
+				/*(float4 *)sortedCol,*/
+				/*gridParticleIndex,*/
+				/*cellStart,*/
+				/*cellEnd,*/
+				/*numParticles);*/
 
 		cudaDeviceSynchronize();
 
@@ -398,6 +429,12 @@ extern "C"
 		checkCudaErrors(cudaUnbindTexture(cellStartTex));
 		checkCudaErrors(cudaUnbindTexture(cellEndTex));
 
+		checkCudaErrors(cudaUnbindTexture(oldBoundaryPosTex));
+		checkCudaErrors(cudaUnbindTexture(oldBoundaryVbiTex));
+
+		//TODO
+		/*checkCudaErrors(cudaUnbindTexture(cellBoundaryStartTex));*/
+		/*checkCudaErrors(cudaUnbindTexture(cellBoundaryEndTex));*/
 #endif
 	}
 }

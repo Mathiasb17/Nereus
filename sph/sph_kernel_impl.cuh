@@ -36,14 +36,13 @@ texture<float, 1, cudaReadModeElementType> oldDensStarTex;
 texture<float, 1, cudaReadModeElementType> oldPresStarTex;
 texture<float, 1, cudaReadModeElementType> oldDensErrorTex;
 
-//boundaries
-texture<float4, 1, cudaReadModeElementType> oldBoundaryPosTex;
-texture<float, 1, cudaReadModeElementType> oldBoundaryVbiTex;
-
 texture<unsigned int, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellStartTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellEndTex;
 
+//boundaries
+texture<float4, 1, cudaReadModeElementType> oldBoundaryPosTex;
+texture<float, 1, cudaReadModeElementType> oldBoundaryVbiTex;
 texture<unsigned int, 1, cudaReadModeElementType> gridBoundaryHashTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellBoundaryStartTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellBoundaryEndTex;
@@ -361,9 +360,14 @@ void computeDensityPressure(
               float *oldPres,               // input: sorted velocities
               float4 *oldForces,            // input: sorted velocities
               float4 *oldCol,               // input: sorted velocities
+			  float4 *oldBi,
+			  float  *oldVbi,
               unsigned int   *gridParticleIndex,    // input: sorted particle indices
               unsigned int   *cellStart,
               unsigned int   *cellEnd,
+			  unsigned int   *gridBoundaryIndex,
+			  unsigned int   *cellBoundaryStart,
+			  unsigned int   *cellBoundaryEnd,
               unsigned int    numParticles)
 {
     const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;

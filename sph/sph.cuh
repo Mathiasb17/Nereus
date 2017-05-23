@@ -79,18 +79,38 @@ extern "C"
                                      unsigned int   numParticles,
                                      unsigned int   numCells);
 
-    void computeDensityPressure(
-                 float *sortedPos,
-                 float *sortedVel,
-                 float *sortedDens,
-                 float *sortedPres,
-                 float *sortedForces,
-                 float *sortedCol,
-                 unsigned int  *gridParticleIndex,
-                 unsigned int  *cellStart,
-                 unsigned int  *cellEnd,
-                 unsigned int   numParticles,
-                 unsigned int   numCells);
+
+void computeDensityPressure(
+			float *sortedPos,
+			float *sortedVel,
+			float *sortedDens,
+			float *sortedPres,
+			float *sortedForces,
+			float *sortedCol,
+			float *sortedBoundaryPos,
+			float *sortedBoundaryVbi,
+			unsigned int  *gridParticleIndex,
+			unsigned int  *cellStart,
+			unsigned int  *cellEnd,
+			unsigned int *gridBoundaryIndex,
+			unsigned int *cellBoundaryStart,
+			unsigned int *cellBoundaryEnd,
+			unsigned int   numParticles,
+			unsigned int   numCells,
+			unsigned int   numBoundaries);
+
+    /*void computeDensityPressure(*/
+                 /*float *sortedPos,*/
+                 /*float *sortedVel,*/
+                 /*float *sortedDens,*/
+                 /*float *sortedPres,*/
+                 /*float *sortedForces,*/
+                 /*float *sortedCol,*/
+                 /*unsigned int  *gridParticleIndex,*/
+                 /*unsigned int  *cellStart,*/
+                 /*unsigned int  *cellEnd,*/
+                 /*unsigned int   numParticles,*/
+                 /*unsigned int   numCells);*/
 
 	void computePciDensityPressure(
 			SphSimParams *hostParams,
