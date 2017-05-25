@@ -52,6 +52,8 @@ public:
 	float getSurfaceTension() const {return m_params.surfaceTension;}
 	float getInteractionRadius() const {return m_params.interactionRadius;}
 
+	unsigned int getNumCells() const {return m_params.numCells;}
+
 	float* & getPos() {return m_pos;}
 	float* & getCol() {return m_colors;}
 	float* & getVel() {return m_vel;}

@@ -192,9 +192,6 @@ __global__ void reorderDataAndFindCellStartDBoundary(unsigned int *cellBoundaryS
 	{
 		hash = gridBoundaryHash[index];
 
-		// Load hash data into shared memory so that we can look
-		// at neighboring particle's hash value without loading
-		// two hash values per thread
 		sharedHash[threadIdx.x+1] = hash;
 
 		if (index > 0 && threadIdx.x == 0)
@@ -209,12 +206,6 @@ __global__ void reorderDataAndFindCellStartDBoundary(unsigned int *cellBoundaryS
 
 	if (index < numBoundaries)
 	{
-		//// If this particle has a different cell index to the previous
-        //// particle then it must be the first particle in the cell,
-        //// so store the index of this particle in the cell.
-        //// As it isn't the first particle, it must also be the cell end of
-        //// the previous particle's cell
-		
 		if (index == 0 || hash != sharedHash[threadIdx.x])
 		{
 			cellBoundaryStart[hash] = index;
@@ -307,10 +298,10 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 		// Now use the sorted index to reorder the pos and vel data
 		unsigned int sortedIndex = gridParticleIndex[index];
 		float4 pos = FETCH(oldPos, sortedIndex);       // macro does either global read or texture fetch
+
 		float4 vel = FETCH(oldVel, sortedIndex);       // see particles_kernel.cuh
-		
-		sortedPos[index] = pos;
 		sortedVel[index] = vel;
+		sortedPos[index] = pos;
 	}
 }
 
@@ -360,8 +351,8 @@ void computeDensityPressure(
               float *oldPres,               // input: sorted velocities
               float4 *oldForces,            // input: sorted velocities
               float4 *oldCol,               // input: sorted velocities
-			  float4 *oldBi,
-			  float  *oldVbi,
+			  float4 *oldBoundaryPos,
+			  float  *oldBoundaryVbi,
               unsigned int   *gridParticleIndex,    // input: sorted particle indices
               unsigned int   *cellStart,
               unsigned int   *cellEnd,
@@ -399,7 +390,7 @@ void computeDensityPressure(
             }
         }
     } 
-
+	
 	/*printf("dens = %f\n", dens);*/
 	//if (nbVois > 40) printf("nbVois too large : %5d\n", nbVois ); ;
 

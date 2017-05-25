@@ -275,6 +275,9 @@ void SPH::updateGpuBoundaries(unsigned int nb_boundary_spheres)
 	cudaMalloc((void**)&m_dGridBoundaryIndex, sizeof(unsigned int)*nb_boundary_spheres);
 	cudaMalloc((void**)&m_dGridBoundaryHash, sizeof(unsigned int)*nb_boundary_spheres);
 
+	cudaMalloc((void**)&m_dBoundaryCellEnd, sizeof(unsigned int)*getNumCells());
+	cudaMalloc((void**)&m_dBoundaryCellStart, sizeof(unsigned int)*getNumCells());
+
 	cudaMemcpy(m_dbi, m_bi, 4*sizeof(float)*nb_boundary_spheres, cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvbi, m_vbi, sizeof(float)*nb_boundary_spheres, cudaMemcpyHostToDevice);
 
@@ -282,6 +285,20 @@ void SPH::updateGpuBoundaries(unsigned int nb_boundary_spheres)
 	sortParticles(m_dGridBoundaryHash, m_dGridBoundaryIndex, m_num_boundaries);
 
 	//appeler le kernel de tri des particules de bord
+	reorderDataAndFindCellStartDBoundary(
+			m_dBoundaryCellStart,
+			m_dBoundaryCellEnd,
+			m_dSortedbi,
+			m_dSortedVbi,
+			m_dGridBoundaryHash,
+			m_dGridBoundaryIndex,
+			m_dbi,
+			m_dvbi,
+			m_num_boundaries,
+			getNumCells()
+			);
+
+	std::cout << "boundaries updated !" << std::endl;
 }
 
 } /* CFD */ 

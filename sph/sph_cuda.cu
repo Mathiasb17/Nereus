@@ -254,7 +254,36 @@ extern "C"
 											unsigned int numCells
 											)
 	{
-		//TODO
+		unsigned int numThreads, numBlocks;
+		computeGridSize(numBoundaries, 64, numBlocks, numThreads);
+
+		checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(unsigned int)));
+
+#if USE_TEX
+		checkCudaErrors(cudaBindTexture(0, oldBoundaryPosTex, oldPos, numBoundaries*sizeof(float4)));
+		checkCudaErrors(cudaBindTexture(0, oldBoundaryVbiTex, oldVbi, numBoundaries*sizeof(float)));
+
+#endif
+		unsigned int smemSize = sizeof(unsigned int)*(numThreads+1);
+
+		reorderDataAndFindCellStartDBoundary<<<numBlocks, numThreads, smemSize>>>(
+				cellStart,
+				cellEnd,
+				(float4*) sortedPos,
+				(float*)  sortedVbi,
+				(unsigned int *)gridParticleHash,
+				(unsigned int *)gridParticleIndex,
+				(float4*) oldPos,
+				(float*)  oldVbi,
+				numBoundaries);
+
+		getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
+
+
+#if USE_TEX
+		checkCudaErrors(cudaBindTexture(0, cellBoundaryStartTex, cellStart, numCells*sizeof(unsigned int)));
+		checkCudaErrors(cudaBindTexture(0, cellBoundaryEndTex, cellEnd, numCells*sizeof(unsigned int)));
+#endif
 	}
 
 	void reorderDataAndFindCellStart(unsigned int  *cellStart,
@@ -297,18 +326,18 @@ extern "C"
 				cellEnd,
 				(float4 *) sortedPos,
 				(float4 *) sortedVel,
-				(float *) sortedDens,
-				(float *) sortedPres,
-				(float4 *) sortedForces,
-				(float4 *) sortedCol,
+				NULL,
+				NULL,
+				NULL,
+				NULL,
 				gridParticleHash,
 				gridParticleIndex,
 				(float4 *) oldPos,
 				(float4 *) oldVel,
-				(float *) oldDens,
-				(float *) oldPres,
-				(float4 *) oldForces,
-				(float4 *) oldCol,
+				NULL,
+				NULL,
+				NULL,
+				NULL,
 				numParticles);
 		getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
 
@@ -358,8 +387,8 @@ extern "C"
 		checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
 		checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
 
-		checkCudaErrors(cudaBindTexture(0, oldBoundaryPosTex, sortedBoundaryPos, numBoundaries*sizeof(float4)));
-		checkCudaErrors(cudaBindTexture(0, oldBoundaryVbiTex, sortedBoundaryVbi, numBoundaries*sizeof(float)));
+		/*checkCudaErrors(cudaBindTexture(0, oldBoundaryPosTex, sortedBoundaryPos, numBoundaries*sizeof(float4)));*/
+		/*checkCudaErrors(cudaBindTexture(0, oldBoundaryVbiTex, sortedBoundaryVbi, numBoundaries*sizeof(float)));*/
 
 		//TODO missing cudamalloc in updateBoundary
 		/*checkCudaErrors(cudaBindTexture(0, cellBoundaryStartTex, cellBoundaryStart, numCells*sizeof(unsigned int)));*/
@@ -389,18 +418,6 @@ extern "C"
 				numParticles
 		);
 		
-		/*computeDensityPressure<<< numBlocks, numThreads >>>(*/
-				/*(float4 *)sortedPos,*/
-				/*(float4 *)sortedVel,*/
-				/*(float *)sortedDens,*/
-				/*(float *)sortedPres,*/
-				/*(float4 *)sortedForces,*/
-				/*(float4 *)sortedCol,*/
-				/*gridParticleIndex,*/
-				/*cellStart,*/
-				/*cellEnd,*/
-				/*numParticles);*/
-
 		cudaDeviceSynchronize();
 
 		computeForces<<< numBlocks, numThreads >>>(
@@ -429,8 +446,8 @@ extern "C"
 		checkCudaErrors(cudaUnbindTexture(cellStartTex));
 		checkCudaErrors(cudaUnbindTexture(cellEndTex));
 
-		checkCudaErrors(cudaUnbindTexture(oldBoundaryPosTex));
-		checkCudaErrors(cudaUnbindTexture(oldBoundaryVbiTex));
+		/*checkCudaErrors(cudaUnbindTexture(oldBoundaryPosTex));*/
+		/*checkCudaErrors(cudaUnbindTexture(oldBoundaryVbiTex));*/
 
 		//TODO
 		/*checkCudaErrors(cudaUnbindTexture(cellBoundaryStartTex));*/
