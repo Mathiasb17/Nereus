@@ -79,7 +79,7 @@ struct integrate_functor
 		vel = vel+accel;
 		pos = pos + dt*vel;
 
-#if 1
+#if 0
 
 		if (pos.x > 1.0f - sph_params.particleRadius)
 		{
@@ -111,13 +111,14 @@ struct integrate_functor
 			vel.z = 0.45f * -vel.z;
 		}
 
-#endif
 
 		if (pos.y < -1.0f + sph_params.particleRadius)
 		{
 			pos.y = -1.0f + sph_params.particleRadius;
 			vel.y = 0.45f * -vel.y;
 		}
+
+#endif
 
         // store new position and velocity
         thrust::get<0>(t) = make_float4(pos, posData.w);
@@ -344,7 +345,7 @@ __device__ float computeCellDensity(int *nb, int3 gridPos, unsigned int index, f
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ float computeBoundaryCellDensity(int3 gridPos, float3 pos, float4* oldBoundaryPos, float* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd,
+__device__ float computeBoundaryCellDensity(int3 gridPos, float3 pos, unsigned int* gridBoundaryIndex, float4* oldBoundaryPos, float* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd,
 		float ir, float kp, float rd, float pm)
 {
 	const unsigned int gridHash = calcGridHash(gridPos);
@@ -359,8 +360,10 @@ __device__ float computeBoundaryCellDensity(int3 gridPos, float3 pos, float4* ol
 
 		for (unsigned  int j = startIndex; j < endIndex; ++j)
 		{
-			const float3 pos2 = make_float3(FETCH(oldBoundaryPos, j));
-			const float  vbi  = FETCH(oldBoundaryVbi, j);
+			const unsigned int originalIndex = gridBoundaryIndex[j];
+
+			const float3 pos2 = make_float3(FETCH(oldBoundaryPos, originalIndex));
+			const float  vbi  = FETCH(oldBoundaryVbi, originalIndex);
 			const float3 p1p2 = pos1 - pos2;
 
 			if (length(p1p2) < ir) 
@@ -375,8 +378,7 @@ __device__ float computeBoundaryCellDensity(int3 gridPos, float3 pos, float4* ol
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__global__
-void computeDensityPressure(
+__global__ void computeDensityPressure(
               float4 *oldPos,               // input: sorted positions
               float4 *oldVel,               // input: sorted velocities
               float *oldDens,               // input: sorted velocities
@@ -425,7 +427,7 @@ void computeDensityPressure(
             {
                 const int3 neighbourPos = gridPos + make_int3(x, y, z);
 				dens += computeCellDensity(&nbVois, neighbourPos, originalIndex, pos, oldPos, cellStart, cellEnd, ir, kp, rd, pm);
-				dens += computeBoundaryCellDensity(neighbourPos, pos, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kp, rd, pm);
+				dens += computeBoundaryCellDensity(neighbourPos, pos, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kp, rd, pm);
             }
         }
     } 
@@ -452,6 +454,7 @@ __device__ void computeCellForces(
 		float3     *fpres,
 		float3     *fvisc,
 		float3     *fsurf,
+		float3     *fbound,
 		int3       gridPos,
 		unsigned   int index,
 		float3     pos,
@@ -462,6 +465,7 @@ __device__ void computeCellForces(
 		float      *oldDens,
 		float*     oldPres,
 		float4*    oldVel,
+		unsigned int* gridBoundaryIndex,
 		float4*    oldBoundaryPos,
 		float*     oldBoundaryVbi,
 		unsigned int *cellStart,
@@ -470,7 +474,7 @@ __device__ void computeCellForces(
 		unsigned int *cellBoundaryEnd)
 {
     const unsigned int gridHash = calcGridHash(gridPos);
-	const unsigned int startIndex = FETCH(cellStart, gridHash);
+	unsigned int startIndex = FETCH(cellStart, gridHash);
 
 	const float3 pos1 = make_float3(pos.x, pos.y, pos.z);
 	const float3 vel1 = make_float3(vel.x, vel.y, vel.z);
@@ -478,7 +482,15 @@ __device__ void computeCellForces(
 	float3 forces = make_float3(0.f, 0.f, 0.f);
 	float3 forces_pres = make_float3(0.f, 0.f, 0.f);
 	float3 forces_visc = make_float3(0.f, 0.f, 0.f);
-	float3 forces_boundaries = make_float3(0.f, 0.f, 0.f);
+
+	const float m2 = sph_params.particleMass;
+	const float ir = sph_params.interactionRadius;
+	const float kp = sph_params.kpoly;
+	const float kpg= sph_params.kpoly_grad;
+
+	const float kprg = sph_params.kpress_grad;
+	const float kvg  = sph_params.kvisc_grad;
+	const float kvd  = sph_params.kvisc_denum;
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -488,9 +500,6 @@ __device__ void computeCellForces(
 		{
 			if(j != index)
 			{
-				const float m2 = sph_params.particleMass;
-				const float ir = sph_params.interactionRadius;
-
 				const float3 pos2 = make_float3(FETCH(oldPos, j));
 				const float dens2 = FETCH(oldDens, j);
 				const float pres2 = FETCH(oldPres, j);
@@ -502,10 +511,10 @@ __device__ void computeCellForces(
 				const float d1sq = dens*dens;
 				const float d2sq = dens2*dens2;
 
-				const float kdefault = Wdefault(p1p2, ir, sph_params.kpoly);
-				const float3 kdefault_grad = Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
-				const float3 kpressure_grad = Wpressure_grad(p1p2, ir, sph_params.kpress_grad);
-				const float3 kvisco_grad = Wviscosity_grad(p1p2, ir, sph_params.kvisc_grad, sph_params.kvisc_denum);
+				const float kdefault = Wdefault(p1p2, ir, kp);
+				const float3 kdefault_grad = Wdefault_grad(p1p2, ir, kpg);
+				const float3 kpressure_grad = Wpressure_grad(p1p2, ir, kprg);
+				const float3 kvisco_grad = Wviscosity_grad(p1p2, ir, kvg, kvd);
 
 				if (length(p1p2) < ir)
 				{
@@ -518,6 +527,34 @@ __device__ void computeCellForces(
 					*fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;
 				}
 			}
+		}
+	}
+
+	//start again with boundaries
+	startIndex = FETCH(cellBoundaryStart, gridHash);
+	float3 forces_boundaries = make_float3(0.f, 0.f, 0.f);
+
+	if (startIndex != 0xffffffff)
+	{
+		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
+		const float beta = 600.f;
+		const float rd = sph_params.restDensity;
+
+		//loop over rigid boundary particles
+        for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			const unsigned int originalIndex = gridBoundaryIndex[j];
+
+			const float vbi  = FETCH(oldBoundaryVbi, originalIndex);
+			const float3 vpos= make_float3(FETCH(oldBoundaryPos, originalIndex));
+
+			const float psi = (rd*vbi);
+			const float3 p1p2 = pos1 - vpos;
+
+			const float kdefault = Wdefault(p1p2, ir, sph_params.kpoly);
+
+			float3 contrib = (beta * psi * p1p2 * kdefault);
+			*fbound = *fbound + contrib;
 		}
 	}
 }
@@ -533,6 +570,7 @@ void computeForces(
               float        * oldPres,           
               float4       * oldForces,        
               float4       * oldCol,          
+			  unsigned int * gridBoundaryIndex,
 			  float4       * oldBoundaryPos,
 			  float        * oldBoundaryVbi,
               unsigned int * gridParticleIndex, 
@@ -563,6 +601,7 @@ void computeForces(
 	float3 fpres = make_float3(0.f, 0.f, 0.f);
 	float3 fvisc = make_float3(0.f, 0.f, 0.f);
 	float3 fsurf = make_float3(0.f, 0.f, 0.f);
+	float3 fbound= make_float3(0.f, 0.f, 0.f);
 
 	for (int z=-1; z<=1; z++)
 	{
@@ -572,7 +611,7 @@ void computeForces(
 			{
 				const int3 neighbourPos = gridPos + make_int3(x, y, z);
 				//a optimiser !!!
-				computeCellForces(&fpres, &fvisc, &fsurf, neighbourPos, originalIndex, pos, vel, dens, pres, oldPos, oldDens, oldPres, oldVel, oldBoundaryPos, oldBoundaryVbi, cellStart, cellEnd, cellBoundaryStart, cellBoundaryEnd);
+				computeCellForces(&fpres, &fvisc, &fsurf, &fbound, neighbourPos, originalIndex, pos, vel, dens, pres, oldPos, oldDens, oldPres, oldVel, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellStart, cellEnd, cellBoundaryStart, cellBoundaryEnd);
 			}
 		}
 	}
@@ -586,7 +625,7 @@ void computeForces(
 	fpres = -(m1 / dens) * fpres;
 	fvisc = (m1*sph_params.viscosity) * fvisc;
 
-	float3 f = fpres + fvisc + m1*sph_params.gravity + fsurf;
+	float3 f = fpres + fvisc + m1*sph_params.gravity + fsurf + fbound;
 	float4 res = make_float4(f.x, f.y, f.z, 0);
 
 	oldForces[originalIndex] = res;

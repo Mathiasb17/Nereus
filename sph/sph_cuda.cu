@@ -420,6 +420,7 @@ extern "C"
 			  (float*) sortedPres,               // input: sorted velocities
 			  (float4*) sortedForces,            // input: sorted velocities
 			  (float4*) sortedCol,               // input: sorted velocities
+			  gridBoundaryIndex,
 			  (float4*) sortedBoundaryPos,
 			  (float*) sortedBoundaryVbi,
 			  gridParticleIndex,    // input: sorted particle indices
