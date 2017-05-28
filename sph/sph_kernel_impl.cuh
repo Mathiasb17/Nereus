@@ -81,42 +81,42 @@ struct integrate_functor
 
 #if 0
 
-		if (pos.x > 1.0f - sph_params.particleRadius)
-		{
-			pos.x = 1.0f - sph_params.particleRadius;
-			vel.x = 0.45f * -vel.x;
-		}
+	   /* if (pos.x > 1.0f - sph_params.particleRadius)*/
+		/*{*/
+			/*pos.x = 1.0f - sph_params.particleRadius;*/
+			/*vel.x = 0.45f * -vel.x;*/
+		/*}*/
 
-		if (pos.x < -1.0f + sph_params.particleRadius)
-		{
-			pos.x = -1.0f + sph_params.particleRadius;
-			vel.x = 0.45f * -vel.x;
-		}
+		/*if (pos.x < -1.0f + sph_params.particleRadius)*/
+		/*{*/
+			/*pos.x = -1.0f + sph_params.particleRadius;*/
+			/*vel.x = 0.45f * -vel.x;*/
+		/*}*/
 
-		if (pos.y > 1.0f - sph_params.particleRadius)
-		{
-			pos.y = 1.0f - sph_params.particleRadius;
-			vel.y = 0.45f * -vel.y;
-		}
+		/*if (pos.y > 1.0f - sph_params.particleRadius)*/
+		/*{*/
+			/*pos.y = 1.0f - sph_params.particleRadius;*/
+			/*vel.y = 0.45f * -vel.y;*/
+		/*}*/
 
-		if (pos.z > 1.0f - sph_params.particleRadius)
-		{
-			pos.z = 1.0f - sph_params.particleRadius;
-			vel.z = 0.45f * -vel.z;
-		}
+		/*if (pos.z > 1.0f - sph_params.particleRadius)*/
+		/*{*/
+			/*pos.z = 1.0f - sph_params.particleRadius;*/
+			/*vel.z = 0.45f * -vel.z;*/
+		/*}*/
 
-		if (pos.z < -1.0f + sph_params.particleRadius)
-		{
-			pos.z = -1.0f + sph_params.particleRadius;
-			vel.z = 0.45f * -vel.z;
-		}
+		/*if (pos.z < -1.0f + sph_params.particleRadius)*/
+		/*{*/
+			/*pos.z = -1.0f + sph_params.particleRadius;*/
+			/*vel.z = 0.45f * -vel.z;*/
+		/*}*/
 
 
-		if (pos.y < -1.0f + sph_params.particleRadius)
-		{
-			pos.y = -1.0f + sph_params.particleRadius;
-			vel.y = 0.45f * -vel.y;
-		}
+		/*if (pos.y < -1.0f + sph_params.particleRadius)*/
+		/*{*/
+			/*pos.y = -1.0f + sph_params.particleRadius;*/
+			/*vel.y = 0.45f * -vel.y;*/
+		/*}*/
 
 #endif
 
@@ -492,6 +492,9 @@ __device__ void computeCellForces(
 	const float kvg  = sph_params.kvisc_grad;
 	const float kvd  = sph_params.kvisc_denum;
 
+	const float ksurf1 = sph_params.ksurf1;
+	const float ksurf2 = sph_params.ksurf2;
+
 	if (startIndex != 0xffffffff)
 	{ 
 		const unsigned int endIndex = FETCH(cellEnd, gridHash);
@@ -524,7 +527,9 @@ __device__ void computeCellForces(
 					const float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
 					*fvisc = *fvisc + m2/dens2  * v1v2 * (a/b);
 
-					*fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;
+					/**fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;*/
+					float gamma = sph_params.surfaceTension;
+					*fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));
 				}
 			}
 		}
@@ -536,8 +541,8 @@ __device__ void computeCellForces(
 
 	if (startIndex != 0xffffffff)
 	{
+		const float beta = sph_params.beta;
 		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
-		const float beta = 600.f;
 		const float rd = sph_params.restDensity;
 
 		//loop over rigid boundary particles

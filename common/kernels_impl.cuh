@@ -60,10 +60,10 @@ __device__ __host__ float3 Wviscosity_grad(float3 r, float h, float kvisc_grad, 
 	return kvisc_grad * r * c;
 }
 
-__device__ __host__ float Cakinci(float3 r, float h)
+__device__ __host__ float Cakinci(float3 r, float h, float ksurf1, float ksurf2)
 {
 	float len = length(r);
-	float poly = 32.f/(M_PI * powf(h,9));
+	float poly = ksurf1;
 	float hr = h - len;
 	if (2.f*len > h && len <= h) 
 	{
@@ -73,7 +73,7 @@ __device__ __host__ float Cakinci(float3 r, float h)
 	else if (len > 0.f && 2*len <= h) 
 	{
 		float a = 2 * (hr*hr*hr) * (len*len*len);
-		float b = powf(h,6)/64.f;
+		float b = ksurf2;
 		return  poly * (a-b);
 	}
 	else

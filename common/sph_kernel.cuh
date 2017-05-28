@@ -36,6 +36,11 @@ struct SphSimParams
     float particleRadius;
     float3 gravity;
 
+	/*********************
+	*  BOUNDARY PARAMS  *
+	*********************/
+	float beta;
+
 	/***********************************
 	*  SPH KERNELS PRE-COMPUTED PART  *
 	***********************************/
@@ -45,6 +50,9 @@ struct SphSimParams
 
 	float kvisc_grad;
 	float kvisc_denum;
+
+	float ksurf1;
+	float ksurf2;
 };
 
 #endif /* ifndef SPH_KERNEL_H */
