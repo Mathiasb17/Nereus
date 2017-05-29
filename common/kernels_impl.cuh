@@ -82,6 +82,22 @@ __device__ __host__ float Cakinci(float3 r, float h, float ksurf1, float ksurf2)
 	}
 }
 
+__device__ __host__ float Aboundary(float3 r, float h, float bpol)
+{
+	float rl = length(r);
+	if (2.f*rl > h && rl <= h) 
+	{
+		float a = -((4*(rl*rl))/(h));
+		float b = (6.f*rl - 2.f*h);
+		float res = powf(a + b, 1.f/4.f);
+		return bpol*res;
+	}
+	else
+	{
+		return 0.f;
+	}
+}
+
 }
 
 #endif /* ifndef KERNELS_IMPL_CUH */

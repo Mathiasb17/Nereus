@@ -527,9 +527,9 @@ __device__ void computeCellForces(
 					const float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
 					*fvisc = *fvisc + m2/dens2  * v1v2 * (a/b);
 
-					/**fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;*/
+					*fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;
 					float gamma = sph_params.surfaceTension;
-					*fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));
+					/**fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));*/
 				}
 			}
 		}
@@ -557,6 +557,7 @@ __device__ void computeCellForces(
 			const float3 p1p2 = pos1 - vpos;
 
 			const float kdefault = Wdefault(p1p2, ir, sph_params.kpoly);
+			/*const float kdefault = Aboundary(p1p2, ir, sph_params.bpol);*/
 
 			float3 contrib = (beta * psi * p1p2 * kdefault);
 			*fbound = *fbound + contrib;

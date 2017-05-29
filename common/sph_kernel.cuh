@@ -44,15 +44,17 @@ struct SphSimParams
 	/***********************************
 	*  SPH KERNELS PRE-COMPUTED PART  *
 	***********************************/
-	float kpoly;
-	float kpoly_grad;
-	float kpress_grad;
+	float kpoly;      //muller03
+	float kpoly_grad; //muller03
+	float kpress_grad;//muller03
 
-	float kvisc_grad;
-	float kvisc_denum;
+	float kvisc_grad; //muller03
+	float kvisc_denum;//muller03
 
-	float ksurf1;
-	float ksurf2;
+	float ksurf1; //akinci surface tension kernel
+	float ksurf2; //akinci surface tension kernel
+
+	float bpol;//akinci boundary kernel
 };
 
 #endif /* ifndef SPH_KERNEL_H */

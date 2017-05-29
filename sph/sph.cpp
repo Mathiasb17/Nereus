@@ -31,22 +31,22 @@ SPH::SPH ():
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 400.f;
+	m_params.gasStiffness = 600.f;
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1E-3;
+	m_params.timestep = 3E-4;
 	m_params.viscosity = 0.002f;
 	m_params.surfaceTension = 0.698f; //.698f
-	m_params.interactionRadius = 0.0557f; //ref : 0.0457f
+	m_params.interactionRadius = 0.0507f; //ref : 0.0457f
 
 	m_params.gravity.x = 0.f;
-	m_params.gravity.y = -0.00f;
-	//m_params.gravity.y = -9.81f;
+	//m_params.gravity.y = -0.00f;
+	m_params.gravity.y = -9.81f;
 	m_params.gravity.z = 0.f;
 
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 800.f;
+	m_params.beta = 600.f;
 
 	/*********************
 	*  GRID PARAMETERS  *
@@ -69,6 +69,8 @@ SPH::SPH ():
 
 	m_params.ksurf1 = 32.f/(M_PI * powf(m_params.interactionRadius,9));
 	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.f;
+
+	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
 	
 	_intialize();
 	m_numParticles = 0;
