@@ -29,12 +29,11 @@ texture<float, 1, cudaReadModeElementType> oldPresTex;
 texture<float4, 1, cudaReadModeElementType> oldForcesTex;
 texture<float4, 1, cudaReadModeElementType> oldColTex;
 
-//texture for pcisph
-texture<float4, 1, cudaReadModeElementType> oldPosStarTex;
-texture<float4, 1, cudaReadModeElementType> oldVelStarTex;
-texture<float, 1, cudaReadModeElementType> oldDensStarTex;
-texture<float, 1, cudaReadModeElementType> oldPresStarTex;
-texture<float, 1, cudaReadModeElementType> oldDensErrorTex;
+//texture for iisph
+texture<float4, 1, cudaReadModeElementType> oldVelAdvTex;
+texture<float , 1, cudaReadModeElementType> oldDensAdvTex;
+texture<float , 1, cudaReadModeElementType> oldDisplacementFactorTex;
+texture<float , 1, cudaReadModeElementType> oldAdvectionFactorTex;
 
 texture<unsigned int, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellStartTex;
@@ -492,8 +491,8 @@ __device__ void computeCellForces(
 	const float kvg  = sph_params.kvisc_grad;
 	const float kvd  = sph_params.kvisc_denum;
 
-	const float ksurf1 = sph_params.ksurf1;
-	const float ksurf2 = sph_params.ksurf2;
+	/*const float ksurf1 = sph_params.ksurf1;*/
+	/*const float ksurf2 = sph_params.ksurf2;*/
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -528,7 +527,7 @@ __device__ void computeCellForces(
 					*fvisc = *fvisc + m2/dens2  * v1v2 * (a/b);
 
 					*fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;
-					float gamma = sph_params.surfaceTension;
+					/*float gamma = sph_params.surfaceTension;*/
 					/**fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));*/
 				}
 			}

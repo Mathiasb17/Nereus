@@ -8,13 +8,22 @@ project(sph)
 
 #BEGIN SUBMODULES DEPENDENCIES
 if (NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/sph_boundary_particles/src")
-  message(FATAL_ERROR "The sph boundary particles dependency repositories (GLFW, etc.) are missing! "
+  message(FATAL_ERROR "The sph boundary particles dependency repositories are missing! "
+    "You probably did not clone the project with --recursive. It is possible to recover "
+    "by calling \"git submodule update --init --recursive\"")
+endif()
+
+if (NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/nanogui/src")
+  message(FATAL_ERROR "The nanogui dependency repositories are missing! "
     "You probably did not clone the project with --recursive. It is possible to recover "
     "by calling \"git submodule update --init --recursive\"")
 endif()
 
 add_subdirectory("./external/sph_boundary_particles" "ext_build/sph_boundary_particles")
 include_directories(./external/sph_boundary_particles/include)
+
+add_subdirectory("./external/nanogui" "ext_build/nanogui")
+include_directories(./external/nanogui/include)
 
 #END SUBMODULES DEPENDENCIES
 

@@ -13,7 +13,9 @@ public:
 	virtual ~IISPH ();
 
 private:
-	/* data */
+	float* vel_adv;
+	float* density_adv;
+	float* displacement_factor;
 };
 
 } /* CFD */ 

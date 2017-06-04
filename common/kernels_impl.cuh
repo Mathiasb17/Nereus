@@ -19,6 +19,14 @@
 extern "C"
 {
 
+struct comp
+{
+	__host__ __device__ bool operator()(float3 p1, float3 p2)
+	{
+		return length(p1) < length(p2);
+	}
+};
+
 __device__ __host__ float Wdefault(float3 r, float h, float kpoly)
 {
 	float l_r = length(r);

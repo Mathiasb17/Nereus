@@ -163,6 +163,23 @@ void SPH::_finalize()
 //==================================================================================================== 
 void SPH::update()
 {
+#if 0
+	/*****************************************
+	*  compute timestep with CFL condition  *
+	*****************************************/
+	
+	float3 res = maxVelocity(m_dSortedVel, m_numParticles);
+	float lambda = 0.4f;
+	float ir = m_params.interactionRadius;
+
+	if (length(res) > 0.f) 
+	{
+		float newDeltat = lambda * (ir / length(res));
+		m_params.timestep = newDeltat;
+		std::cout << "new timestep is " << newDeltat << std::endl;
+	}
+#endif	
+
 	cudaMemcpy(m_dpos, m_pos, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvel, m_vel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	setParameters(&m_params);
@@ -211,6 +228,7 @@ void SPH::update()
 			m_num_boundaries);
 
 	integrateSystem( m_dSortedPos, m_dSortedVel, m_dSortedForces, m_params.timestep, m_numParticles);
+
 
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);

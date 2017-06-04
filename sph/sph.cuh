@@ -99,19 +99,6 @@ void computeDensityPressure(
 			unsigned int   numCells,
 			unsigned int   numBoundaries);
 
-    /*void computeDensityPressure(*/
-                 /*float *sortedPos,*/
-                 /*float *sortedVel,*/
-                 /*float *sortedDens,*/
-                 /*float *sortedPres,*/
-                 /*float *sortedForces,*/
-                 /*float *sortedCol,*/
-                 /*unsigned int  *gridParticleIndex,*/
-                 /*unsigned int  *cellStart,*/
-                 /*unsigned int  *cellEnd,*/
-                 /*unsigned int   numParticles,*/
-                 /*unsigned int   numCells);*/
-
 	void computePciDensityPressure(
 			SphSimParams *hostParams,
 			float* sortedPos,
@@ -131,7 +118,59 @@ void computeDensityPressure(
 			unsigned int   numCells);
 
 	float maxDensity(float* dDensities, unsigned int numParticles);
+	float3 maxVelocity(float* dVelocities, unsigned int numParticles);
 
     void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles);
+
+	/***********
+	*  IISPH  *
+	***********/
+	
+void predictAdvection(
+	unsigned int * cellStart,
+	unsigned int * cellEnd,
+	unsigned int * cellBoundaryStart,
+	unsigned int * cellBoundaryEnd,
+	float        * sortedPos,
+	float        * sortedVel,
+	float        * sortedVelAdv,
+	float        * sortedDens,
+	float        * sortedDensAdv,
+	float        * firstPressure,
+	float        * sortedForcesAdv,
+	float        * sortedDisplacementFactor,
+	float        * sortedAdvectionFactor,
+	unsigned int * gridParticleHash,
+	unsigned int * gridParticleIndex,
+	unsigned int * gridBoundaryHash,
+	unsigned int * gridBoundaryIndex,
+	unsigned int numParticles,
+	unsigned int numBoundaries,
+	unsigned int nymCells
+	);
+
+void pressureSolve(
+	unsigned int * cellStart,
+	unsigned int * cellEnd,
+	unsigned int * cellBoundaryStart,
+	unsigned int * cellBoundaryEnd,
+	float        * sortedPos,
+	float        * sortedVel,
+	float        * sortedVelAdv,
+	float        * sortedDens,
+	float        * sortedDensAdv,
+	float        * sortedPressure,
+	float        * sortedForcesAdv,
+	float        * sortedDisplacementFactor,
+	float        * sortedAdvectionFactor,
+	unsigned int * gridParticleHash,
+	unsigned int * gridParticleIndex,
+	unsigned int * gridBoundaryHash,
+	unsigned int * gridBoundaryIndex,
+	unsigned int numParticles,
+	unsigned int numBoundaries,
+	unsigned int nymCells
+	);
+
 }
 #endif /* ifndef SPH_CUH */
