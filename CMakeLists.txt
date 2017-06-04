@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.5.1)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_FORCE_INLINES")
+
 #c++ 11, always before project to avoid infinite loop
 set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_COMPILER "/usr/bin/g++-4.9")
@@ -52,7 +55,7 @@ set(SOURCES ${SPH_FILES})
 #CUDA OPTIONS
 set(CUDA_64_BIT_DEVICE_CODE ON)
 set(NVCC_FLAGS_EXTRA ${NVCC_FLAGS_EXTRA} -D_FORCE_INLINES)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-gencode arch=compute_35,code=sm_35 -gencode arch=compute_52,code=sm_52 --use_fast_math -Xptxas -O3 --maxrregcount 40") 
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-gencode arch=compute_35,code=sm_35 -gencode arch=compute_52,code=sm_52 --use_fast_math --maxrregcount 40") 
 
 message(${CUDA_NVCC_FLAGS})
 
