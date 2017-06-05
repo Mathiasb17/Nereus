@@ -31,12 +31,12 @@ SPH::SPH ():
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 600.f;
+	m_params.gasStiffness = 400.f;
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 3E-4;
+	m_params.timestep = 1E-3f;
 	m_params.viscosity = 0.002f;
-	m_params.surfaceTension = 0.698f; //.698f
+	m_params.surfaceTension = 0.4;//0.698f;
 	m_params.interactionRadius = 0.0507f; //ref : 0.0457f
 
 	m_params.gravity.x = 0.f;

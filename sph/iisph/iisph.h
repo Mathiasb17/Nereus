@@ -12,10 +12,22 @@ public:
 	IISPH ();
 	virtual ~IISPH ();
 
+	/****
+	* Initialize and finalize *
+	****/
+	virtual void _intialize();
+	virtual void _finalize();
+
+	/*********************************
+	*  PERFORM ONE SIMULATION STEP  *
+	*********************************/
+	void update();
+
 private:
-	float* vel_adv;
-	float* density_adv;
-	float* displacement_factor;
+	float* m_dVel_adv;
+	float* m_dDensity_adv;
+	float* m_dDisplacement_factor;
+	float* m_dAdvection_factor;
 };
 
 } /* CFD */ 

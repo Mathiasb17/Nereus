@@ -1,6 +1,7 @@
 #define GLM_FORCE_RADIANS
 
 #include "sph.h"
+#include "iisph/iisph.h"
 #include "common/colored_output.h"
 
 #include <iostream>
@@ -399,7 +400,6 @@ glm::vec4 getCamMove(GLFWwindow *win, glm::vec4 camDir, glm::vec4 camUp)
 	
 	glm::vec4 right = glm::vec4(glm::cross(camUp.xyz(), camDir.xyz()),0);
 
-
 	int stateA = glfwGetKey(win, GLFW_KEY_A);
 	if (stateA == GLFW_PRESS || stateA == GLFW_REPEAT)
 	{
@@ -462,13 +462,36 @@ void displayFPS(GLFWwindow *window)
 	}
 }
 
+void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
+{
+	static bool dropped = false;
+	int stateK = glfwGetKey(win, GLFW_KEY_K);
+	if (stateK == GLFW_PRESS && dropped == false)
+	{
+		dropped = true;
+		sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(0.5f, 0.5f, 0.5f, 0.f), glm::vec4(0,0,0,0));
+
+		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
+		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostCol(), GL_STATIC_DRAW);
+		getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
+
+		std::cout << "more particles" << std::endl;
+	}
+
+	//lock particle dropping to avoid explosions
+	int stateU = glfwGetKey(win, GLFW_KEY_U);
+	if(stateU == GLFW_PRESS && dropped == true)
+	{
+		dropped = false;
+	}
+}
+
 /**********************************************************************
  *                            MAIN PROGRAM                            *
  **********************************************************************/
-
 int main(void)
 {
-	CFD::SPH *sim_sph = new CFD::SPH();
+	CFD::SPH *sim_sph = new CFD::IISPH();
 	sim_sph->_intialize();
 	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(1.0f, 1.0f, 1.0f, 0.f), glm::vec4(0,0,0,0));
 
@@ -517,6 +540,7 @@ int main(void)
 
 	while(!glfwWindowShouldClose(window))
 	{
+		drop_more_particles(window, sim_sph);
 		displayFPS(window);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo_spheres_pos);

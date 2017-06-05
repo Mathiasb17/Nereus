@@ -459,17 +459,25 @@ void computeDensityPressure(
 #endif
 }
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+/***********
+*  IISPH  *
+***********/
 void predictAdvection(
 	unsigned int * cellStart,
 	unsigned int * cellEnd,
 	unsigned int * cellBoundaryStart,
 	unsigned int * cellBoundaryEnd,
+	float		 * sortedBoundaryPos,
+	float		 * sortedBoundaryVbi,
 	float        * sortedPos,
 	float        * sortedVel,
 	float        * sortedVelAdv,
 	float        * sortedDens,
 	float        * sortedDensAdv,
-	float        * firstPressure,
+	float        * sortedPres,
 	float        * sortedForcesAdv,
 	float        * sortedDisplacementFactor,
 	float        * sortedAdvectionFactor,
@@ -479,13 +487,78 @@ void predictAdvection(
 	unsigned int * gridBoundaryIndex,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
-	unsigned int nymCells
+	unsigned int numCells
 	)
 {
 #if USE_TEX
+	checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldDensTex, sortedDens, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldPresTex, sortedPres, numParticles*sizeof(float)));
+
+	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
+	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
+
+	checkCudaErrors(cudaBindTexture(0, oldVelAdvTex, sortedVelAdv, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForcesAdv, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldDisplacementFactorTex, sortedDisplacementFactor, numParticles*sizeof(float4)));
+
+	checkCudaErrors(cudaBindTexture(0, oldDensAdvTex, sortedDensAdv, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldAdvectionFactorTex, sortedAdvectionFactor, numParticles*sizeof(float)));
 #endif
 
+	unsigned int numThreads, numBlocks;
+	computeGridSize(numParticles, 64, numBlocks, numThreads);
+
+	iisph_compute_displacement_factor<<<numBlocks, numThreads>>>(
+			cellStart,
+			cellEnd,
+			cellBoundaryStart,
+			cellBoundaryEnd,
+			(float4*) sortedBoundaryPos,
+			sortedBoundaryVbi,
+			(float4*) sortedPos,
+			(float4*) sortedVel,
+			(float4*) sortedVelAdv,
+			sortedDens,
+			sortedDensAdv,
+			sortedPres,
+			(float4*) sortedForcesAdv,
+			(float4*) sortedDisplacementFactor,
+			sortedAdvectionFactor,
+			gridParticleHash,
+			gridParticleIndex,
+			gridBoundaryHash,
+			gridBoundaryIndex,
+			numParticles,
+			numBoundaries,
+			numCells);
+
+   /* iisph_compute_advection_factor<<<numBlocks, numThreads>>>(*/
+			/*cellStart,*/
+			/*cellEnd,*/
+			/*cellBoundaryStart,*/
+			/*cellBoundaryEnd,*/
+			/*(float4*) sortedPos,*/
+			/*(float4*) sortedVel,*/
+			/*(float4*) sortedVelAdv,*/
+			/*sortedDens,*/
+			/*sortedDensAdv,*/
+			/*sortedPres,*/
+			/*(float4*) sortedForcesAdv,*/
+			/*(float4*) sortedDisplacementFactor,*/
+			/*sortedAdvectionFactor,*/
+			/*gridParticleHash,*/
+			/*gridParticleIndex,*/
+			/*gridBoundaryHash,*/
+			/*gridBoundaryIndex,*/
+			/*numParticles,*/
+			/*numBoundaries,*/
+			/*numCells);*/
+
+
 #if USE_TEX
+	//no texture to unbind
 #endif
 }
 
@@ -499,7 +572,7 @@ void pressureSolve(
 	float        * sortedVelAdv,
 	float        * sortedDens,
 	float        * sortedDensAdv,
-	float        * sortedPressure,
+	float        * sortedPres,
 	float        * sortedForcesAdv,
 	float        * sortedDisplacementFactor,
 	float        * sortedAdvectionFactor,
@@ -513,9 +586,7 @@ void pressureSolve(
 	)
 {
 #if USE_TEX
-#endif
-
-#if USE_TEX
+	//unbind textures here
 #endif
 }
 

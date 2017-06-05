@@ -131,12 +131,14 @@ void predictAdvection(
 	unsigned int * cellEnd,
 	unsigned int * cellBoundaryStart,
 	unsigned int * cellBoundaryEnd,
+	float		 * sortedBoundaryPos,
+	float		 * sortedBoundaryVbi,
 	float        * sortedPos,
 	float        * sortedVel,
 	float        * sortedVelAdv,
 	float        * sortedDens,
 	float        * sortedDensAdv,
-	float        * firstPressure,
+	float        * sortedPressure,
 	float        * sortedForcesAdv,
 	float        * sortedDisplacementFactor,
 	float        * sortedAdvectionFactor,
@@ -146,7 +148,7 @@ void predictAdvection(
 	unsigned int * gridBoundaryIndex,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
-	unsigned int nymCells
+	unsigned int numCells
 	);
 
 void pressureSolve(

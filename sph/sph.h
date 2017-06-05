@@ -33,12 +33,12 @@ public:
 	 *  GENERATE FLUID  *
 	 ********************/
 	virtual void addNewParticle(glm::vec4 p, glm::vec4 v);
-	void generateParticleCube(glm::vec4 center, glm::vec4 size, glm::vec4 vel);
+	virtual void generateParticleCube(glm::vec4 center, glm::vec4 size, glm::vec4 vel);
 
 	/*********************************
 	*  PERFORM ONE SIMULATION STEP  *
 	*********************************/
-	void update();
+	virtual void update();
 
 	/*************
 	 *  GETTERS  *
