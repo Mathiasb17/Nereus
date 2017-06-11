@@ -1068,6 +1068,33 @@ __global__ void computeAdvectionFactor(
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
+
+__device__ float3 dijpjcell(float ir, float pm, float kpg, float3 pos1, float4* oldPos, float* oldDens, float* oldP_l, unsigned int index, unsigned int *cellStart, unsigned int *cellEnd, int3 neighbourPos)
+{
+	float3 res = make_float3(0.f, 0.f, 0.f);
+	const unsigned int gridHash = calcGridHash(neighbourPos);
+	const unsigned int startIndex = FETCH(cellStart, gridHash);
+
+	if (startIndex != 0xffffffff)
+	{ 
+		const unsigned int endIndex = FETCH(cellEnd, gridHash);
+        for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			if(j != index)
+			{
+				//todo
+				const float3 pos2 = make_float3(FETCH(oldPos, j));
+				const float3 p1p2 = pos1 - pos2;
+				const float p_lj = FETCH(oldP_l, j);
+				const float densj = FETCH(oldDens, j);
+
+				res = res + ((-pm/(densj*densj))*p_lj*Wdefault_grad(p1p2, ir, kpg));
+			}
+		}
+	}
+	return res;
+}
+
 __global__ void computeSumDijPj(
 	float4                      * oldPos,
 	float4                      * oldVel,
@@ -1100,7 +1127,37 @@ __global__ void computeSumDijPj(
 	unsigned int numCells
 		)
 {
-	//TODO
+    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    if (index >= numParticles) return;
+	const unsigned int originalIndex = gridParticleIndex[index];
+
+	//global reads
+	const float3 pos1 = make_float3(FETCH(oldPos, originalIndex));
+
+	//grid compute
+    const int3 gridPos = calcGridPos(pos1);
+
+	//const reads
+	const float ir = sph_params.interactionRadius;
+	const float pm = sph_params.particleMass;
+	const float kpg= sph_params.kpoly_grad;
+	const float dt = sph_params.timestep;
+
+	float3 dijpj = make_float3(0.f, 0.f, 0.f);
+	for (int z=-1; z<=1; z++)
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				const int3 neighbourPos = gridPos + make_int3(x, y, z);
+
+				dijpj = dijpj + dijpjcell(ir, pm, kpg, pos1, oldPos, oldDens, oldP_l, originalIndex, cellStart, cellEnd, neighbourPos);
+			}
+		}
+	}
+	dijpj = dijpj * (dt*dt);
+	oldSumDij[originalIndex] = make_float4(dijpj.x, dijpj.y, dijpj.z, 0.f);
 }
 
 //====================================================================================================  
