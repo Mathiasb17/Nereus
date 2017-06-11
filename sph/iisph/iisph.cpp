@@ -41,20 +41,34 @@ void IISPH::_intialize()
 	unsigned int memSize = sizeof(float) * 4 * MAX_PARTICLE_NUMBER;
 	unsigned int memSizeFloat = sizeof(float) * MAX_PARTICLE_NUMBER;
 
-	cudaMallocHost((void**)&m_dVel_adv, memSize);
-	cudaMallocHost((void**)&m_dDensity_adv, memSizeFloat);
-	cudaMallocHost((void**)&m_dDisplacement_factor, memSize);
-	cudaMallocHost((void**)&m_dAdvection_factor, memSizeFloat);
 
-	allocateArray((void **)&m_dVel_adv, memSize);
-	allocateArray((void **)&m_dDensity_adv, memSizeFloat);
-	allocateArray((void **)&m_dDisplacement_factor, memSize);
-	allocateArray((void **)&m_dAdvection_factor, memSizeFloat);
+	allocateArray((void**)&m_dSortedDensAdv, memSizeFloat);
+	allocateArray((void**)&m_dSortedDensCorr, memSizeFloat);
+	allocateArray((void**)&m_dSortedP_l, memSizeFloat);
+	allocateArray((void**)&m_dSortedPreviousP, memSizeFloat);
+	allocateArray((void**)&m_dSortedAii, memSizeFloat);
 
-	cudaMemset(m_dVel_adv, 0, memSize);
-	cudaMemset(m_dDensity_adv, 0, memSizeFloat);
-	cudaMemset(m_dDisplacement_factor, 0, memSize);
-	cudaMemset(m_dAdvection_factor, 0, memSizeFloat);
+	allocateArray((void**)&m_dSortedVelAdv, memSize);
+	allocateArray((void**)&m_dSortedForcesAdv, memSize);
+	allocateArray((void**)&m_dSortedForcesP, memSize);
+	allocateArray((void**)&m_dSortedDiiFluid, memSize);
+	allocateArray((void**)&m_dSortedDiiBoundary, memSize);
+	allocateArray((void**)&m_dSortedSumDij, memSize);
+	allocateArray((void**)&m_dSortedNormal, memSize);
+
+	cudaMemset(m_dSortedDensAdv, 0, memSizeFloat);
+	cudaMemset(m_dSortedDensCorr, 0, memSizeFloat);
+	cudaMemset(m_dSortedP_l, 0, memSizeFloat);
+	cudaMemset(m_dSortedPreviousP, 0, memSizeFloat);
+	cudaMemset(m_dSortedAii, 0, memSizeFloat);
+
+	cudaMemset(m_dSortedVelAdv, 0, memSize);
+	cudaMemset(m_dSortedForcesAdv, 0, memSize);
+	cudaMemset(m_dSortedForcesP, 0, memSize);
+	cudaMemset(m_dSortedDiiFluid, 0, memSize);
+	cudaMemset(m_dSortedDiiBoundary, 0, memSize);
+	cudaMemset(m_dSortedSumDij, 0, memSize);
+	cudaMemset(m_dSortedNormal, 0, memSize);
 
 	setParameters(&m_params);
 }
@@ -94,34 +108,10 @@ void IISPH::update()
 		m_numParticles,
 		m_params.numCells);
 
-	//TODO 
-	predictAdvection(
-		m_dCellStart,
-		m_dCellEnd,
-		m_dBoundaryCellStart,
-		m_dBoundaryCellEnd,
-		m_dbi,
-		m_vbi,
-		m_dSortedPos,
-		m_dSortedVel,
-		m_dVel_adv,
-		m_dSortedDens,
-		m_dDensity_adv,
-		m_dSortedPress,
-		m_dSortedForces,
-		m_dDisplacement_factor,
-		m_dAdvection_factor,
-		m_dGridParticleHash,
-		m_dGridParticleIndex,
-		m_dGridBoundaryHash,
-		m_dGridBoundaryIndex,
-		m_numParticles,
-		m_num_boundaries,
-		getNumCells()
-		);
-	//predict Advection and pressure solve
-	
-
+	predictAdvection(m_dSortedPos, m_dSortedVel, m_dSortedDens, m_dSortedPress, m_dSortedForces, m_dSortedCol, m_dCellStart, m_dCellEnd, m_dGridParticleIndex, m_dSortedbi, m_dSortedVbi,
+					  m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedDensAdv, m_dSortedDensCorr, m_dSortedP_l,  m_dSortedPreviousP, 
+					  m_dSortedAii, m_dSortedVelAdv, m_dSortedForcesAdv, m_dSortedForcesP, m_dSortedDiiFluid, m_dSortedDiiBoundary, m_dSortedSumDij, m_dSortedNormal,
+					  m_numParticles, m_num_boundaries, getNumCells());
 }
 
 } /* CFD */ 

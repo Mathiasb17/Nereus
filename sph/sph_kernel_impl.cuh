@@ -18,6 +18,7 @@
 
 #include <helper_math.h>
 #include <math_constants.h>
+#include <float.h>
 
 
 #if USE_TEX
@@ -30,11 +31,21 @@ texture<float4, 1, cudaReadModeElementType> oldForcesTex;
 texture<float4, 1, cudaReadModeElementType> oldColTex;
 
 //texture for iisph
-texture<float4, 1, cudaReadModeElementType> oldVelAdvTex;
-texture<float , 1, cudaReadModeElementType> oldDensAdvTex;
-texture<float4 , 1, cudaReadModeElementType> oldDisplacementFactorTex;
-texture<float , 1, cudaReadModeElementType> oldAdvectionFactorTex;
+texture<float, 1, cudaReadModeElementType> oldDensAdvTex;
+texture<float, 1, cudaReadModeElementType> oldDensCorrTex;
+texture<float, 1, cudaReadModeElementType> oldP_lTex;
+texture<float, 1, cudaReadModeElementType> oldPreviousPTex;
+texture<float, 1, cudaReadModeElementType> oldAiiTex;
 
+texture<float4, 1, cudaReadModeElementType> oldVelAdvTex;
+texture<float4, 1, cudaReadModeElementType> oldForcesAdvTex;
+texture<float4, 1, cudaReadModeElementType> oldForcesPTex;
+texture<float4, 1, cudaReadModeElementType> oldDiiFluidTex;
+texture<float4, 1, cudaReadModeElementType> oldDiiBoundaryTex;
+texture<float4, 1, cudaReadModeElementType> oldSumDijTex;
+texture<float4, 1, cudaReadModeElementType> oldNormalTex;
+
+//grid textures
 texture<unsigned int, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellStartTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellEndTex;
@@ -596,6 +607,7 @@ void computeForces(
 	const float pres = FETCH(oldPres, originalIndex);
 
 	const float m1 = sph_params.particleMass;
+	const float dt = sph_params.timestep;
 
 	//grid address
     const int3 gridPos = calcGridPos(pos);
@@ -628,7 +640,7 @@ void computeForces(
 	fpres = -(m1 / dens) * fpres;
 	fvisc = (m1*sph_params.viscosity) * fvisc;
 
-	float3 f = fpres + fvisc + m1*sph_params.gravity + fsurf + fbound;
+	float3 f = fpres + fvisc + (sph_params.gravity*m1) + fsurf + fbound;
 	float4 res = make_float4(f.x, f.y, f.z, 0);
 
 	oldForces[originalIndex] = res;
@@ -641,115 +653,6 @@ void computeForces(
 /***********
 *  IISPH  *
 ***********/
-__device__ float3 computeCellNonPressureForces(
-		float3     *fvisc,
-		float3     *fsurf,
-		float3     *fbound,
-		int3       gridPos,
-		unsigned   int index,
-		float3     pos,
-		float3     vel,
-		float      dens,
-		float4*    oldPos,
-		float      *oldDens,
-		float4*    oldVel,
-		unsigned int* gridBoundaryIndex,
-		float4*    oldBoundaryPos,
-		float*     oldBoundaryVbi,
-		unsigned int *cellStart,
-		unsigned int *cellEnd,
-		unsigned int *cellBoundaryStart,
-		unsigned int *cellBoundaryEnd)
-{
-	const unsigned int gridHash = calcGridHash(gridPos);
-	unsigned int startIndex = FETCH(cellStart, gridHash);
-
-	const float3 pos1 = make_float3(pos.x, pos.y, pos.z);
-	const float3 vel1 = make_float3(vel.x, vel.y, vel.z);
-
-	float3 forces = make_float3(0.f, 0.f, 0.f);
-	float3 forces_visc = make_float3(0.f, 0.f, 0.f);
-
-	const float m2 = sph_params.particleMass;
-	const float ir = sph_params.interactionRadius;
-	const float kp = sph_params.kpoly;
-	const float kpg= sph_params.kpoly_grad;
-
-	const float kprg = sph_params.kpress_grad;
-	const float kvg  = sph_params.kvisc_grad;
-	const float kvd  = sph_params.kvisc_denum;
-
-	float3 res = make_float3(0.f, 0.f, 0.f);
-
-	if (startIndex != 0xffffffff)
-	{ 
-		const unsigned int endIndex = FETCH(cellEnd, gridHash);
-
-        for (unsigned int j=startIndex; j<endIndex; j++)
-		{
-			if(j != index)
-			{
-				const float3 pos2 = make_float3(FETCH(oldPos, j));
-				const float dens2 = FETCH(oldDens, j);
-				const float pres2 = FETCH(oldPres, j);
-				const float3 vel2 = make_float3(FETCH(oldVel, j));
-
-				const float3 p1p2 = pos1-pos2;
-				const float3 v1v2 = vel1-vel2;
-
-				const float d1sq = dens*dens;
-				const float d2sq = dens2*dens2;
-
-				const float kdefault = Wdefault(p1p2, ir, kp);
-				const float3 kdefault_grad = Wdefault_grad(p1p2, ir, kpg);
-				const float3 kpressure_grad = Wpressure_grad(p1p2, ir, kprg);
-				const float3 kvisco_grad = Wviscosity_grad(p1p2, ir, kvg, kvd);
-
-				if (length(p1p2) < ir)
-				{
-					const float a = dot(p1p2, kvisco_grad);
-					const float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
-					*fvisc = *fvisc + m2/dens2  * v1v2 * (a/b);
-
-					*fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;
-					/*float gamma = sph_params.surfaceTension;*/
-					/**fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));*/
-				}
-			}
-		}
-	}
-
-	//start again with boundaries
-	startIndex = FETCH(cellBoundaryStart, gridHash);
-	float3 forces_boundaries = make_float3(0.f, 0.f, 0.f);
-
-	if (startIndex != 0xffffffff)
-	{
-		const float beta = sph_params.beta;
-		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
-		const float rd = sph_params.restDensity;
-
-		//loop over rigid boundary particles
-        for (unsigned int j=startIndex; j<endIndex; j++)
-		{
-			const unsigned int originalIndex = gridBoundaryIndex[j];
-
-			const float vbi  = FETCH(oldBoundaryVbi, originalIndex);
-			const float3 vpos= make_float3(FETCH(oldBoundaryPos, originalIndex));
-
-			const float psi = (rd*vbi);
-			const float3 p1p2 = pos1 - vpos;
-
-			const float kdefault = Wdefault(p1p2, ir, sph_params.kpoly);
-			/*const float kdefault = Aboundary(p1p2, ir, sph_params.bpol);*/
-
-			float3 contrib = (beta * psi * p1p2 * kdefault);
-			*fbound = *fbound + contrib;
-		}
-	}
-	return res;
-}
-
 __device__ float3 computeDisplacementFactorCell(float dens, float mj, int3 gridPos, float3 pos, float4* oldPos, unsigned int index, unsigned int* cellStart, unsigned int* cellEnd,
 		float ir, float kp, float rd, float pm)
 {
@@ -772,7 +675,6 @@ __device__ float3 computeDisplacementFactorCell(float dens, float mj, int3 gridP
 				if(length(p1p2) < ir)
 				{
 					res = res -(pm/(dens*dens)) * Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
-;
 				}
 			}
 		}
@@ -780,115 +682,157 @@ __device__ float3 computeDisplacementFactorCell(float dens, float mj, int3 gridP
 	return res;
 }
 
-__global__ void iisph_compute_displacement_factor(
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	float4       * oldBoundaryPos,
-	float       * oldBoundaryVbi,
-	float4       * oldPos,
-	float4       * oldVel,
-	float4       * oldVelAdv,
-	float        * oldDens,
-	float        * oldDensAdv,
-	float        * oldPres,
-	float4       * oldForcesAdv,
-	float4       * oldDisplacementFactor,
-	float        * oldAdvectionFactor,
-	unsigned int * gridParticleHash,
-	unsigned int * gridParticleIndex,
-	unsigned int * gridBoundaryHash,
-	unsigned int * gridBoundaryIndex,
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__device__ float3 computeDisplacementFactorBoundaryCell(float dens, float mj, int3 gridPos, float3 pos, float4* oldBoundaryPos, float* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd,
+		float ir, float kpg, float rd, float pm, float dt)
+{
+	const unsigned int gridHash = calcGridHash(gridPos);
+	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
+
+	float3 res  = make_float3(0.f, 0.f, 0.f);
+	const float3 pos1 = make_float3(pos.x, pos.y, pos.z);
+
+	if (startIndex != 0xffffffff)
+	{ 
+		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
+
+        for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			const float3 pos2 = make_float3(FETCH(oldBoundaryPos, j));
+			const float  vbi  = FETCH(oldBoundaryVbi, j);
+			const float3 p1p2 = pos1 - pos2;
+
+			const float psi  = rd*vbi;
+			if(length(p1p2) < ir)
+			{
+				res = res + (-dt*dt*psi/(dens*dens))*Wdefault_grad(p1p2, ir, kpg);
+			}
+		}
+	}
+	return res;
+
+}
+
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__global__ void computeDisplacementFactor(
+	float4                      * oldPos,
+	float4                      * oldVel,
+	float                       * oldDens,
+	float                       * oldPres,
+	float4                      * oldForces,
+	float4                      * oldCol,
+	unsigned int                * cellStart,
+	unsigned int                * cellEnd,
+	unsigned int                * gridParticleIndex,
+	float4                      * oldBoundaryPos,
+	float                       * oldBoundaryVbi,
+	unsigned int                * cellBoundaryStart,
+	unsigned int                * cellBoundaryEnd,
+	unsigned int                * gridBoundaryIndex,
+	float                       * oldDensAdv,
+	float                       * oldDensCorr,
+	float                       * oldP_l,
+	float                       * oldPreviousP,
+	float                       * oldAii,
+	float4                      * oldVelAdv,
+	float4                      * oldForcesAdv,
+	float4                      * oldForcesP,
+	float4                      * oldDiiFluid,
+	float4                      * oldDiiBoundary,
+	float4                      * oldSumDij,
+	float4                      * oldNormal,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
-	unsigned int nymCells
-	)
+	unsigned int numCells)
 {
     const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
-
 	const unsigned int originalIndex = gridParticleIndex[index];
-
-    const float3 pos = make_float3(FETCH(oldPos, originalIndex));
-
-    // get address in grid
-    const int3 gridPos = calcGridPos(pos);
-
-    // examine neighbouring cells
-    float dens = 0.f;
-	int nbVois = 0;
-
-	//const memory access
-	const float dt = sph_params.timestep;
-	const float ir = sph_params.interactionRadius;
+	
+	//global memory reads
+	const float3 pos1 = make_float3(FETCH(oldPos, originalIndex));
+	const float3 vel1 = make_float3(FETCH(oldVel, originalIndex));
+	const float pres = 0.f; //useless, just to reuse computeCellForces below
+	
+	//const memory reads
 	const float kp = sph_params.kpoly;
 	const float kpg= sph_params.kpoly_grad;
-	const float rd = sph_params.restDensity;
 	const float pm = sph_params.particleMass;
-	const float visc=sph_params.viscosity;
+	const float ir = sph_params.interactionRadius;
+	const float rd = sph_params.restDensity;
+	const float dt = sph_params.timestep;
 
-	/****************************************************
-	*  ************* COMPUTE DENSITIES **************  *
-	****************************************************/
-    for (int z=-1; z<=1; z++)
-    {
-        for (int y=-1; y<=1; y++)
-        {
-            for (int x=-1; x<=1; x++)
-            {
-                const int3 neighbourPos = gridPos + make_int3(x, y, z);
-				dens += computeCellDensity(&nbVois, neighbourPos, originalIndex, pos, oldPos, cellStart, cellEnd, ir, kp, rd, pm);
-				dens += computeBoundaryCellDensity(neighbourPos, pos, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kp, rd, pm);
-            }
-        }
-    } 
+	//grid computations
+    const int3 gridPos = calcGridPos(pos1);
+	
+	/*********************
+	*  COMPUTE DENSITY  *
+	*********************/
+	float dens = 0.f;
+	int nb = 0;
 
-	oldDens[originalIndex] = dens;
-
+	//loop over each neighbor cell
+	for (int z=-1; z<=1; z++)
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				const int3 neighbourPos = gridPos + make_int3(x, y, z);
+				dens += computeCellDensity(&nb, neighbourPos, originalIndex, pos1, oldPos, cellStart, cellEnd, ir, kp, rd, pm);
+				dens += computeBoundaryCellDensity(neighbourPos, pos1, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kp, rd, pm);
+			}
+		}
+	}
 	__syncthreads();
-
-	/****************************************************************
-	*  *************** COMPUTE NON PRESSURE FORCES **************  *
-	****************************************************************/
+	
+	/***********************
+	*  PREDICT ADVECTION  *
+	***********************/
 	float3 fvisc = make_float3(0.f, 0.f, 0.f);
 	float3 fsurf = make_float3(0.f, 0.f, 0.f);
+	float3 fgrav = make_float3(0.f, 0.f, 0.f);
 	float3 fbound= make_float3(0.f, 0.f, 0.f);
-
-	//compute viscosity
-	float3 vel = make_float3(FETCH(oldVel, originalIndex));
+	float3 fpres = make_float3(0.f, 0.f, 0.f); //ignored here, just to reuse computeCellForces
 
 	for (int z=-1; z<=1; z++)
-    {
-        for (int y=-1; y<=1; y++)
-        {
-            for (int x=-1; x<=1; x++)
-            {
-                const int3 neighbourPos = gridPos + make_int3(x, y, z);
-				computeCellNonPressureForces(&fvisc, &fsurf, &fbound, neighbourPos, originalIndex, pos, vel, dens,
-											 oldPos, oldDens, oldVel, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi,
-											 cellStart, cellEnd, cellBoundaryStart, cellBoundaryEnd);
-            }
-        }
-    } 
-	//compute gravity
-	float3 fgrav =  pm*sph_params.gravity;
-	float3 fadv = fvisc + fsurf + fgrav;
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				const int3 neighbourPos = gridPos + make_int3(x, y, z);
+				//a optimiser !!!
+				computeCellForces(&fpres, &fvisc, &fsurf, &fbound, neighbourPos, originalIndex, pos1, vel1, dens, pres, oldPos, oldDens, oldPres, oldVel, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellStart, cellEnd, cellBoundaryStart, cellBoundaryEnd);
+			}
+		}
+	}
+
+	//finishing gradient and laplacian computations
+	fvisc = 2.f * fvisc;
+	fsurf = -(sph_params.surfaceTension/pm) * fsurf;
+
+	//computing forces
+	fvisc = (pm*sph_params.viscosity) * fvisc;
+	fgrav =  pm*sph_params.gravity;
+
 	float3 force_adv = fvisc + fsurf + fbound + fgrav;
-
-	__syncthreads();
-	/*************************************************
-	*  ************* COMPUTE VEL ADV *************  *
-	*************************************************/
-	float3 vel_adv = vel + dt*(force_adv/pm);
+	oldForcesAdv[originalIndex] = make_float4(force_adv.x, force_adv.y, force_adv.z, 0.f);
+	
+	float3 vel_adv = vel1 + dt*(force_adv/pm);
 	oldVelAdv[originalIndex] = make_float4(vel_adv.x, vel_adv.y, vel_adv.z, 0);
-
 	__syncthreads();
 
-	/*************************************************************
-	*  ************* COMPUTE DISPLACEMENT FACTOR *************  *
-	*************************************************************/
-	float3 displacement_factor = make_float3(0.f, 0.f, 0.f);
+	/*****************
+	*  COMPUTE Dii  *
+	*****************/
+
+	float3 displacement_factor_fluid = make_float3(0.f, 0.f, 0.f);
+	float3 displacement_factor_boundary = make_float3(0.f, 0.f, 0.f);
 	for (int z=-1; z<=1; z++)
     {
         for (int y=-1; y<=1; y++)
@@ -896,67 +840,382 @@ __global__ void iisph_compute_displacement_factor(
             for (int x=-1; x<=1; x++)
             {
                 const int3 neighbourPos = gridPos + make_int3(x, y, z);
-				displacement_factor = displacement_factor + computeDisplacementFactorCell(dens, pm, neighbourPos, pos, oldPos, originalIndex, cellStart, cellEnd, ir, kpg, rd, pm);
+				displacement_factor_fluid = displacement_factor_fluid + computeDisplacementFactorCell(dens, pm, neighbourPos, pos1, oldPos, originalIndex, cellStart, cellEnd, ir, kpg, rd, pm);
+				displacement_factor_boundary = displacement_factor_boundary + computeDisplacementFactorBoundaryCell(dens, pm, gridPos, pos1, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kpg, rd, pm, dt);
 			}
         }
     } 
-	displacement_factor = displacement_factor * (dt*dt);
+	displacement_factor_fluid = displacement_factor_fluid * (dt*dt);
+	oldDiiFluid[originalIndex] = make_float4(displacement_factor_fluid.x, displacement_factor_fluid.y, displacement_factor_fluid.z, 0.f);
+	oldDiiBoundary[originalIndex] = make_float4(displacement_factor_boundary.x, displacement_factor_boundary.y, displacement_factor_boundary.z, 0.f);
 }
 
-__global__ void iisph_compute_advection_factor(
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	float4       * oldPos,
-	float4       * oldVel,
-	float4       * oldVelAdv,
-	float        * oldDens,
-	float        * oldDensAdv,
-	float        * oldPres,
-	float4       * oldForcesAdv,
-	float4       * oldDisplacementFactor,
-	float        * oldAdvectionFactor,
-	unsigned int * gridParticleHash,
-	unsigned int * gridParticleIndex,
-	unsigned int * gridBoundaryHash,
-	unsigned int * gridBoundaryIndex,
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+
+__device__ float rho_adv_fluid(float* rho_advf, float ir, float pm, unsigned int index, float3 pos1, float3 velAdv1, float kpg, float4* oldPos, float4* oldVelAdv, int3 neighbourPos, unsigned int* cellStart, unsigned int* cellEnd)
+{
+	const unsigned int gridHash = calcGridHash(neighbourPos);
+	const unsigned int startIndex = FETCH(cellStart, gridHash);
+
+	float res  = 0.f;
+	if (startIndex != 0xffffffff)
+	{ 
+		const unsigned int endIndex = FETCH(cellEnd, gridHash);
+        for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			if(j != index)
+			{
+				const float3 pos2 = make_float3(FETCH(oldPos, j));
+				const float3 velAdv2 = make_float3(FETCH(oldVelAdv, j));
+				const float3 v1v2 = velAdv1 - velAdv2;
+				const float3 p1p2 = pos1 - pos2;
+				if(length(p1p2) < ir)
+				{
+					res += pm  * dot(v1v2, Wdefault_grad(p1p2, ir, kpg));
+				}
+			}
+		}
+	}
+	return res;
+}
+
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__device__ float rho_adv_boundary(float *rho_advb, float3 pos1, float3 vel1, float rd, float pm, float ir, float kpg, int3 neighbourPos, float4* oldBoundaryPos, float* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd)
+{
+	const unsigned int gridHash = calcGridHash(neighbourPos);
+	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
+	float res = 0.f;
+
+	if (startIndex != 0xffffffff)
+	{
+		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
+		for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			const float3 vb = make_float3(0.1f, 0.1f, 0.1f);
+			const float3 bpos = make_float3(FETCH(oldBoundaryPos, j));
+			const float  vbi  = FETCH(oldBoundaryVbi, j);
+
+			const float3 p1p2 = pos1 - bpos;
+			const float3 v1v2 = vel1 - vb;
+
+			const float psi = (rd * vbi);
+			res += (psi* dot(v1v2, Wdefault_grad(p1p2, ir, kpg)));
+		}
+	}
+	return res;
+}
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__device__ float compute_aii_cell(float ir, float dt, float pm, float kpg, float dens, float3 pos1, float3 diif, float3 diib, float4* oldPos, unsigned int* cellStart, unsigned int* cellEnd, int3 neighbourPos, unsigned int index)
+{
+	const unsigned int gridHash = calcGridHash(neighbourPos);
+	const unsigned int startIndex = FETCH(cellStart, gridHash);
+
+	float res  = 0.f;
+	if (startIndex != 0xffffffff)
+	{ 
+		const unsigned int endIndex = FETCH(cellEnd, gridHash);
+        for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			if(j != index)
+			{
+				const float3 pos2 = make_float3(FETCH(oldPos, j));
+				const float3 p1p2 = pos1 - pos2;
+
+				const float3 dji = -(dt*dt*pm)/(dens*dens)*(-1.f * Wdefault_grad(p1p2, ir, kpg));
+
+				res += pm * dot((diif+diib)-dji, Wdefault_grad(p1p2, ir, kpg));
+			}
+		}
+	}
+	return res;
+}
+
+__device__ float compute_aii_cell_boundary(float rd, float ir, float kpg, float3 diif, float3 diib, float3 pos1, float4* oldBoundaryPos, float* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, int3 neighbourPos)
+{
+	const unsigned int gridHash = calcGridHash(neighbourPos);
+	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
+	float res = 0.f;
+
+	if (startIndex != 0xffffffff)
+	{
+		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
+		for (unsigned int j=startIndex; j<endIndex; j++)
+		{
+			const float3 pos2 = make_float3(FETCH(oldBoundaryPos, j));
+			const float3 p1p2 = pos1 - pos2;
+			const float  vbi  = FETCH(oldBoundaryVbi, j);
+
+			const float psi = rd*vbi;
+
+			res += psi * dot(diif + diib, Wdefault_grad(p1p2, ir, kpg));
+		}
+	}
+	return res;
+}
+
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+
+__global__ void computeAdvectionFactor(
+	float4                      * oldPos,
+	float4                      * oldVel,
+	float                       * oldDens,
+	float                       * oldPres,
+	float4                      * oldForces,
+	float4                      * oldCol,
+	unsigned int                * cellStart,
+	unsigned int                * cellEnd,
+	unsigned int                * gridParticleIndex,
+	float4					    * oldBoundaryPos,
+	float                       * oldBoundaryVbi,
+	unsigned int                * cellBoundaryStart,
+	unsigned int                * cellBoundaryEnd,
+	unsigned int                * gridBoundaryIndex,
+	float                       * oldDensAdv,
+	float                       * oldDensCorr,
+	float                       * oldP_l,
+	float                       * oldPreviousP,
+	float                       * oldAii,
+	float4                      * oldVelAdv,
+	float4                      * oldForcesAdv,
+	float4                      * oldForcesP,
+	float4                      * oldDiiFluid,
+	float4                      * oldDiiBoundary,
+	float4                      * oldSumDij,
+	float4                      * oldNormal,
+	unsigned int numParticles,
+	unsigned int numBoundaries,
+	unsigned int numCells)
+{
+    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    if (index >= numParticles) return;
+	const unsigned int originalIndex = gridParticleIndex[index];
+
+	//global memory reads
+	const float3 pos1 = make_float3(FETCH(oldPos, originalIndex));
+	const float3 vel1 = make_float3(FETCH(oldVel, originalIndex));
+	const float3 velAdv1 = make_float3(FETCH(oldVelAdv, originalIndex));
+	const float  dens = FETCH(oldDens, originalIndex);
+	const float3 diif = make_float3(FETCH(oldDiiFluid, originalIndex));
+	const float3 diib = make_float3(FETCH(oldDiiBoundary, originalIndex));
+
+	//grid computation
+    const int3 gridPos = calcGridPos(pos1);
+
+	//const memory reads
+	const float kp = sph_params.kpoly;
+	const float kpg= sph_params.kpoly_grad;
+	const float pm = sph_params.particleMass;
+	const float ir = sph_params.interactionRadius;
+	const float rd = sph_params.restDensity;
+	const float dt = sph_params.timestep;
+
+	/*********************
+	*  COMPUTE RHO_ADV  *
+	*********************/
+	float rho_advf= 0.f;
+	float rho_advb= 0.f;
+
+	//loop over fluid particles and boundary particles
+	for (int z=-1; z<=1; z++)
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				const int3 neighbourPos = gridPos + make_int3(x, y, z);
+
+				rho_advf+= rho_adv_fluid(&rho_advf, ir, pm, originalIndex, pos1, velAdv1, kpg, oldPos, oldVelAdv, neighbourPos, cellStart, cellEnd);
+				rho_advb+= rho_adv_boundary(&rho_advb, pos1, vel1, rd, pm, ir, kpg, neighbourPos, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd);
+			}
+		}
+	}
+	float rho_adv = dens + dt*(rho_advf + rho_advb);
+	oldDensAdv[originalIndex] = rho_adv; 
+
+	/*******************
+	*  COMPUTE P_i^0  *
+	*******************/
+	oldP_l[originalIndex] = 0.5f * oldPres[originalIndex];
+
+	/*****************
+	*  COMPUTE AII  *
+	*****************/
+	float aii = 0.f;
+	for (int z=-1; z<=1; z++)
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				const int3 neighbourPos = gridPos + make_int3(x, y, z);
+
+				aii += compute_aii_cell(ir, dt, pm, kpg, dens, pos1, diif, diib, oldPos, cellStart, cellEnd, neighbourPos, originalIndex);
+				aii += compute_aii_cell_boundary(rd, ir, kpg, diif, diib, pos1, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, neighbourPos);
+			}
+		}
+	}
+	oldAii[originalIndex] = aii;
+}
+
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__global__ void computeSumDijPj(
+	float4                      * oldPos,
+	float4                      * oldVel,
+	float                       * oldDens,
+	float                       * oldPres,
+	float4                      * oldForces,
+	float4                      * oldCol,
+	unsigned int                * cellStart,
+	unsigned int                * cellEnd,
+	unsigned int                * gridParticleIndex,
+	float4					    * oldBoundaryPos,
+	float                       * oldBoundaryVbi,
+	unsigned int                * cellBoundaryStart,
+	unsigned int                * cellBoundaryEnd,
+	unsigned int                * gridBoundaryIndex,
+	float                       * oldDensAdv,
+	float                       * oldDensCorr,
+	float                       * oldP_l,
+	float                       * oldPreviousP,
+	float                       * oldAii,
+	float4                      * oldVelAdv,
+	float4                      * oldForcesAdv,
+	float4                      * oldForcesP,
+	float4                      * oldDiiFluid,
+	float4                      * oldDiiBoundary,
+	float4                      * oldSumDij,
+	float4                      * oldNormal,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
 	unsigned int numCells
 		)
 {
-    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
-    if (index >= numParticles) return;
-
-	const unsigned int originalIndex = gridParticleIndex[index];
-
-	// read particle data from sorted arrays
-    const float3 pos = make_float3(FETCH(oldPos, originalIndex));
-    const float3 vel = make_float3(FETCH(oldVel, originalIndex));
-
-
+	//TODO
 }
 
-__global__ void compute_sum_pressure_movement()
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__global__ void computePressure(
+	float4                      * oldPos,
+	float4                      * oldVel,
+	float                       * oldDens,
+	float                       * oldPres,
+	float4                      * oldForces,
+	float4                      * oldCol,
+	unsigned int                * cellStart,
+	unsigned int                * cellEnd,
+	unsigned int                * gridParticleIndex,
+	float4					    * oldBoundaryPos,
+	float                       * oldBoundaryVbi,
+	unsigned int                * cellBoundaryStart,
+	unsigned int                * cellBoundaryEnd,
+	unsigned int                * gridBoundaryIndex,
+	float                       * oldDensAdv,
+	float                       * oldDensCorr,
+	float                       * oldP_l,
+	float                       * oldPreviousP,
+	float                       * oldAii,
+	float4                      * oldVelAdv,
+	float4                      * oldForcesAdv,
+	float4                      * oldForcesP,
+	float4                      * oldDiiFluid,
+	float4                      * oldDiiBoundary,
+	float4                      * oldSumDij,
+	float4                      * oldNormal,
+	unsigned int numParticles,
+	unsigned int numBoundaries,
+	unsigned int numCells
+		)
 {
-
+	//TODO
 }
 
-__global__ void compute_pressure()
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__global__ void computePredictedDensity(
+	float4                      * oldPos,
+	float4                      * oldVel,
+	float                       * oldDens,
+	float                       * oldPres,
+	float4                      * oldForces,
+	float4                      * oldCol,
+	unsigned int                * cellStart,
+	unsigned int                * cellEnd,
+	unsigned int                * gridParticleIndex,
+	float4					    * oldBoundaryPos,
+	float                       * oldBoundaryVbi,
+	unsigned int                * cellBoundaryStart,
+	unsigned int                * cellBoundaryEnd,
+	unsigned int                * gridBoundaryIndex,
+	float                       * oldDensAdv,
+	float                       * oldDensCorr,
+	float                       * oldP_l,
+	float                       * oldPreviousP,
+	float                       * oldAii,
+	float4                      * oldVelAdv,
+	float4                      * oldForcesAdv,
+	float4                      * oldForcesP,
+	float4                      * oldDiiFluid,
+	float4                      * oldDiiBoundary,
+	float4                      * oldSumDij,
+	float4                      * oldNormal,
+	unsigned int numParticles,
+	unsigned int numBoundaries,
+	unsigned int numCells
+		)
 {
-
+	//TODO
 }
 
-__global__ void compute_predicted_density()
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
+__global__ void computeDensityError(
+	float4                      * oldPos,
+	float4                      * oldVel,
+	float                       * oldDens,
+	float                       * oldPres,
+	float4                      * oldForces,
+	float4                      * oldCol,
+	unsigned int                * cellStart,
+	unsigned int                * cellEnd,
+	unsigned int                * gridParticleIndex,
+	float4					    * oldBoundaryPos,
+	float                       * oldBoundaryVbi,
+	unsigned int                * cellBoundaryStart,
+	unsigned int                * cellBoundaryEnd,
+	unsigned int                * gridBoundaryIndex,
+	float                       * oldDensAdv,
+	float                       * oldDensCorr,
+	float                       * oldP_l,
+	float                       * oldPreviousP,
+	float                       * oldAii,
+	float4                      * oldVelAdv,
+	float4                      * oldForcesAdv,
+	float4                      * oldForcesP,
+	float4                      * oldDiiFluid,
+	float4                      * oldDiiBoundary,
+	float4                      * oldSumDij,
+	float4                      * oldNormal,
+	unsigned int numParticles,
+	unsigned int numBoundaries,
+	unsigned int numCells
+		)
 {
-
+	//TODO
 }
 
-__global__ void compute_density_error()
-{
-
-}
-
-#endif /* ifndef _PARTICLES_KERNEL_IMPL_CUH */
+#endif//_PARTICLES_KERNEL_IMPL_CUH
 

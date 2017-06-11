@@ -24,10 +24,22 @@ public:
 	void update();
 
 private:
-	float* m_dVel_adv;
-	float* m_dDensity_adv;
-	float* m_dDisplacement_factor;
-	float* m_dAdvection_factor;
+	//float
+	float *m_dSortedDensAdv;
+	float *m_dSortedDensCorr;
+	float *m_dSortedP_l;
+	float *m_dSortedPreviousP;
+	float *m_dSortedAii;
+
+	//float4
+	float *m_dSortedVelAdv;
+	float *m_dSortedForcesAdv;
+	float *m_dSortedForcesP;
+	float *m_dSortedDiiFluid;
+	float *m_dSortedDiiBoundary;
+	float *m_dSortedSumDij;
+	float *m_dSortedNormal;
+
 };
 
 } /* CFD */ 

@@ -125,54 +125,40 @@ void computeDensityPressure(
 	/***********
 	*  IISPH  *
 	***********/
-	
-void predictAdvection(
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	float		 * sortedBoundaryPos,
-	float		 * sortedBoundaryVbi,
-	float        * sortedPos,
-	float        * sortedVel,
-	float        * sortedVelAdv,
-	float        * sortedDens,
-	float        * sortedDensAdv,
-	float        * sortedPressure,
-	float        * sortedForcesAdv,
-	float        * sortedDisplacementFactor,
-	float        * sortedAdvectionFactor,
-	unsigned int * gridParticleHash,
-	unsigned int * gridParticleIndex,
-	unsigned int * gridBoundaryHash,
-	unsigned int * gridBoundaryIndex,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int numCells
-	);
+	void predictAdvection(float* sortedPos,
+		float                       * sortedVel,
+		float                       * sortedDens,
+		float                       * sortedPres,
+		float                       * sortedForces,
+		float                       * sortedCol,
+		unsigned int                * cellStart,
+		unsigned int                * cellEnd,
+		unsigned int                * gridParticleIndex,
+		float						* sortedBoundaryPos,
+		float						* sortedBoundaryVbi,
+		unsigned int                * cellBoundaryStart,
+		unsigned int                * cellBoundaryEnd,
+		unsigned int                * gridBoundaryIndex,
+		float                       * sortedDensAdv,
+		float                       * sortedDensCorr,
+		float                       * sortedP_l,
+		float                       * sortedPreviousP,
+		float                       * sortedAii,
+		float                       * sortedVelAdv,
+		float                       * sortedForcesAdv,
+		float                       * sortedForcesP,
+		float                       * sortedDiiFluid,
+		float                       * sortedDiiBoundary,
+		float                       * sortedSumDij,
+		float                       * sortedNormal,
+		unsigned int numParticles,
+		unsigned int numBoundaries,
+		unsigned int numCells);
 
-void pressureSolve(
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	float        * sortedPos,
-	float        * sortedVel,
-	float        * sortedVelAdv,
-	float        * sortedDens,
-	float        * sortedDensAdv,
-	float        * sortedPressure,
-	float        * sortedForcesAdv,
-	float        * sortedDisplacementFactor,
-	float        * sortedAdvectionFactor,
-	unsigned int * gridParticleHash,
-	unsigned int * gridParticleIndex,
-	unsigned int * gridBoundaryHash,
-	unsigned int * gridBoundaryIndex,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int nymCells
-	);
 
+	void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float* sortedPres, float* sortedForces, float* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+					  unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, float* sortedDensAdv, float* sortedDensCorr, float* sortedP_l,  float* sortedPreviousP, 
+					  float* sortedAii, float* sortedVelAdv, float* sortedForcesAdv, float* sortedForcesP, float* sortedDiiFluid, float* sortedDiiBoundary, float* sortedSumDij, float* sortedNormal,
+					  unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells);
 }
 #endif /* ifndef SPH_CUH */

@@ -465,131 +465,142 @@ void computeDensityPressure(
 /***********
 *  IISPH  *
 ***********/
-void predictAdvection(
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	float		 * sortedBoundaryPos,
-	float		 * sortedBoundaryVbi,
-	float        * sortedPos,
-	float        * sortedVel,
-	float        * sortedVelAdv,
-	float        * sortedDens,
-	float        * sortedDensAdv,
-	float        * sortedPres,
-	float        * sortedForcesAdv,
-	float        * sortedDisplacementFactor,
-	float        * sortedAdvectionFactor,
-	unsigned int * gridParticleHash,
-	unsigned int * gridParticleIndex,
-	unsigned int * gridBoundaryHash,
-	unsigned int * gridBoundaryIndex,
+void predictAdvection(float* sortedPos,
+	float                       * sortedVel,
+	float                       * sortedDens,
+	float                       * sortedPres,
+	float                       * sortedForces,
+	float                       * sortedCol,
+	unsigned int                * cellStart,
+	unsigned int                * cellEnd,
+	unsigned int                * gridParticleIndex,
+	float						* sortedBoundaryPos,
+	float						* sortedBoundaryVbi,
+	unsigned int                * cellBoundaryStart,
+	unsigned int                * cellBoundaryEnd,
+	unsigned int                * gridBoundaryIndex,
+	float                       * sortedDensAdv,
+	float                       * sortedDensCorr,
+	float                       * sortedP_l,
+	float                       * sortedPreviousP,
+	float                       * sortedAii,
+	float                       * sortedVelAdv,
+	float                       * sortedForcesAdv,
+	float                       * sortedForcesP,
+	float                       * sortedDiiFluid,
+	float                       * sortedDiiBoundary,
+	float                       * sortedSumDij,
+	float                       * sortedNormal,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
-	unsigned int numCells
-	)
+	unsigned int numCells)
 {
 #if USE_TEX
 	checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
 	checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
 	checkCudaErrors(cudaBindTexture(0, oldDensTex, sortedDens, numParticles*sizeof(float)));
 	checkCudaErrors(cudaBindTexture(0, oldPresTex, sortedPres, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForces, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldColTex, sortedCol, numParticles*sizeof(float4)));
 
 	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
 	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
 
-	checkCudaErrors(cudaBindTexture(0, oldVelAdvTex, sortedVelAdv, numParticles*sizeof(float4)));
-	checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForcesAdv, numParticles*sizeof(float4)));
-	checkCudaErrors(cudaBindTexture(0, oldDisplacementFactorTex, sortedDisplacementFactor, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldDensAdvTex, sortedDensAdv, numCells*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldDensCorrTex, sortedDensCorr, numCells*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldP_lTex, sortedP_l, numCells*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldPreviousPTex, sortedPreviousP, numCells*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldAiiTex, sortedAii, numCells*sizeof(float)));
 
-	checkCudaErrors(cudaBindTexture(0, oldDensAdvTex, sortedDensAdv, numParticles*sizeof(float)));
-	checkCudaErrors(cudaBindTexture(0, oldAdvectionFactorTex, sortedAdvectionFactor, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldVelAdvTex, sortedVelAdv, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldForcesAdvTex, sortedForcesAdv, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldForcesPTex, sortedForcesP, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldDiiFluidTex, sortedDiiFluid, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldDiiBoundaryTex, sortedDiiBoundary, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldSumDijTex, sortedSumDij, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldNormalTex, sortedNormal, numParticles*sizeof(float4)));
 #endif
 
 	unsigned int numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
-	iisph_compute_displacement_factor<<<numBlocks, numThreads>>>(
-			cellStart,
-			cellEnd,
-			cellBoundaryStart,
-			cellBoundaryEnd,
-			(float4*) sortedBoundaryPos,
-			sortedBoundaryVbi,
+	computeDisplacementFactor<<<numBlocks, numThreads>>>(
 			(float4*) sortedPos,
 			(float4*) sortedVel,
-			(float4*) sortedVelAdv,
 			sortedDens,
-			sortedDensAdv,
 			sortedPres,
-			(float4*) sortedForcesAdv,
-			(float4*) sortedDisplacementFactor,
-			sortedAdvectionFactor,
-			gridParticleHash,
+			(float4*) sortedForces,
+			(float4*) sortedCol,
+			cellStart,
+			cellEnd,
 			gridParticleIndex,
-			gridBoundaryHash,
+			(float4*) sortedBoundaryPos,
+			sortedBoundaryVbi,
+			cellBoundaryStart,
+			cellBoundaryEnd,
 			gridBoundaryIndex,
+			sortedDensAdv,
+			sortedDensCorr,
+			sortedP_l,
+			sortedPreviousP,
+			sortedAii,
+			(float4*) sortedVelAdv,
+			(float4*) sortedForcesAdv,
+			(float4*) sortedForcesP,
+			(float4*) sortedDiiFluid,
+			(float4*) sortedDiiBoundary,
+			(float4*) sortedSumDij,
+			(float4*) sortedNormal,
 			numParticles,
 			numBoundaries,
 			numCells);
 
-   /* iisph_compute_advection_factor<<<numBlocks, numThreads>>>(*/
-			/*cellStart,*/
-			/*cellEnd,*/
-			/*cellBoundaryStart,*/
-			/*cellBoundaryEnd,*/
-			/*(float4*) sortedPos,*/
-			/*(float4*) sortedVel,*/
-			/*(float4*) sortedVelAdv,*/
-			/*sortedDens,*/
-			/*sortedDensAdv,*/
-			/*sortedPres,*/
-			/*(float4*) sortedForcesAdv,*/
-			/*(float4*) sortedDisplacementFactor,*/
-			/*sortedAdvectionFactor,*/
-			/*gridParticleHash,*/
-			/*gridParticleIndex,*/
-			/*gridBoundaryHash,*/
-			/*gridBoundaryIndex,*/
-			/*numParticles,*/
-			/*numBoundaries,*/
-			/*numCells);*/
+	computeAdvectionFactor<<<numBlocks, numThreads>>>(
+			(float4*) sortedPos,
+			(float4*) sortedVel,
+			sortedDens,
+			sortedPres,
+			(float4*) sortedForces,
+			(float4*) sortedCol,
+			cellStart,
+			cellEnd,
+			gridParticleIndex,
+			(float4*) sortedBoundaryPos,
+			sortedBoundaryVbi,
+			cellBoundaryStart,
+			cellBoundaryEnd,
+			gridBoundaryIndex,
+			sortedDensAdv,
+			sortedDensCorr,
+			sortedP_l,
+			sortedPreviousP,
+			sortedAii,
+			(float4*) sortedVelAdv,
+			(float4*) sortedForcesAdv,
+			(float4*) sortedForcesP,
+			(float4*) sortedDiiFluid,
+			(float4*) sortedDiiBoundary,
+			(float4*) sortedSumDij,
+			(float4*) sortedNormal,
+			numParticles,
+			numBoundaries,
+			numCells);
 
-
-#if USE_TEX
-	//no texture to unbind
-#endif
 }
 
-void pressureSolve(
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	float        * sortedPos,
-	float        * sortedVel,
-	float        * sortedVelAdv,
-	float        * sortedDens,
-	float        * sortedDensAdv,
-	float        * sortedPres,
-	float        * sortedForcesAdv,
-	float        * sortedDisplacementFactor,
-	float        * sortedAdvectionFactor,
-	unsigned int * gridParticleHash,
-	unsigned int * gridParticleIndex,
-	unsigned int * gridBoundaryHash,
-	unsigned int * gridBoundaryIndex,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int nymCells
-	)
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float* sortedPres, float* sortedForces, float* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+					  unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, float* sortedDensAdv, float* sortedDensCorr, float* sortedP_l,  float* sortedPreviousP, 
+					  float* sortedAii, float* sortedVelAdv, float* sortedForcesAdv, float* sortedForcesP, float* sortedDiiFluid, float* sortedDiiBoundary, float* sortedSumDij, float* sortedNormal,
+					  unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
-#if USE_TEX
-	//unbind textures here
-#endif
+
 }
 
+}//extern c
 
-} //extern end
-
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
