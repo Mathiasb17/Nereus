@@ -1195,7 +1195,98 @@ __global__ void computePressure(
 	unsigned int numCells
 		)
 {
+	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    if (index >= numParticles) return;
+	const unsigned int originalIndex = gridParticleIndex[index];
+
+	//global reads
+	const float3 pos1 = make_float3(FETCH(oldPos, originalIndex));
+	const float dens = FETCH(oldDens, originalIndex);
+	float  p_l = FETCH(oldP_l, originalIndex);
+	const float previous_p_l = p_l;
+	const float rho_adv = FETCH(oldDensAdv, originalIndex);
+	const float3 sum_dij = make_float3(FETCH(oldSumDij, originalIndex));
+	const float3 diif = make_float3(FETCH(oldDiiFluid, originalIndex));
+	const float3 diib = make_float3(FETCH(oldDiiBoundary, originalIndex));
+	const float aii = FETCH(oldAii, originalIndex);
+
+	//grid compute
+    const int3 gridPos = calcGridPos(pos1);
+
+	//const reads
+	const float ir = sph_params.interactionRadius;
+	const float pm = sph_params.particleMass;
+	const float kpg= sph_params.kpoly_grad;
+	const float dt = sph_params.timestep;
+	const float rd = sph_params.restDensity;
+
+	float3 dijpj = make_float3(0.f, 0.f, 0.f);
+
+	float fsum = 0.f;
+	float bsum = 0.f;
+	for (int z=-1; z<=1; z++)
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				const int3 neighbourPos = gridPos + make_int3(x, y, z);
+				//TODO
+
+				/*dijpj = dijpj + dijpjcell(ir, pm, kpg, pos1, oldPos, oldDens, oldP_l, originalIndex, cellStart, cellEnd, neighbourPos);*/
+				const unsigned int gridHash = calcGridHash(neighbourPos);
+				const unsigned int startIndex = FETCH(cellStart, gridHash);
+
+				if (startIndex != 0xffffffff)
+				{ 
+					const unsigned int endIndex = FETCH(cellEnd, gridHash);
+					for (unsigned int j=startIndex; j<endIndex; j++)
+					{
+						if(j != index)
+						{
+							//todo
+							const float3 pos2 = make_float3(FETCH(oldPos, j));
+							const float3 p1p2 = pos1 - pos2;
+							const float p_lj = FETCH(oldP_l, j);
+							const float densj = FETCH(oldDens, j);
+
+							float dji; -(dt*dt*pm)/(dens*dens)*(-1.f * Wdefault_grad(p1p2, ir, kpg));//TODO
+
+							const float3 diifj = make_float3(FETCH(oldDiiFluid, j));
+							const float3 diibj = make_float3(FETCH(oldDiiBoundary, j));
+							const float3 sum_dijj = make_float3(FETCH(oldSumDij, j));
+							float3 aux = sum_dij - (diifj+diibj)*p_lj - (sum_dijj - dji*p_l);
+
+
+							fsum += pm*dot(aux, Wdefault_grad(p1p2, ir, kpg));//TODO
+							bsum += 0.f; //TODO
+						}
+					}
+				}
+
+			}
+		}
+	}
+
+	float omega = 0.5f;
+	float rho_corr = rho_adv + fsum + bsum;
+
+    if(fabs(aii)>FLT_EPSILON)
+    {
+        p_l = (1.f-omega)*previous_p_l + (omega/aii)*(rd - rho_corr);
+    }
+    else
+    {
+        p_l = 0.0;
+    }
+
+    float p = fmax(p_l, 0.f);
+    p_l = p;
+    rho_corr += aii*previous_p_l;
+
+	//global writes
 	//TODO
+
 }
 
 //====================================================================================================  
