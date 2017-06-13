@@ -555,6 +555,8 @@ void predictAdvection(float* sortedPos,
 			numBoundaries,
 			numCells);
 
+	cudaDeviceSynchronize();
+
 	computeAdvectionFactor<<<numBlocks, numThreads>>>(
 			(float4*) sortedPos,
 			(float4*) sortedVel,
@@ -586,17 +588,135 @@ void predictAdvection(float* sortedPos,
 			numBoundaries,
 			numCells);
 
+	cudaDeviceSynchronize();
+
 }
 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
 void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float* sortedPres, float* sortedForces, float* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+					  float* sortedBoundaryPos, float* sortedBoundaryVbi,
 					  unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, float* sortedDensAdv, float* sortedDensCorr, float* sortedP_l,  float* sortedPreviousP, 
 					  float* sortedAii, float* sortedVelAdv, float* sortedForcesAdv, float* sortedForcesP, float* sortedDiiFluid, float* sortedDiiBoundary, float* sortedSumDij, float* sortedNormal,
 					  unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
+	unsigned int numThreads, numBlocks;
+	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
+	unsigned int l=0; 
+	float rho_avg = 0.f;
+	const float rd = 1000.f;
+	const float max_rho_err = 10.f;
+
+	while( (rho_avg - rd) > max_rho_err || (l<2))
+	{
+		//compute sumdijpj
+		computeSumDijPj<<<numBlocks, numThreads>>>(
+				(float4                      *) sortedPos,
+				(float4                      *) sortedVel,
+				sortedDens,
+				sortedPres,
+				(float4                      *) sortedForces,
+				(float4                      *) sortedCol,
+				cellStart,
+				cellEnd,
+				gridParticleIndex,
+				(float4					    *)sortedBoundaryPos,
+				sortedBoundaryVbi,
+				cellBoundaryStart,
+				cellBoundaryEnd,
+				gridBoundaryIndex,
+				sortedDensAdv,
+				sortedDensCorr,
+				sortedP_l,
+				sortedPreviousP,
+				sortedAii,
+				(float4                      *) sortedVelAdv,
+				(float4                      *) sortedForcesAdv,
+				(float4                      *) sortedForcesP,
+				(float4                      *) sortedDiiFluid,
+				(float4                      *) sortedDiiBoundary,
+				(float4                      *) sortedSumDij,
+				(float4                      *) sortedNormal,
+				numParticles,
+				numBoundaries,
+				numCells
+		);
+
+		cudaDeviceSynchronize();
+		//compute pressure
+		computePressure<<<numBlocks, numThreads>>>(
+				(float4                      *) sortedPos,
+				(float4                      *) sortedVel,
+				sortedDens,
+				sortedPres,
+				(float4                      *) sortedForces,
+				(float4                      *) sortedCol,
+				cellStart,
+				cellEnd,
+				gridParticleIndex,
+				(float4					    *)sortedBoundaryPos,
+				sortedBoundaryVbi,
+				cellBoundaryStart,
+				cellBoundaryEnd,
+				gridBoundaryIndex,
+				sortedDensAdv,
+				sortedDensCorr,
+				sortedP_l,
+				sortedPreviousP,
+				sortedAii,
+				(float4                      *) sortedVelAdv,
+				(float4                      *) sortedForcesAdv,
+				(float4                      *) sortedForcesP,
+				(float4                      *) sortedDiiFluid,
+				(float4                      *) sortedDiiBoundary,
+				(float4                      *) sortedSumDij,
+				(float4                      *) sortedNormal,
+				numParticles,
+				numBoundaries,
+				numCells
+		);
+
+		cudaDeviceSynchronize();
+		//reduce rho_error buffers
+		rho_avg = 0.f;
+		rho_avg = thrust::reduce(thrust::device_ptr<float>(sortedDensCorr),thrust::device_ptr<float>(sortedDensCorr+numParticles));
+		rho_avg /= numParticles;
+		l++;
+	}
+
+	computePressureForce<<<numBlocks, numThreads>>>(
+				(float4                      *) sortedPos,
+				(float4                      *) sortedVel,
+				sortedDens,
+				sortedPres,
+				(float4                      *) sortedForces,
+				(float4                      *) sortedCol,
+				cellStart,
+				cellEnd,
+				gridParticleIndex,
+				(float4					    *)sortedBoundaryPos,
+				sortedBoundaryVbi,
+				cellBoundaryStart,
+				cellBoundaryEnd,
+				gridBoundaryIndex,
+				sortedDensAdv,
+				sortedDensCorr,
+				sortedP_l,
+				sortedPreviousP,
+				sortedAii,
+				(float4                      *) sortedVelAdv,
+				(float4                      *) sortedForcesAdv,
+				(float4                      *) sortedForcesP,
+				(float4                      *) sortedDiiFluid,
+				(float4                      *) sortedDiiBoundary,
+				(float4                      *) sortedSumDij,
+				(float4                      *) sortedNormal,
+				numParticles,
+				numBoundaries,
+				numCells
+		);
 }
 
 }//extern c

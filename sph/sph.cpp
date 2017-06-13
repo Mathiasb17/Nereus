@@ -40,7 +40,6 @@ SPH::SPH ():
 	m_params.interactionRadius = 0.0507f; //ref : 0.0457f
 
 	m_params.gravity.x = 0.f;
-	//m_params.gravity.y = -0.00f;
 	m_params.gravity.y = -9.81f;
 	m_params.gravity.z = 0.f;
 
@@ -182,6 +181,7 @@ void SPH::update()
 
 	cudaMemcpy(m_dpos, m_pos, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvel, m_vel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
+
 	setParameters(&m_params);
 
 	calcHash( m_dGridParticleHash, m_dGridParticleIndex, m_dpos, m_numParticles);
@@ -229,9 +229,8 @@ void SPH::update()
 
 	integrateSystem( m_dSortedPos, m_dSortedVel, m_dSortedForces, m_params.timestep, m_numParticles);
 
-
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
-	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
+	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 }
 
 //==================================================================================================== 

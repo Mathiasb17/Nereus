@@ -82,6 +82,7 @@ void IISPH::update()
 {
 	cudaMemcpy(m_dpos, m_pos, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvel, m_vel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
+
 	setParameters(&m_params);
 
 	calcHash( m_dGridParticleHash, m_dGridParticleIndex, m_dpos, m_numParticles);
@@ -112,6 +113,14 @@ void IISPH::update()
 					  m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedDensAdv, m_dSortedDensCorr, m_dSortedP_l,  m_dSortedPreviousP, 
 					  m_dSortedAii, m_dSortedVelAdv, m_dSortedForcesAdv, m_dSortedForcesP, m_dSortedDiiFluid, m_dSortedDiiBoundary, m_dSortedSumDij, m_dSortedNormal,
 					  m_numParticles, m_num_boundaries, getNumCells());
+
+	pressureSolve(m_dSortedPos, m_dSortedVel, m_dSortedDens, m_dSortedPress, m_dSortedForces, m_dSortedCol, m_dCellStart, m_dCellEnd, m_dGridParticleIndex, m_dSortedbi, m_dSortedVbi,
+					  m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedDensAdv, m_dSortedDensCorr, m_dSortedP_l,  m_dSortedPreviousP, 
+					  m_dSortedAii, m_dSortedVelAdv, m_dSortedForcesAdv, m_dSortedForcesP, m_dSortedDiiFluid, m_dSortedDiiBoundary, m_dSortedSumDij, m_dSortedNormal,
+					  m_numParticles, m_num_boundaries, getNumCells());
+
+	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
+	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 }
 
 } /* CFD */ 

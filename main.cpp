@@ -491,9 +491,9 @@ void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
  **********************************************************************/
 int main(void)
 {
-	CFD::SPH *sim_sph = new CFD::IISPH();
+	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(1.0f, 1.0f, 1.0f, 0.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(1.1f, 1.1f, 1.1f, 0.f), glm::vec4(0,0,0,0));
 
 	//make boundary particles
 	std::vector<glm::vec4> bi;
