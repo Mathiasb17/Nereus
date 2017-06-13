@@ -244,7 +244,7 @@ void calcHash(unsigned int  *gridParticleHash,
 			numParticles);
 
 	// check if kernel invocation generated an error
-	getLastCudaError("Kernel execution failed");
+	getLastCudaError("calcHash Failed");
 }
 
 //==================================================================================================== 
@@ -340,7 +340,7 @@ void reorderDataAndFindCellStart(unsigned int  *cellStart,
 			(float4 *) sortedPos,
 			(float4 *) sortedVel,
 			NULL,
-			NULL,
+			sortedPres,
 			NULL,
 			NULL,
 			gridParticleHash,
@@ -348,7 +348,7 @@ void reorderDataAndFindCellStart(unsigned int  *cellStart,
 			(float4 *) oldPos,
 			(float4 *) oldVel,
 			NULL,
-			NULL,
+			oldPres,
 			NULL,
 			NULL,
 			numParticles);
@@ -601,15 +601,16 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 					  float* sortedAii, float* sortedVelAdv, float* sortedForcesAdv, float* sortedForcesP, float* sortedDiiFluid, float* sortedDiiBoundary, float* sortedSumDij, float* sortedNormal,
 					  unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
+	/*printf("avant\n");*/
 	unsigned int numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 	unsigned int l=0; 
 	float rho_avg = 0.f;
 	const float rd = 1000.f;
-	const float max_rho_err = 10.f;
+	const float max_rho_err = 1.f;
 
-	while( (rho_avg - rd) > max_rho_err || (l<2))
+	while( ((rho_avg - rd) > max_rho_err) || (l<2))
 	{
 		//compute sumdijpj
 		computeSumDijPj<<<numBlocks, numThreads>>>(
@@ -643,6 +644,8 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 				numBoundaries,
 				numCells
 		);
+
+		getLastCudaError("computeSumDijPj failed");
 
 		cudaDeviceSynchronize();
 		//compute pressure
@@ -679,12 +682,16 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 		);
 
 		cudaDeviceSynchronize();
+
 		//reduce rho_error buffers
 		rho_avg = 0.f;
 		rho_avg = thrust::reduce(thrust::device_ptr<float>(sortedDensCorr),thrust::device_ptr<float>(sortedDensCorr+numParticles));
 		rho_avg /= numParticles;
+
 		l++;
 	}
+	getLastCudaError("computePressure failed");
+
 
 	computePressureForce<<<numBlocks, numThreads>>>(
 				(float4                      *) sortedPos,
@@ -717,6 +724,19 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 				numBoundaries,
 				numCells
 		);
+
+
+	cudaDeviceSynchronize();
+	iisph_integrate<<<numBlocks, numThreads>>>(
+			(float4*) sortedPos,
+			(float4*) sortedVel,
+			(float4*) sortedVelAdv,
+			(float4*) sortedForcesP,
+			gridParticleIndex,
+			numParticles
+			);
+
+	cudaDeviceSynchronize();
 }
 
 }//extern c

@@ -28,6 +28,8 @@ namespace CFD
 SPH::SPH ():
 	m_gridSortBits(18)
 {
+	std::cout << "construction of sph based system" << std::endl;
+
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
@@ -35,14 +37,15 @@ SPH::SPH ():
 	m_params.restDensity = 998.29;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1E-3f;
-	m_params.viscosity = 0.002f;
-	m_params.surfaceTension = 0.4;//0.698f;
-	m_params.interactionRadius = 0.0507f; //ref : 0.0457f
+	m_params.viscosity = 0.01f;
+	m_params.surfaceTension = 0.005; //0.698f; 
 
 	m_params.gravity.x = 0.f;
+	//m_params.gravity.y = 0.f;
 	m_params.gravity.y = -9.81f;
 	m_params.gravity.z = 0.f;
 
+	m_params.interactionRadius = 0.0457f;
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	m_params.beta = 600.f;

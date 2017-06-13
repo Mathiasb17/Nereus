@@ -89,45 +89,6 @@ struct integrate_functor
 		vel = vel+accel;
 		pos = pos + dt*vel;
 
-#if 0
-		if (pos.x > 1.0f - sph_params.particleRadius)
-		{
-			pos.x = 1.0f - sph_params.particleRadius;
-			vel.x = 0.45f * -vel.x;
-		}
-
-		if (pos.x < -1.0f + sph_params.particleRadius)
-		{
-			pos.x = -1.0f + sph_params.particleRadius;
-			vel.x = 0.45f * -vel.x;
-		}
-
-		if (pos.y > 1.0f - sph_params.particleRadius)
-		{
-			pos.y = 1.0f - sph_params.particleRadius;
-			vel.y = 0.45f * -vel.y;
-		}
-
-		if (pos.z > 1.0f - sph_params.particleRadius)
-		{
-			pos.z = 1.0f - sph_params.particleRadius;
-			vel.z = 0.45f * -vel.z;
-		}
-
-		if (pos.z < -1.0f + sph_params.particleRadius)
-		{
-			pos.z = -1.0f + sph_params.particleRadius;
-			vel.z = 0.45f * -vel.z;
-		}
-
-
-		if (pos.y < -1.0f + sph_params.particleRadius)
-		{
-			pos.y = -1.0f + sph_params.particleRadius;
-			vel.y = 0.45f * -vel.y;
-		}
-#endif
-
         // store new position and velocity
         thrust::get<0>(t) = make_float4(pos, posData.w);
         thrust::get<1>(t) = make_float4(vel, velData.w);
@@ -230,12 +191,12 @@ __global__ void reorderDataAndFindCellStartDBoundary(unsigned int *cellBoundaryS
 
 		// Now use the sorted index to reorder the pos and vel data
 		unsigned int sortedIndex = gridBoundaryIndex[index];
-		//TODO
+
 		float4 pos = FETCH(oldBoundaryPos, sortedIndex);       // macro does either global read or texture fetch
 		float vbi = FETCH(oldBoundaryVbi, sortedIndex);       // see particles_kernel.cuh
 		
-		/*sortedPos[index] = pos;*/
-		/*sortedVbi[index] = vbi;*/
+		oldBoundaryPos[index] = pos;
+		oldBoundaryVbi[index] = vbi;
 	}
 }
 
@@ -307,10 +268,11 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 		// Now use the sorted index to reorder the pos and vel data
 		unsigned int sortedIndex = gridParticleIndex[index];
 		float4 pos = FETCH(oldPos, sortedIndex);       // macro does either global read or texture fetch
-
 		float4 vel = FETCH(oldVel, sortedIndex);       // see particles_kernel.cuh
+		float pressure = FETCH(oldPres, sortedIndex);       // see particles_kernel.cuh
 		sortedVel[index] = vel;
 		sortedPos[index] = pos;
+		sortedPres[index] = pressure;
 	}
 }
 
@@ -607,7 +569,6 @@ void computeForces(
 	const float pres = FETCH(oldPres, originalIndex);
 
 	const float m1 = sph_params.particleMass;
-	const float dt = sph_params.timestep;
 
 	//grid address
     const int3 gridPos = calcGridPos(pos);
@@ -822,7 +783,7 @@ __global__ void computeDisplacementFactor(
 	fgrav =  pm*sph_params.gravity;
 
 	//FIXME nan in visc force estimations !!!
-	if (length(fvisc) != length(fvisc)) fvisc = make_float3(0.f, 0.f, 0.f) ;
+	/*if (length(fvisc) != length(fvisc)) fvisc = make_float3(0.f, 0.f, 0.f) ;*/
 
 	float3 force_adv = fvisc + fsurf + fbound + fgrav;
 	oldForcesAdv[originalIndex] = make_float4(force_adv.x, force_adv.y, force_adv.z, 0.f);
@@ -1024,7 +985,6 @@ __global__ void computeAdvectionFactor(
     const int3 gridPos = calcGridPos(pos1);
 
 	//const memory reads
-	const float kp = sph_params.kpoly;
 	const float kpg= sph_params.kpoly_grad;
 	const float pm = sph_params.particleMass;
 	const float ir = sph_params.interactionRadius;
@@ -1059,7 +1019,8 @@ __global__ void computeAdvectionFactor(
 	/*******************
 	*  COMPUTE P_i^0  *
 	*******************/
-	oldP_l[originalIndex] = 0.5f * oldPres[originalIndex];
+	//FIXME
+	oldP_l[originalIndex] = 0.5f * oldPres[originalIndex]; 
 
 	/*****************
 	*  COMPUTE AII  *
@@ -1078,7 +1039,7 @@ __global__ void computeAdvectionFactor(
 			}
 		}
 	}
-	if (aii != aii) aii = 0.f;//FIXME to avoid nan issues
+	/*if (aii != aii) aii = 0.f;//FIXME to avoid nan issues*/
 	oldAii[originalIndex] = aii;
 }
 
@@ -1175,7 +1136,7 @@ __global__ void computeSumDijPj(
 	}
 	dijpj = dijpj * (dt*dt);
 
-	if (length(dijpj) != length(dijpj)) dijpj = make_float3(0.f, 0.f, 0.f);//FIXME nan issues
+	/*if (length(dijpj) != length(dijpj)) dijpj = make_float3(0.f, 0.f, 0.f);//FIXME nan issues*/
 
 	oldSumDij[originalIndex] = make_float4(dijpj.x, dijpj.y, dijpj.z, 0.f);
 }
@@ -1269,7 +1230,7 @@ __global__ void computePressure(
 							const float densj = FETCH(oldDens, j);
 
 							float3 dji = -(dt*dt*pm)/(dens*dens)*(-1.f * Wdefault_grad(p1p2, ir, kpg));//FIXME nan issues
-							if (length(dji) != length(dji)) dji = make_float3(0.f, 0.f ,0.f) ;
+							/*if (length(dji) != length(dji)) dji = make_float3(0.f, 0.f ,0.f) ;*/
 
 							const float3 diifj = make_float3(FETCH(oldDiiFluid, j));
 							const float3 diibj = make_float3(FETCH(oldDiiBoundary, j));
@@ -1317,11 +1278,8 @@ __global__ void computePressure(
     p_l = p;
     rho_corr += aii*previous_p_l;
 
-	/*printf("rho_corr = %f\n", rho_corr);*/
 
 	//global writes
-	//TODO
-	/*printf("rho_corr = %f\n", rho_corr);*/
 	oldP_l[originalIndex] = p_l;
 	oldPres[originalIndex] = p_l;
 	oldDensCorr[originalIndex] = rho_corr;
@@ -1433,24 +1391,39 @@ __global__ void computePressureForce(
 			}
 		}
 	}
-
 	if (length(fpres_res) != length(fpres_res)) fpres_res = make_float3(0.f, 0.f, 0.f);
 	oldForcesP[originalIndex] = make_float4(fpres_res.x, fpres_res.y, fpres_res.z, 0.f);
 	__syncthreads();
-	
-	/****************
-	*  UPDATE POS  *
-	****************/
-	float3 newVel;
-    float3 newPos = pos1;
-
-	newVel = velAdv1 + (dt*fpres_res)/pm;
-	newPos = newPos + dt*newVel;
-
-	oldVel[originalIndex] = make_float4(newVel.x, newVel.y, newVel.z, 0.f);
-	oldPos[originalIndex] = make_float4(newPos.x, newPos.y, newPos.z, 0.f);
-	/*oldPos[originalIndex] += make_float4(0.001, 0.f, 0.f, 0.f);*/
 }
+
+__global__ void iisph_integrate(
+			float4* oldPos,
+			float4* oldVel,
+			float4* oldVelAdv,
+			float4* oldForcesP,
+			unsigned int* gridParticleIndex,
+			unsigned int numParticles
+			)
+{
+	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    if (index >= numParticles) return;
+
+	const unsigned int originalIndex = gridParticleIndex[index];
+
+	const float3 pos1 = make_float3(FETCH(oldPos, originalIndex));
+	const float3 velAdv1 = make_float3(FETCH(oldVelAdv, originalIndex));
+	const float3 fpres1 = make_float3(FETCH(oldForcesP,originalIndex));
+
+	const float dt = sph_params.timestep;
+	const float pm = sph_params.particleMass;
+
+	float3 newVel = velAdv1 + (dt*fpres1)/pm;
+	float3 newPos = pos1+ dt*newVel;
+
+	oldPos[originalIndex] = make_float4(newPos.x, newPos.y, newPos.z, 1.f); // FUCK !
+	oldVel[originalIndex] = make_float4(newVel.x, newVel.y, newVel.z, 0.f);
+}
+
 
 #endif//_PARTICLES_KERNEL_IMPL_CUH
 

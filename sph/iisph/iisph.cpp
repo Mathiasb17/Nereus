@@ -26,7 +26,8 @@ namespace CFD
 IISPH::IISPH():
 	SPH()
 {
-
+	std::cout << "construction of iisph based system" << std::endl;
+	
 }
 
 IISPH::~IISPH()
@@ -40,7 +41,6 @@ void IISPH::_intialize()
 
 	unsigned int memSize = sizeof(float) * 4 * MAX_PARTICLE_NUMBER;
 	unsigned int memSizeFloat = sizeof(float) * MAX_PARTICLE_NUMBER;
-
 
 	allocateArray((void**)&m_dSortedDensAdv, memSizeFloat);
 	allocateArray((void**)&m_dSortedDensCorr, memSizeFloat);
@@ -79,9 +79,10 @@ void IISPH::_finalize()
 }
 
 void IISPH::update()
-{
+{	
 	cudaMemcpy(m_dpos, m_pos, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvel, m_vel, sizeof(float)*4*m_numParticles,cudaMemcpyHostToDevice);
+	cudaMemcpy(m_dpressure, m_pressure, sizeof(float)*m_numParticles,cudaMemcpyHostToDevice);
 
 	setParameters(&m_params);
 
@@ -109,10 +110,12 @@ void IISPH::update()
 		m_numParticles,
 		m_params.numCells);
 
+
 	predictAdvection(m_dSortedPos, m_dSortedVel, m_dSortedDens, m_dSortedPress, m_dSortedForces, m_dSortedCol, m_dCellStart, m_dCellEnd, m_dGridParticleIndex, m_dSortedbi, m_dSortedVbi,
 					  m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedDensAdv, m_dSortedDensCorr, m_dSortedP_l,  m_dSortedPreviousP, 
 					  m_dSortedAii, m_dSortedVelAdv, m_dSortedForcesAdv, m_dSortedForcesP, m_dSortedDiiFluid, m_dSortedDiiBoundary, m_dSortedSumDij, m_dSortedNormal,
 					  m_numParticles, m_num_boundaries, getNumCells());
+
 
 	pressureSolve(m_dSortedPos, m_dSortedVel, m_dSortedDens, m_dSortedPress, m_dSortedForces, m_dSortedCol, m_dCellStart, m_dCellEnd, m_dGridParticleIndex, m_dSortedbi, m_dSortedVbi,
 					  m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedDensAdv, m_dSortedDensCorr, m_dSortedP_l,  m_dSortedPreviousP, 
@@ -121,6 +124,8 @@ void IISPH::update()
 
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
+	cudaMemcpy(m_pressure, m_dSortedPress, sizeof(float)*m_numParticles,cudaMemcpyDeviceToHost);
+
 }
 
 } /* CFD */ 

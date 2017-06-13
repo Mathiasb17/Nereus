@@ -491,15 +491,13 @@ void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
  **********************************************************************/
 int main(void)
 {
-	CFD::SPH *sim_sph = new CFD::SPH();
+	CFD::SPH *sim_sph = new CFD::IISPH();
 	sim_sph->_intialize();
 	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(1.1f, 1.1f, 1.1f, 0.f), glm::vec4(0,0,0,0));
 
 	//make boundary particles
 	std::vector<glm::vec4> bi;
 	std::vector<float> vbi;
-
-	std::cout << "boundary particles number " << bi.size() << std::endl;
 
 	sample_spheres::ss::sampleBox(bi, glm::vec3(-1, -1, -1), glm::vec3(2.f, 2.f, 2.f), 0.02 );
 	sample_spheres::boundary_forces::getVbi(vbi, bi, sim_sph->getInteractionRadius());
