@@ -36,8 +36,8 @@ IISPH::IISPH():
 	m_params.restDensity = 1000.f;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1E-3f;
-	m_params.viscosity = 0.002f;
-	m_params.surfaceTension = 0.002f;
+	m_params.viscosity = 0.02f;
+	m_params.surfaceTension = 0.602f;
 
 	m_params.gravity.x = 0.f;
 	m_params.gravity.y = 0.f;
@@ -64,6 +64,9 @@ IISPH::IISPH():
 	
 	m_params.kpoly_grad = -945.f/(32.f*M_PI*powf(m_params.interactionRadius, 9.f));
 	m_params.kpress_grad = -45.f/(M_PI*powf(m_params.interactionRadius, 6.f));
+
+	std::cout << "kpoly = " << std::fixed << m_params.kpoly << std::endl;
+	std::cout << "kpoly_grad = " <<  std::fixed << m_params.kpoly_grad << std::endl;
 
 	m_params.kvisc_grad = 15.f / (2*M_PI*powf(m_params.interactionRadius, 3.f));
 	m_params.kvisc_denum = 2.f*powf(m_params.interactionRadius, 3.f);
@@ -173,7 +176,7 @@ void IISPH::update()
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_pressure, m_dSortedPress, sizeof(float)*m_numParticles,cudaMemcpyDeviceToHost);
-	exit(0);
+	//exit(0);
 }
 
 } /* CFD */ 

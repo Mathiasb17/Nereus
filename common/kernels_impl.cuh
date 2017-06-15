@@ -54,6 +54,11 @@ __device__ __host__ float3 Wdefault_grad(float3 r, float h, float kpoly_grad)
 {
 	float l_r = length(r);
 
+	if (l_r > h) 
+	{
+		return make_float3(0.f, 0.f, 0.f);
+	}
+
 	float b = powf(h*h - l_r*l_r, 2);
 
 	return kpoly_grad*r*b;
