@@ -944,14 +944,6 @@ __device__ float compute_aii_cell(float ir, float dt, float pm, float kpg, float
 
 				float3 dji = ( -(dt*dt*pm)/(dens*dens) )*(-1.f * Wdefault_grad(p1p2, ir, kpg));
 				res += pm * dot((diif+diib)-dji, Wdefault_grad(p1p2, ir, kpg));
-
-				float3 grad = Wdefault_grad(p1p2, ir, kpg);
-
-				/*if (index == 821) */
-				/*{*/
-					/*printf("grad = %8f %8f %8f\n", grad.x, grad.y, grad.z);*/
-					/*printf("dji = %8f %8f %8f\n", (-1.f * Wdefault_grad(p1p2, ir, kpg)).x, (-1.f * Wdefault_grad(p1p2, ir, kpg)).y, (-1.f * Wdefault_grad(p1p2, ir, kpg)).z);*/
-				/*}*/
 			}
 		}
 	}

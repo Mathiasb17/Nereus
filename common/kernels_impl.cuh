@@ -71,6 +71,11 @@ __device__ __host__ float3 Wpressure_grad(float3 r, float h, float kpress_grad)
 {
 	float l_r = length(r);
 
+	if (l_r > h) 
+	{
+		return make_float3(0.f, 0.f, 0.f);
+	}
+
 	float c = (h - l_r)*(h - l_r);
 
 	return kpress_grad * (r/l_r) * c;
@@ -82,6 +87,11 @@ __device__ __host__ float3 Wpressure_grad(float3 r, float h, float kpress_grad)
 __device__ __host__ float3 Wviscosity_grad(float3 r, float h, float kvisc_grad, float kvisc_denum)
 {
 	float l_r = length(r);
+
+	if (l_r > h) 
+	{
+		return make_float3(0.f, 0.f, 0.f);
+	}
 
 	float c = -(3*l_r / kvisc_denum ) + ( 2/(h*h) ) - ( h / (2*l_r*l_r*l_r));
 

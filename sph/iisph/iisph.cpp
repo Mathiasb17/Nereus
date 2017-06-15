@@ -36,8 +36,8 @@ IISPH::IISPH():
 	m_params.restDensity = 1000.f;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1E-3f;
-	m_params.viscosity = 0.02f;
-	m_params.surfaceTension = 0.602f;
+	m_params.viscosity = 0.01f;
+	m_params.surfaceTension = 0.01f;
 
 	m_params.gravity.x = 0.f;
 	m_params.gravity.y = 0.f;
