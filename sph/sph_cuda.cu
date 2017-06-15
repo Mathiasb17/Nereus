@@ -524,6 +524,37 @@ void predictAdvection(float* sortedPos,
 	unsigned int numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
+	computeIisphDensity<<<numBlocks, numThreads>>>(
+			(float4*) sortedPos,
+			(float4*) sortedVel,
+			sortedDens,
+			sortedPres,
+			(float4*) sortedForces,
+			(float4*) sortedCol,
+			cellStart,
+			cellEnd,
+			gridParticleIndex,
+			(float4*) sortedBoundaryPos,
+			sortedBoundaryVbi,
+			cellBoundaryStart,
+			cellBoundaryEnd,
+			gridBoundaryIndex,
+			sortedDensAdv,
+			sortedDensCorr,
+			sortedP_l,
+			sortedPreviousP,
+			sortedAii,
+			(float4*) sortedVelAdv,
+			(float4*) sortedForcesAdv,
+			(float4*) sortedForcesP,
+			(float4*) sortedDiiFluid,
+			(float4*) sortedDiiBoundary,
+			(float4*) sortedSumDij,
+			(float4*) sortedNormal,
+			numParticles,
+			numBoundaries,
+			numCells);
+
 	computeDisplacementFactor<<<numBlocks, numThreads>>>(
 			(float4*) sortedPos,
 			(float4*) sortedVel,
@@ -608,9 +639,9 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 	unsigned int l=0; 
 	float rho_avg = 0.f;
 	const float rd = 1000.f;
-	const float max_rho_err = 1.f;
+	const float max_rho_err = 10.f;
 
-	while( ((rho_avg - rd) > max_rho_err) || (l<2))
+	while( ((rho_avg - rd) > max_rho_err) || (l<3))
 	{
 		//compute sumdijpj
 		computeSumDijPj<<<numBlocks, numThreads>>>(
@@ -644,8 +675,6 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 				numBoundaries,
 				numCells
 		);
-
-		getLastCudaError("computeSumDijPj failed");
 
 		cudaDeviceSynchronize();
 		//compute pressure
@@ -690,8 +719,6 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 
 		l++;
 	}
-	getLastCudaError("computePressure failed");
-
 
 	computePressureForce<<<numBlocks, numThreads>>>(
 				(float4                      *) sortedPos,
@@ -724,7 +751,6 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 				numBoundaries,
 				numCells
 		);
-
 
 	cudaDeviceSynchronize();
 	iisph_integrate<<<numBlocks, numThreads>>>(

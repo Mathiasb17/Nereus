@@ -27,7 +27,56 @@ IISPH::IISPH():
 	SPH()
 {
 	std::cout << "construction of iisph based system" << std::endl;
+
+
+	//OVERIDING THE FOLLOWING AS FOR NOW FIXME
+	/********************
+	*  SPH PARAMETERS  *
+	********************/
+	m_params.gasStiffness = 0.f; //useless in iisph
+	m_params.restDensity = 1000.f;
+	m_params.particleRadius = 0.02;
+	m_params.timestep = 1E-2f;
+	m_params.viscosity = 0.002f;
+	m_params.surfaceTension = 0.002f;
+
+	m_params.gravity.x = 0.f;
+	m_params.gravity.y = 0.f;
+	m_params.gravity.y = -9.81f;
+	m_params.gravity.z = 0.f;
+
+	m_params.interactionRadius = 0.0527f;//better !
+	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
+
+	m_params.beta = 600.f;
+
+	/*********************
+	*  GRID PARAMETERS  *
+	*********************/
+	m_params.worldOrigin = make_float3(-1.1,-1.1,-1.1); //slight offset to avoid particles off the domain
+	m_params.gridSize = make_uint3(64,64,64); // power of 2
+	m_params.cellSize = make_float3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
+	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
+
+	/****************************************
+	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
+	****************************************/
+	m_params.kpoly = 315.f / (64.f * M_PI * powf(m_params.interactionRadius, 9.f));
 	
+	m_params.kpoly_grad = -945.f/(32.f*M_PI*powf(m_params.interactionRadius, 9.f));
+	m_params.kpress_grad = -45.f/(M_PI*powf(m_params.interactionRadius, 6.f));
+
+	m_params.kvisc_grad = 15.f / (2*M_PI*powf(m_params.interactionRadius, 3.f));
+	m_params.kvisc_denum = 2.f*powf(m_params.interactionRadius, 3.f);
+
+	m_params.ksurf1 = 32.f/(M_PI * powf(m_params.interactionRadius,9));
+	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.f;
+
+	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
+	
+	_intialize();
+	m_numParticles = 0;
+
 }
 
 IISPH::~IISPH()
@@ -125,7 +174,6 @@ void IISPH::update()
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_pressure, m_dSortedPress, sizeof(float)*m_numParticles,cudaMemcpyDeviceToHost);
-
 }
 
 } /* CFD */ 

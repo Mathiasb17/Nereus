@@ -568,9 +568,6 @@ int main(void)
 		displayCube(mvp, shader_program_basic, vao_cube, vbo_cube_pos, vbo_cube_color, vbo_cube_indices);
 
 		//step 5 : sph computations
-		
-		cube_points[0].x = cube_points[0].x - 0.01;
-
 		if(do_simulation)
 		{
 			sim_sph->update();
