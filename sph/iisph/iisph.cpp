@@ -35,7 +35,7 @@ IISPH::IISPH():
 	m_params.gasStiffness = 100.f; //useless in iisph
 	m_params.restDensity = 1000.f;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1E-3f;
+	m_params.timestep = 1E-2f;
 	m_params.viscosity = 0.01f;
 	m_params.surfaceTension = 0.01f;
 
