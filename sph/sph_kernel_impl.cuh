@@ -341,6 +341,7 @@ __device__ float computeBoundaryCellDensity(int3 gridPos, float3 pos, unsigned i
 			}
 		}
 	}
+
 	return dens;
 }
 
@@ -458,8 +459,8 @@ __device__ void computeCellForces(
 	const float kvg  = sph_params.kvisc_grad;
 	const float kvd  = sph_params.kvisc_denum;
 
-	/*const float ksurf1 = sph_params.ksurf1;*/
-	/*const float ksurf2 = sph_params.ksurf2;*/
+	const float ksurf1 = sph_params.ksurf1;
+	const float ksurf2 = sph_params.ksurf2;
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -490,12 +491,12 @@ __device__ void computeCellForces(
 					*fpres = *fpres + (m2 * ( pres/d1sq + pres2/d2sq ) *kpressure_grad);
 
 					const float a = dot(p1p2, kvisco_grad);
-					const float b = dot(p1p2,p1p2) + 0.01f*ir*ir;
+					const float b = dot(p1p2,p1p2) + 0.01f*(ir*ir);
 					*fvisc = *fvisc + (m2/dens2  * v1v2 * (a/b));
 
-					*fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;
-					/*float gamma = sph_params.surfaceTension;*/
-					/**fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));*/
+					/**fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;*/
+					float gamma = sph_params.surfaceTension;
+					*fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));
 				}
 			}
 		}
@@ -742,8 +743,14 @@ __global__ void computeIisphDensity(
 			}
 		}
 	}
-	oldDens[originalIndex] = dens;
 
+	if (dens <= 1.f) 
+	{
+		/*printf("dens = %f\n", dens);*/
+		dens = 1.f;
+	}
+
+	oldDens[originalIndex] = dens;
 }
 
 //====================================================================================================  
@@ -942,7 +949,10 @@ __device__ float compute_aii_cell(float ir, float dt, float pm, float kpg, float
 				const float3 pos2 = make_float3(FETCH(oldPos, j));
 				const float3 p1p2 = pos1 - pos2;
 
-				float3 dji = ( -(dt*dt*pm)/(dens*dens) )*(-1.f * Wdefault_grad(p1p2, ir, kpg));
+				const float3 grad = Wdefault_grad(p1p2, ir, kpg)*-1.f;
+				const float  a    = ( -(dt*dt*pm)/(dens*dens) );
+
+				float3 dji = a*grad;
 				res += pm * dot((diif+diib)-dji, Wdefault_grad(p1p2, ir, kpg));
 			}
 		}
@@ -1175,7 +1185,6 @@ __global__ void computeSumDijPj(
 	}
 	dijpj = dijpj * (dt*dt);
 
-	/*if (length(dijpj) != length(dijpj)) dijpj = make_float3(0.f, 0.f, 0.f);//FIXME nan issues*/
 
 	oldSumDij[originalIndex] = make_float4(dijpj.x, dijpj.y, dijpj.z, 0.f);
 }
@@ -1319,6 +1328,7 @@ __global__ void computePressure(
 
 	//global writes
 	oldP_l[originalIndex] = p_l;
+
 	oldPres[originalIndex] = p_l;
 	oldDensCorr[originalIndex] = rho_corr;
 
@@ -1406,7 +1416,9 @@ __global__ void computePressureForce(
 							const float pj = FETCH(oldPres, j);
 							const float densj = FETCH(oldDens, j);
 
-							fpres_res += -pm*pm*( p/(dens*dens) + pj/(densj*densj) ) * Wdefault_grad(p1p2, ir, kpg);
+							const float3 contrib = (-pm*pm*( p/(dens*dens) + pj/(densj*densj) ) * Wdefault_grad(p1p2, ir, kpg));
+
+							fpres_res = fpres_res  + contrib;
 						}
 					}
 				}
@@ -1422,13 +1434,22 @@ __global__ void computePressureForce(
 						const float vbi = FETCH(oldBoundaryVbi, j);
 						const float psi = rd * vbi;
 
-						fpres_res += pm*psi*( p/(dens*dens) ) * Wdefault_grad(p1p2, ir, kpg);
+						const float3 contrib = (pm*psi*( p/(dens*dens) ) * Wdefault_grad(p1p2, ir, kpg));
+						fpres_res = fpres_res + contrib;
 					}
 				}
 			}
 		}
 	}
+	
+	//clamp 
+	/*if (length(fpres_res) != length(fpres_res))*/
+	/*{*/
+		/*printf("oups fpres_res\n");*/
+	/*}*/
 	if (length(fpres_res) != length(fpres_res)) fpres_res = make_float3(0.f, 0.f, 0.f);
+	if (length(fpres_res) <= 0.f) fpres_res = make_float3(0.f, 0.f, 0.f);
+
 	oldForcesP[originalIndex] = make_float4(fpres_res.x, fpres_res.y, fpres_res.z, 0.f);
 	__syncthreads();
 }

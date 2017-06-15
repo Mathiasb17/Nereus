@@ -35,25 +35,29 @@ IISPH::IISPH():
 	m_params.gasStiffness = 100.f; //useless in iisph
 	m_params.restDensity = 1000.f;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1E-2f;
-	m_params.viscosity = 0.01f;
-	m_params.surfaceTension = 0.01f;
+	m_params.timestep = 1e-3f;
+	m_params.viscosity = 0.002f;
+	m_params.surfaceTension = 0.02f;
 
 	m_params.gravity.x = 0.f;
 	m_params.gravity.y = 0.f;
 	m_params.gravity.y = -9.81f;
 	m_params.gravity.z = 0.f;
 
-	m_params.interactionRadius = 0.0527f;//better !
+	m_params.interactionRadius = 0.0537f;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 600.f;
+	m_params.beta = 500.f;
 
 	/*********************
 	*  GRID PARAMETERS  *
 	*********************/
+	//m_params.worldOrigin = make_float3(-1.1,-1.1,-1.1); //slight offset to avoid particles off the domain
+	//m_params.gridSize = make_uint3(64,64,64); // power of 2
+
 	m_params.worldOrigin = make_float3(-1.1,-1.1,-1.1); //slight offset to avoid particles off the domain
 	m_params.gridSize = make_uint3(64,64,64); // power of 2
+
 	m_params.cellSize = make_float3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
 	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
 
@@ -64,9 +68,6 @@ IISPH::IISPH():
 	
 	m_params.kpoly_grad = -945.f/(32.f*M_PI*powf(m_params.interactionRadius, 9.f));
 	m_params.kpress_grad = -45.f/(M_PI*powf(m_params.interactionRadius, 6.f));
-
-	std::cout << "kpoly = " << std::fixed << m_params.kpoly << std::endl;
-	std::cout << "kpoly_grad = " <<  std::fixed << m_params.kpoly_grad << std::endl;
 
 	m_params.kvisc_grad = 15.f / (2*M_PI*powf(m_params.interactionRadius, 3.f));
 	m_params.kvisc_denum = 2.f*powf(m_params.interactionRadius, 3.f);

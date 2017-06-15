@@ -555,6 +555,8 @@ void predictAdvection(float* sortedPos,
 			numBoundaries,
 			numCells);
 
+	cudaDeviceSynchronize();
+
 	computeDisplacementFactor<<<numBlocks, numThreads>>>(
 			(float4*) sortedPos,
 			(float4*) sortedVel,
@@ -639,7 +641,7 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 	unsigned int l=0; 
 	float rho_avg = 0.f;
 	const float rd = 1000.f;
-	const float max_rho_err = 1.f;
+	const float max_rho_err = 10.f;
 
 	while( ((rho_avg - rd) > max_rho_err) || (l<2))
 	{
@@ -763,6 +765,8 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 			);
 
 	cudaDeviceSynchronize();
+
+	/*exit(0);*/
 }
 
 }//extern c

@@ -47,7 +47,7 @@ const char* vertex_shader_spheres =
 "void main() {"
 "  vec3 posEye = vec3(MVP*vec4(vp));"
 "  float dist = length(posEye);"
-"  gl_PointSize = 0.018 * (pointScale/dist);"
+"  gl_PointSize = 0.02 * (pointScale/dist);"
 "  gl_Position = MVP*vec4(vp);"
 "  fcol = col;"
 "}";
@@ -493,7 +493,7 @@ int main(void)
 {
 	CFD::SPH *sim_sph = new CFD::IISPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(1.1f, 1.1f, 1.1f, 0.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f, 1.f), glm::vec4(1.58f, 1.5f, 1.5f, 0.f), glm::vec4(0,0,0,0));
 
 	//make boundary particles
 	std::vector<glm::vec4> bi;
