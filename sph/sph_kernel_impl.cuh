@@ -620,8 +620,6 @@ __device__ float3 computeDisplacementFactorCell(float dens, float mj, int3 gridP
 	float3 res  = make_float3(0.f, 0.f, 0.f);
 	const float3 pos1 = make_float3(pos.x, pos.y, pos.z);
 
-	const float dt = sph_params.timestep;
-
 	if (startIndex != 0xffffffff)
 	{ 
 		const unsigned int endIndex = FETCH(cellEnd, gridHash);
@@ -635,7 +633,7 @@ __device__ float3 computeDisplacementFactorCell(float dens, float mj, int3 gridP
 
 				if(length(p1p2) < ir)
 				{
-					res = res -(pm/(dens*dens)) * Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
+					res = res + ( - ( pm/(dens*dens) )) * Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
 				}
 			}
 		}
@@ -673,7 +671,6 @@ __device__ float3 computeDisplacementFactorBoundaryCell(float dens, float mj, in
 		}
 	}
 	return res;
-
 }
 
 //====================================================================================================  
@@ -718,15 +715,12 @@ __global__ void computeIisphDensity(
 	//global memory reads
 	const float3 pos1 = make_float3(FETCH(oldPos, originalIndex));
 	const float3 vel1 = make_float3(FETCH(oldVel, originalIndex));
-	const float pres = 0.f; //useless, just to reuse computeCellForces below
 	
 	//const memory reads
 	const float kp = sph_params.kpoly;
-	const float kpg= sph_params.kpoly_grad;
 	const float pm = sph_params.particleMass;
 	const float ir = sph_params.interactionRadius;
 	const float rd = sph_params.restDensity;
-	const float dt = sph_params.timestep;
 
 	//grid computations
     const int3 gridPos = calcGridPos(pos1);
@@ -796,9 +790,9 @@ __global__ void computeDisplacementFactor(
 	const float3 pos1 = make_float3(FETCH(oldPos, originalIndex));
 	const float3 vel1 = make_float3(FETCH(oldVel, originalIndex));
 	const float pres = 0.f; //useless, just to reuse computeCellForces below
-	
+	const float dens = FETCH(oldDens, originalIndex);
+
 	//const memory reads
-	const float kp = sph_params.kpoly;
 	const float kpg= sph_params.kpoly_grad;
 	const float pm = sph_params.particleMass;
 	const float ir = sph_params.interactionRadius;
@@ -807,28 +801,6 @@ __global__ void computeDisplacementFactor(
 
 	//grid computations
     const int3 gridPos = calcGridPos(pos1);
-	
-	/*********************
-	*  COMPUTE DENSITY  *
-	*********************/
-	float dens = 0.f;
-	int nb = 0;
-
-	//loop over each neighbor cell
-   /* for (int z=-1; z<=1; z++)*/
-	/*{*/
-		/*for (int y=-1; y<=1; y++)*/
-		/*{*/
-			/*for (int x=-1; x<=1; x++)*/
-			/*{*/
-				/*const int3 neighbourPos = gridPos + make_int3(x, y, z);*/
-				/*dens += computeCellDensity(&nb, neighbourPos, originalIndex, pos1, oldPos, cellStart, cellEnd, ir, kp, rd, pm);*/
-				/*dens += computeBoundaryCellDensity(neighbourPos, pos1, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kp, rd, pm);*/
-   /*         }*/
-		/*}*/
-	/*}*/
-	/*oldDens[originalIndex] = dens;*/
-	/*__syncthreads();*/
 	
 	/***********************
 	*  PREDICT ADVECTION  *
@@ -852,8 +824,6 @@ __global__ void computeDisplacementFactor(
 		}
 	}
 
-	/*printf("fvisc = %8f %8f %8f\n", fvisc.x, fvisc.y, fvisc.z);*/
-
 	//finishing gradient and laplacian computations
 	fvisc = 2.f * fvisc;
 	fsurf = -(sph_params.surfaceTension/pm) * fsurf;
@@ -862,15 +832,11 @@ __global__ void computeDisplacementFactor(
 	fvisc = (pm*sph_params.viscosity) * fvisc;
 	fgrav =  pm*sph_params.gravity;
 
-	//FIXME nan in visc force estimations !!!
-	/*if (length(fvisc) != length(fvisc)) fvisc = make_float3(0.f, 0.f, 0.f) ;*/
-
 	float3 force_adv = fvisc + fsurf + fbound + fgrav;
 	oldForcesAdv[originalIndex] = make_float4(force_adv.x, force_adv.y, force_adv.z, 0.f);
 		
 	float3 vel_adv = vel1 + dt*(force_adv/pm);
-
-	oldVelAdv[originalIndex] = make_float4(vel_adv.x, vel_adv.y, vel_adv.z, 0);
+	oldVelAdv[originalIndex] = make_float4(vel_adv.x, vel_adv.y, vel_adv.z, 0.f);
 
 	__syncthreads();
 
@@ -891,6 +857,7 @@ __global__ void computeDisplacementFactor(
 			}
         }
     }
+
 	displacement_factor_fluid = displacement_factor_fluid * (dt*dt);
 
 	oldDiiFluid[originalIndex] = make_float4(displacement_factor_fluid.x, displacement_factor_fluid.y, displacement_factor_fluid.z, 0.f);
@@ -977,8 +944,14 @@ __device__ float compute_aii_cell(float ir, float dt, float pm, float kpg, float
 				const float3 pos2 = make_float3(FETCH(oldPos, j));
 				const float3 p1p2 = pos1 - pos2;
 
-				float3 dji = -(dt*dt*pm)/(dens*dens)*(-1.f * Wdefault_grad(p1p2, ir, kpg));
+				float3 dji = ( -(dt*dt*pm)/(dens*dens) )*(-1.f * Wdefault_grad(p1p2, ir, kpg));
 				res += pm * dot((diif+diib)-dji, Wdefault_grad(p1p2, ir, kpg));
+
+				if (index == 821) 
+				{
+					printf("ir = %f\n", ir);
+					/*printf("dji = %8f %8f %8f\n", (-1.f * Wdefault_grad(p1p2, ir, kpg)).x, (-1.f * Wdefault_grad(p1p2, ir, kpg)).y, (-1.f * Wdefault_grad(p1p2, ir, kpg)).z);*/
+				}
 			}
 		}
 	}
@@ -1089,7 +1062,6 @@ __global__ void computeAdvectionFactor(
 	}
 
 	float rho_adv = dens + dt*(rho_advf + rho_advb);
-
 	oldDensAdv[originalIndex] = rho_adv; 
 
 	/*******************
@@ -1115,7 +1087,6 @@ __global__ void computeAdvectionFactor(
 			}
 		}
 	}
-	/*if (aii != aii) aii = 0.f;//FIXME to avoid nan issues*/
 	oldAii[originalIndex] = aii;
 }
 
@@ -1303,7 +1274,6 @@ __global__ void computePressure(
 							const float3 pos2 = make_float3(FETCH(oldPos, j));
 							const float3 p1p2 = pos1 - pos2;
 							const float p_lj = FETCH(oldP_l, j);
-							const float densj = FETCH(oldDens, j);
 
 							float3 dji = -(dt*dt*pm)/(dens*dens)*(-1.f * Wdefault_grad(p1p2, ir, kpg));//FIXME nan issues
 							/*if (length(dji) != length(dji)) dji = make_float3(0.f, 0.f ,0.f) ;*/
@@ -1414,7 +1384,6 @@ __global__ void computePressureForce(
 	const float ir = sph_params.interactionRadius;
 	const float pm = sph_params.particleMass;
 	const float kpg= sph_params.kpoly_grad;
-	const float dt = sph_params.timestep;
 	const float rd = sph_params.restDensity;
 	
 	/***************************
@@ -1493,8 +1462,8 @@ __global__ void iisph_integrate(
 	const float dt = sph_params.timestep;
 	const float pm = sph_params.particleMass;
 
-	float3 newVel = velAdv1 + (dt*fpres1)/pm;
-	float3 newPos = pos1+ dt*newVel;
+	float3 newVel = velAdv1 + (dt*fpres1/pm);
+	float3 newPos = pos1+ (dt*newVel);
 
 	oldPos[originalIndex] = make_float4(newPos.x, newPos.y, newPos.z, 1.f); // FUCK !
 	oldVel[originalIndex] = make_float4(newVel.x, newVel.y, newVel.z, 0.f);

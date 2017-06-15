@@ -639,9 +639,9 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 	unsigned int l=0; 
 	float rho_avg = 0.f;
 	const float rd = 1000.f;
-	const float max_rho_err = 10.f;
+	const float max_rho_err = 1.f;
 
-	while( ((rho_avg - rd) > max_rho_err) || (l<3))
+	while( ((rho_avg - rd) > max_rho_err) || (l<2))
 	{
 		//compute sumdijpj
 		computeSumDijPj<<<numBlocks, numThreads>>>(

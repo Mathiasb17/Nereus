@@ -28,15 +28,14 @@ IISPH::IISPH():
 {
 	std::cout << "construction of iisph based system" << std::endl;
 
-
 	//OVERIDING THE FOLLOWING AS FOR NOW FIXME
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 0.f; //useless in iisph
+	m_params.gasStiffness = 100.f; //useless in iisph
 	m_params.restDensity = 1000.f;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1E-2f;
+	m_params.timestep = 1E-3f;
 	m_params.viscosity = 0.002f;
 	m_params.surfaceTension = 0.002f;
 
@@ -174,6 +173,7 @@ void IISPH::update()
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_pressure, m_dSortedPress, sizeof(float)*m_numParticles,cudaMemcpyDeviceToHost);
+	exit(0);
 }
 
 } /* CFD */ 
