@@ -506,11 +506,11 @@ void predictAdvection(float* sortedPos,
 	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
 	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
 
-	checkCudaErrors(cudaBindTexture(0, oldDensAdvTex, sortedDensAdv, numCells*sizeof(float)));
-	checkCudaErrors(cudaBindTexture(0, oldDensCorrTex, sortedDensCorr, numCells*sizeof(float)));
-	checkCudaErrors(cudaBindTexture(0, oldP_lTex, sortedP_l, numCells*sizeof(float)));
-	checkCudaErrors(cudaBindTexture(0, oldPreviousPTex, sortedPreviousP, numCells*sizeof(float)));
-	checkCudaErrors(cudaBindTexture(0, oldAiiTex, sortedAii, numCells*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldDensAdvTex, sortedDensAdv, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldDensCorrTex, sortedDensCorr, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldP_lTex, sortedP_l, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldPreviousPTex, sortedPreviousP, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldAiiTex, sortedAii, numParticles*sizeof(float)));
 
 	checkCudaErrors(cudaBindTexture(0, oldVelAdvTex, sortedVelAdv, numParticles*sizeof(float4)));
 	checkCudaErrors(cudaBindTexture(0, oldForcesAdvTex, sortedForcesAdv, numParticles*sizeof(float4)));
@@ -555,7 +555,7 @@ void predictAdvection(float* sortedPos,
 			numBoundaries,
 			numCells);
 
-	cudaDeviceSynchronize();
+	/*cudaDeviceSynchronize();*/
 
 	computeDisplacementFactor<<<numBlocks, numThreads>>>(
 			(float4*) sortedPos,
@@ -588,7 +588,7 @@ void predictAdvection(float* sortedPos,
 			numBoundaries,
 			numCells);
 
-	cudaDeviceSynchronize();
+	/*cudaDeviceSynchronize();*/
 
 	computeAdvectionFactor<<<numBlocks, numThreads>>>(
 			(float4*) sortedPos,
@@ -621,7 +621,32 @@ void predictAdvection(float* sortedPos,
 			numBoundaries,
 			numCells);
 
-	cudaDeviceSynchronize();
+	/*cudaDeviceSynchronize();*/
+#if USE_TEX
+	checkCudaErrors(cudaUnbindTexture(oldPosTex));
+	checkCudaErrors(cudaUnbindTexture(oldVelTex));
+	checkCudaErrors(cudaUnbindTexture(oldDensTex));
+	checkCudaErrors(cudaUnbindTexture(oldPresTex));
+	checkCudaErrors(cudaUnbindTexture(oldForcesTex));
+	checkCudaErrors(cudaUnbindTexture(oldColTex));
+
+	checkCudaErrors(cudaUnbindTexture(cellStartTex));
+	checkCudaErrors(cudaUnbindTexture(cellEndTex));
+
+	checkCudaErrors(cudaUnbindTexture(oldDensAdvTex));
+	checkCudaErrors(cudaUnbindTexture(oldDensCorrTex));
+	checkCudaErrors(cudaUnbindTexture(oldP_lTex));
+	checkCudaErrors(cudaUnbindTexture(oldPreviousPTex));
+	checkCudaErrors(cudaUnbindTexture(oldAiiTex));
+
+	checkCudaErrors(cudaUnbindTexture(oldVelAdvTex));
+	checkCudaErrors(cudaUnbindTexture(oldForcesAdvTex));
+	checkCudaErrors(cudaUnbindTexture(oldForcesPTex));
+	checkCudaErrors(cudaUnbindTexture(oldDiiFluidTex));
+	checkCudaErrors(cudaUnbindTexture(oldDiiBoundaryTex));
+	checkCudaErrors(cudaUnbindTexture(oldSumDijTex));
+	checkCudaErrors(cudaUnbindTexture(oldNormalTex));
+#endif
 
 }
 
@@ -634,6 +659,31 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 					  float* sortedAii, float* sortedVelAdv, float* sortedForcesAdv, float* sortedForcesP, float* sortedDiiFluid, float* sortedDiiBoundary, float* sortedSumDij, float* sortedNormal,
 					  unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
+#if USE_TEX
+	checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldVelTex, sortedVel, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldDensTex, sortedDens, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldPresTex, sortedPres, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForces, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldColTex, sortedCol, numParticles*sizeof(float4)));
+
+	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
+	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
+
+	checkCudaErrors(cudaBindTexture(0, oldDensAdvTex, sortedDensAdv, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldDensCorrTex, sortedDensCorr, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldP_lTex, sortedP_l, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldPreviousPTex, sortedPreviousP, numParticles*sizeof(float)));
+	checkCudaErrors(cudaBindTexture(0, oldAiiTex, sortedAii, numParticles*sizeof(float)));
+
+	checkCudaErrors(cudaBindTexture(0, oldVelAdvTex, sortedVelAdv, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldForcesAdvTex, sortedForcesAdv, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldForcesPTex, sortedForcesP, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldDiiFluidTex, sortedDiiFluid, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldDiiBoundaryTex, sortedDiiBoundary, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldSumDijTex, sortedSumDij, numParticles*sizeof(float4)));
+	checkCudaErrors(cudaBindTexture(0, oldNormalTex, sortedNormal, numParticles*sizeof(float4)));
+#endif
 	/*printf("avant\n");*/
 	unsigned int numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
@@ -678,7 +728,7 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 				numCells
 		);
 
-		cudaDeviceSynchronize();
+		/*cudaDeviceSynchronize();*/
 		//compute pressure
 		computePressure<<<numBlocks, numThreads>>>(
 				(float4                      *) sortedPos,
@@ -712,12 +762,13 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 				numCells
 		);
 
-		cudaDeviceSynchronize();
+		/*cudaDeviceSynchronize();*/
 
 		//reduce rho_error buffers
 		rho_avg = 0.f;
 		rho_avg = thrust::reduce(thrust::device_ptr<float>(sortedDensCorr),thrust::device_ptr<float>(sortedDensCorr+numParticles));
 		rho_avg /= numParticles;
+
 
 		l++;
 	}
@@ -754,7 +805,7 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 				numCells
 		);
 
-	cudaDeviceSynchronize();
+	/*cudaDeviceSynchronize();*/
 	iisph_integrate<<<numBlocks, numThreads>>>(
 			(float4*) sortedPos,
 			(float4*) sortedVel,
@@ -764,9 +815,36 @@ void pressureSolve(float* sortedPos, float* sortedVel, float* sortedDens, float*
 			numParticles
 			);
 
-	cudaDeviceSynchronize();
+	/*cudaDeviceSynchronize();*/
 
 	/*exit(0);*/
+
+#if USE_TEX
+	checkCudaErrors(cudaUnbindTexture(oldPosTex));
+	checkCudaErrors(cudaUnbindTexture(oldVelTex));
+	checkCudaErrors(cudaUnbindTexture(oldDensTex));
+	checkCudaErrors(cudaUnbindTexture(oldPresTex));
+	checkCudaErrors(cudaUnbindTexture(oldForcesTex));
+	checkCudaErrors(cudaUnbindTexture(oldColTex));
+
+	checkCudaErrors(cudaUnbindTexture(cellStartTex));
+	checkCudaErrors(cudaUnbindTexture(cellEndTex));
+
+	checkCudaErrors(cudaUnbindTexture(oldDensAdvTex));
+	checkCudaErrors(cudaUnbindTexture(oldDensCorrTex));
+	checkCudaErrors(cudaUnbindTexture(oldP_lTex));
+	checkCudaErrors(cudaUnbindTexture(oldPreviousPTex));
+	checkCudaErrors(cudaUnbindTexture(oldAiiTex));
+
+	checkCudaErrors(cudaUnbindTexture(oldVelAdvTex));
+	checkCudaErrors(cudaUnbindTexture(oldForcesAdvTex));
+	checkCudaErrors(cudaUnbindTexture(oldForcesPTex));
+	checkCudaErrors(cudaUnbindTexture(oldDiiFluidTex));
+	checkCudaErrors(cudaUnbindTexture(oldDiiBoundaryTex));
+	checkCudaErrors(cudaUnbindTexture(oldSumDijTex));
+	checkCudaErrors(cudaUnbindTexture(oldNormalTex));
+#endif
+
 }
 
 }//extern c

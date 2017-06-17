@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <cstdio>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -32,6 +33,34 @@ int width = 1024;
 int height = 768;
 
 /**********************************************************************
+*                EXPORT VIDEO LIKE IN MMACKLIN BLOG                  *
+**********************************************************************/
+
+const char* cmd = "ffmpeg -r 60 -f rawvideo -pix_fmt rgba -s 1024x768 -i - "
+                  "-threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip output.mp4";
+
+int* buffer = new int[width*height];
+FILE* ffmpeg;
+
+void openVideoStream()
+{
+	ffmpeg = popen(cmd, "w");
+}
+
+void exportFrame(GLFWwindow* win)
+{
+	glfwSwapBuffers(win);
+	glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+
+	fwrite(buffer, sizeof(int)*width*height, 1, ffmpeg);
+}
+
+void closeVideoStream()
+{
+	pclose(ffmpeg);
+}
+
+/**********************************************************************
  *                           BASIC SHADERS                            *
  **********************************************************************/
 
@@ -47,7 +76,7 @@ const char* vertex_shader_spheres =
 "void main() {"
 "  vec3 posEye = vec3(MVP*vec4(vp));"
 "  float dist = length(posEye);"
-"  gl_PointSize = 0.02 * (pointScale/dist);"
+"  gl_PointSize = 0.017 * (pointScale/dist);"
 "  gl_Position = MVP*vec4(vp);"
 "  fcol = col;"
 "}";
@@ -101,14 +130,14 @@ glm::vec4 cube_points[8];glm::vec4 cube_colors[8]; unsigned int cube_indices[36]
 
 void initCube()
 {
-	cube_points[0] = glm::vec4(-1,-1,1,1.f);
+	cube_points[0] = glm::vec4(-1,-1,2,1.f);
 	cube_points[1] = glm::vec4(-1,-1,-1,1.f);
-	cube_points[2] = glm::vec4(-1,1,-1,1.f);
-	cube_points[3] = glm::vec4(-1,1,1,1.f);
-	cube_points[4] = glm::vec4(1,-1,1,1.f);
-	cube_points[5] = glm::vec4(1,-1,-1,1.f);
-	cube_points[6] = glm::vec4(1,1,-1,1.f);
-	cube_points[7] = glm::vec4(1,1,1,1.f);
+	cube_points[2] = glm::vec4(-1,2,-1,1.f);
+	cube_points[3] = glm::vec4(-1,2,2,1.f);
+	cube_points[4] = glm::vec4(2,-1,2,1.f);
+	cube_points[5] = glm::vec4(2,-1,-1,1.f);
+	cube_points[6] = glm::vec4(2,2,-1,1.f);
+	cube_points[7] = glm::vec4(2,2,2,1.f);
 
 	cube_colors[0] = glm::vec4(1,0,0,1);
 	cube_colors[1] = glm::vec4(1,0,0,1);
@@ -469,7 +498,7 @@ void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
 	if (stateK == GLFW_PRESS && dropped == false)
 	{
 		dropped = true;
-		sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f,1.f), glm::vec4(0.5f, 0.5f, 0.5f, 0.f), glm::vec4(0,0,0,0));
+		sim_sph->generateParticleCube(glm::vec4(-0.f, 1.4f, 0.0f,1.f), glm::vec4(0.5f, 0.5f, 0.5f, 0.f), glm::vec4(0,0,0,0));
 
 		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
 		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostCol(), GL_STATIC_DRAW);
@@ -491,15 +520,19 @@ void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
  **********************************************************************/
 int main(void)
 {
+	static unsigned int save = 0;
+	openVideoStream();
+
 	CFD::SPH *sim_sph = new CFD::IISPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(0.0f, 0.0f, 0.0f, 1.f), glm::vec4(1.58f, 1.5f, 1.5f, 0.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(glm::vec4(-0.4f, 0.04f, 0.5f, 1.f), glm::vec4(1.0f, 2.0f, 2.9f, 1.f), glm::vec4(0,0,0,0));
 
 	//make boundary particles
 	std::vector<glm::vec4> bi;
 	std::vector<float> vbi;
 
-	sample_spheres::ss::sampleBox(bi, glm::vec3(-1, -1, -1), glm::vec3(2.f, 2.f, 2.f), 0.02 );
+	//FIXME VARIABLE FOR RADIUS
+	sample_spheres::ss::sampleBox(bi, glm::vec3(-1, -1, -1), glm::vec3(3.f, 3.f, 3.f), 0.02 );
 	sample_spheres::boundary_forces::getVbi(vbi, bi, sim_sph->getInteractionRadius());
 
 	sim_sph->setNumBoundaries(bi.size());
@@ -571,15 +604,23 @@ int main(void)
 		if(do_simulation)
 		{
 			sim_sph->update();
+			if (save % 10 == 0) 
+			{
+				exportFrame(window);
+				save = 0;
+			}
 		}
 
 		//last step : read new events if some
 		glfwPollEvents();
 		glfwSwapBuffers(window);
+
+		save++;
 	}
 
 	sim_sph->_finalize();
 
+	closeVideoStream();
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
 }

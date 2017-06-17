@@ -495,8 +495,8 @@ __device__ void computeCellForces(
 					*fvisc = *fvisc + (m2/dens2  * v1v2 * (a/b));
 
 					/**fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;*/
-					float gamma = sph_params.surfaceTension;
-					*fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));
+					/*float gamma = sph_params.surfaceTension;*/
+					/**fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));*/
 				}
 			}
 		}
@@ -618,6 +618,8 @@ __device__ float3 computeDisplacementFactorCell(float dens, float mj, int3 gridP
 
 	float3 res  = make_float3(0.f, 0.f, 0.f);
 	const float3 pos1 = make_float3(pos.x, pos.y, pos.z);
+
+	const float dt = sph_params.timestep;
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -746,7 +748,6 @@ __global__ void computeIisphDensity(
 
 	if (dens <= 1.f) 
 	{
-		/*printf("dens = %f\n", dens);*/
 		dens = 1.f;
 	}
 
@@ -843,7 +844,9 @@ __global__ void computeDisplacementFactor(
 	float3 vel_adv = vel1 + dt*(force_adv/pm);
 	oldVelAdv[originalIndex] = make_float4(vel_adv.x, vel_adv.y, vel_adv.z, 0.f);
 
-	__syncthreads();
+	//debug3("vel_adv", vel_adv);
+
+	/*__syncthreads();*/
 
 	/*****************
 	*  COMPUTE Dii  *
@@ -894,7 +897,7 @@ __device__ float rho_adv_fluid(float ir, float pm, unsigned int index, float3 po
 
 				if(length(p1p2) < ir)
 				{
-					res += pm  * dot(v1v2, Wdefault_grad(p1p2, ir, kpg));
+					res += (pm  * dot(v1v2, Wdefault_grad(p1p2, ir, kpg)) );
 				}
 			}
 		}
@@ -953,7 +956,7 @@ __device__ float compute_aii_cell(float ir, float dt, float pm, float kpg, float
 				const float  a    = ( -(dt*dt*pm)/(dens*dens) );
 
 				float3 dji = a*grad;
-				res += pm * dot((diif+diib)-dji, Wdefault_grad(p1p2, ir, kpg));
+				res += (pm * dot((diif+diib)-dji, Wdefault_grad(p1p2, ir, kpg)));
 			}
 		}
 	}
@@ -1065,12 +1068,15 @@ __global__ void computeAdvectionFactor(
 
 	float rho_adv = dens + dt*(rho_advf + rho_advb);
 	oldDensAdv[originalIndex] = rho_adv; 
+	//debug("rho_adv", rho_adv);
 
 	/*******************
 	*  COMPUTE P_i^0  *
 	*******************/
 	//FIXME
 	oldP_l[originalIndex] = 0.5f * oldPres[originalIndex]; 
+
+	/*printf("oldP_l[originalIndex] = %f\n", oldP_l[originalIndex]);*/
 
 	/*****************
 	*  COMPUTE AII  *
@@ -1090,6 +1096,7 @@ __global__ void computeAdvectionFactor(
 		}
 	}
 	oldAii[originalIndex] = aii;
+	//debug("aii", aii);
 }
 
 //====================================================================================================  
@@ -1121,6 +1128,10 @@ __device__ float3 dijpjcell(float ir, float pm, float kpg, float3 pos1, float4* 
 	}
 	return res;
 }
+
+//====================================================================================================  
+//====================================================================================================  
+//====================================================================================================  
 
 __global__ void computeSumDijPj(
 	float4                      * oldPos,
@@ -1185,6 +1196,7 @@ __global__ void computeSumDijPj(
 	}
 	dijpj = dijpj * (dt*dt);
 
+	//debug3("dijpj", dijpj);
 
 	oldSumDij[originalIndex] = make_float4(dijpj.x, dijpj.y, dijpj.z, 0.f);
 }
@@ -1276,13 +1288,15 @@ __global__ void computePressure(
 							const float3 p1p2 = pos1 - pos2;
 							const float p_lj = FETCH(oldP_l, j);
 
-							float3 dji = -(dt*dt*pm)/(dens*dens)*(-1.f * Wdefault_grad(p1p2, ir, kpg));//FIXME nan issues
-							/*if (length(dji) != length(dji)) dji = make_float3(0.f, 0.f ,0.f) ;*/
+							const float3 grad = Wdefault_grad(p1p2, ir, kpg)*(-1.f);
+
+							const float3 dji = -(dt*dt*pm)/(dens*dens)*( grad );//FIXME nan issues
 
 							const float3 diifj = make_float3(FETCH(oldDiiFluid, j));
 							const float3 diibj = make_float3(FETCH(oldDiiBoundary, j));
 							const float3 sum_dijj = make_float3(FETCH(oldSumDij, j));
-							float3 aux = sum_dij - (diifj+diibj)*p_lj - (sum_dijj - dji*p_l);
+
+							const float3 aux = sum_dij - (diifj+diibj)*p_lj - (sum_dijj - dji*p_l);
 
 							fsum += pm*dot(aux, Wdefault_grad(p1p2, ir, kpg));
 						}
@@ -1306,8 +1320,8 @@ __global__ void computePressure(
 		}
 	}
 
-	if (fsum != fsum) fsum = 0.f;
-	if (bsum != bsum) bsum = 0.f;
+	//debug("bsum", bsum);
+	/*debug("fsum", fsum);*/
 
 	float omega = 0.5f;
 	float rho_corr = rho_adv + fsum + bsum;
@@ -1323,11 +1337,14 @@ __global__ void computePressure(
 
     float p = fmax(p_l, 0.f);
     p_l = p;
-    rho_corr += aii*previous_p_l;
 
+    rho_corr += aii*previous_p_l;
 
 	//global writes
 	oldP_l[originalIndex] = p_l;
+
+	//debug("p_l", p_l);
+	//debug("rho_corr", rho_corr);
 
 	oldPres[originalIndex] = p_l;
 	oldDensCorr[originalIndex] = rho_corr;
@@ -1416,7 +1433,7 @@ __global__ void computePressureForce(
 							const float pj = FETCH(oldPres, j);
 							const float densj = FETCH(oldDens, j);
 
-							const float3 contrib = (-pm*pm*( p/(dens*dens) + pj/(densj*densj) ) * Wdefault_grad(p1p2, ir, kpg));
+							const float3 contrib = -pm*pm*( p/(dens*dens) + pj/(densj*densj) ) * Wdefault_grad(p1p2, ir, kpg);
 
 							fpres_res = fpres_res  + contrib;
 						}
@@ -1441,17 +1458,11 @@ __global__ void computePressureForce(
 			}
 		}
 	}
-	
-	//clamp 
-	/*if (length(fpres_res) != length(fpres_res))*/
-	/*{*/
-		/*printf("oups fpres_res\n");*/
-	/*}*/
+
 	if (length(fpres_res) != length(fpres_res)) fpres_res = make_float3(0.f, 0.f, 0.f);
 	if (length(fpres_res) <= 0.f) fpres_res = make_float3(0.f, 0.f, 0.f);
 
 	oldForcesP[originalIndex] = make_float4(fpres_res.x, fpres_res.y, fpres_res.z, 0.f);
-	__syncthreads();
 }
 
 __global__ void iisph_integrate(
@@ -1478,7 +1489,7 @@ __global__ void iisph_integrate(
 	float3 newVel = velAdv1 + (dt*fpres1/pm);
 	float3 newPos = pos1+ (dt*newVel);
 
-	oldPos[originalIndex] = make_float4(newPos.x, newPos.y, newPos.z, 1.f); // FUCK !
+	oldPos[originalIndex] = make_float4(newPos.x, newPos.y, newPos.z, 1.f);
 	oldVel[originalIndex] = make_float4(newVel.x, newVel.y, newVel.z, 0.f);
 }
 

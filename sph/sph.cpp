@@ -38,14 +38,14 @@ SPH::SPH ():
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1E-3f;
 	m_params.viscosity = 0.003f;
-	m_params.surfaceTension = 0.500f;
+	m_params.surfaceTension = 0.02f;
 
 	m_params.gravity.x = 0.f;
 	m_params.gravity.y = 0.f;
 	m_params.gravity.y = -9.81f;
 	m_params.gravity.z = 0.f;
 
-	m_params.interactionRadius = 0.0527f;//better !
+	m_params.interactionRadius = 0.0547f;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	m_params.beta = 600.f;
@@ -273,11 +273,11 @@ void SPH::addNewParticle(glm::vec4 p, glm::vec4 v)
 //==================================================================================================== 
 void SPH::generateParticleCube(glm::vec4 center, glm::vec4 size, glm::vec4 vel)
 {
-	for(float x = center.x-size.x/2.f; x <= center.x+size.x/2.f; x += m_params.particleRadius*2 )
+	for(float x = center.x-size.x/2.f; x <= center.x+size.x/2.f; x += m_params.interactionRadius-0.005f )
 	{
-		for(float y = center.y-size.y/2.f; y <= center.y+size.y/2.f; y += m_params.particleRadius*2 )
+		for(float y = center.y-size.y/2.f; y <= center.y+size.y/2.f; y += m_params.interactionRadius-0.005f )
 		{
-			for(float z = center.z-size.z/2.f; z <= center.z+size.z/2.f; z += m_params.particleRadius*2 )
+			for(float z = center.z-size.z/2.f; z <= center.z+size.z/2.f; z += m_params.interactionRadius-0.005f )
 			{
 				addNewParticle(glm::vec4(x,y,z,1.f), vel);
 			}
