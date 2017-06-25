@@ -47,7 +47,7 @@ IISPH::IISPH():
 	m_params.interactionRadius = 0.0537f;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 700.f;
+	m_params.beta = 1400.f;
 
 	/*********************
 	*  GRID PARAMETERS  *
@@ -56,7 +56,7 @@ IISPH::IISPH():
 	//m_params.gridSize = make_uint3(64,64,64); // power of 2
 
 	m_params.worldOrigin = make_float3(-1.2,-1.2,-1.2); //slight offset to avoid particles off the domain
-	m_params.gridSize = make_uint3(256,256,256); // power of 2
+	m_params.gridSize = make_uint3(128,128,128); // power of 2
 
 	m_params.cellSize = make_float3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
 	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;

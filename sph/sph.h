@@ -21,6 +21,7 @@ class SPH
 {
 public:
 	SPH ();
+	SPH (SphSimParams params);
 	virtual ~SPH ();
 
 	/**********
@@ -39,6 +40,11 @@ public:
 	*  PERFORM ONE SIMULATION STEP  *
 	*********************************/
 	virtual void update();
+	
+	/**********
+	*  GRID  *
+	**********/
+	void computeGridMinMax();
 
 	/*************
 	 *  GETTERS  *

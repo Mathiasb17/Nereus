@@ -16,6 +16,8 @@
 #include <helper_math.h>
 #include <math.h>
 
+#include "common.h"
+
 extern "C"
 {
 
@@ -31,7 +33,7 @@ __device__ void debug3(const char* valname, float3 val)
 	}
 }
 
-__device__ void debug(const char* valname, float val)
+__device__ void debug(const char* valname, SReal val)
 {	
 	if ( (val != val) || isinf(val)) 
 	{
@@ -53,16 +55,16 @@ struct comp
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float Wdefault(float3 r, float h, float kpoly)
+__device__ __host__ SReal Wdefault(float3 r, SReal h, SReal kpoly)
 {
-	float l_r = length(r);
+	SReal l_r = length(r);
 
 	if (l_r > h)
 	{
 		return 0.f ;
 	}
 
-	float b = pow((h * h - l_r * l_r), 3);
+	SReal b = pow((h * h - l_r * l_r), 3);
 
 	return (kpoly * b);
 }
@@ -70,16 +72,16 @@ __device__ __host__ float Wdefault(float3 r, float h, float kpoly)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float3 Wdefault_grad(float3 r, float h, float kpoly_grad)
+__device__ __host__ float3 Wdefault_grad(float3 r, SReal h, SReal kpoly_grad)
 {
-	float l_r = length(r);
+	SReal l_r = length(r);
 
 	if (l_r > h) 
 	{
 		return make_float3(0.f, 0.f, 0.f);
 	}
 
-	float b = powf(h*h - l_r*l_r, 2);
+	SReal b = powf(h*h - l_r*l_r, 2);
 
 	return kpoly_grad*r*b;
 }
@@ -87,16 +89,16 @@ __device__ __host__ float3 Wdefault_grad(float3 r, float h, float kpoly_grad)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float3 Wpressure_grad(float3 r, float h, float kpress_grad)
+__device__ __host__ float3 Wpressure_grad(float3 r, SReal h, SReal kpress_grad)
 {
-	float l_r = length(r);
+	SReal l_r = length(r);
 
 	if (l_r > h) 
 	{
 		return make_float3(0.f, 0.f, 0.f);
 	}
 
-	float c = (h - l_r)*(h - l_r);
+	SReal c = (h - l_r)*(h - l_r);
 
 	return kpress_grad * (r/l_r) * c;
 }
@@ -104,16 +106,16 @@ __device__ __host__ float3 Wpressure_grad(float3 r, float h, float kpress_grad)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float3 Wviscosity_grad(float3 r, float h, float kvisc_grad, float kvisc_denum)
+__device__ __host__ float3 Wviscosity_grad(float3 r, SReal h, SReal kvisc_grad, SReal kvisc_denum)
 {
-	float l_r = length(r);
+	SReal l_r = length(r);
 
 	if (l_r > h) 
 	{
 		return make_float3(0.f, 0.f, 0.f);
 	}
 
-	float c = -(3*l_r / kvisc_denum ) + ( 2/(h*h) ) - ( h / (2*l_r*l_r*l_r));
+	SReal c = -(3*l_r / kvisc_denum ) + ( 2/(h*h) ) - ( h / (2*l_r*l_r*l_r));
 
 	return kvisc_grad * r * c;
 }
@@ -121,12 +123,12 @@ __device__ __host__ float3 Wviscosity_grad(float3 r, float h, float kvisc_grad, 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float Wmonaghan(float3 r, float h, float kp)
+__device__ __host__ SReal Wmonaghan(float3 r, SReal h, SReal kp)
 {
-	float value = 0.f;
-	float m_invH = 1.f  / h;
-	float m_v = 1.0/(4.0*M_PI*h*h*h);
-    float q = length(r)*m_invH;
+	SReal value = 0.f;
+	SReal m_invH = 1.f  / h;
+	SReal m_v = 1.0/(4.0*M_PI*h*h*h);
+    SReal q = length(r)*m_invH;
     if( q >= 0 && q < 1 )
     {
         value = m_v*( (2-q)*(2-q)*(2-q) - 4.0f*(1-q)*(1-q)*(1-q));
@@ -145,23 +147,23 @@ __device__ __host__ float Wmonaghan(float3 r, float h, float kp)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float3 Wmonaghan_grad(float3 r, float h, float kpg)
+__device__ __host__ float3 Wmonaghan_grad(float3 r, SReal h, SReal kpg)
 {
 
-    float m_g = 1.0/(4.0*M_PI*h*h*h);
-	float dist = length(r);
-	float m_invH = 1.f/h;
-    float q = dist*m_invH;
+    SReal m_g = 1.0/(4.0*M_PI*h*h*h);
+	SReal dist = length(r);
+	SReal m_invH = 1.f/h;
+    SReal q = dist*m_invH;
     float3 gradient = make_float3(0.f, 0.f, 0.f);
     if( q >= 0 && q < 1 )
     {
-        float scalar = -3.0f*(2-q)*(2-q);
+        SReal scalar = -3.0f*(2-q)*(2-q);
         scalar += 12.0f*(1-q)*(1-q);
         gradient = (m_g*m_invH*scalar/dist)*r;
     }
     else if ( q >=1 && q < 2 )
     {
-        float scalar = -3.0f*(2-q)*(2-q);
+        SReal scalar = -3.0f*(2-q)*(2-q);
         gradient = (m_g*scalar*m_invH/dist)*r;
     }
 	return gradient;
@@ -170,20 +172,20 @@ __device__ __host__ float3 Wmonaghan_grad(float3 r, float h, float kpg)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float Cakinci(float3 r, float h, float ksurf1, float ksurf2)
+__device__ __host__ SReal Cakinci(float3 r, SReal h, SReal ksurf1, SReal ksurf2)
 {
-	float len = length(r);
-	float poly = ksurf1;
-	float hr = h - len;
+	SReal len = length(r);
+	SReal poly = ksurf1;
+	SReal hr = h - len;
 	if (2.f*len > h && len <= h) 
 	{
-		float a = (hr*hr*hr) * (len*len*len);
+		SReal a = (hr*hr*hr) * (len*len*len);
 		return poly*a;
 	}
 	else if (len > 0.f && 2*len <= h) 
 	{
-		float a = 2 * (hr*hr*hr) * (len*len*len);
-		float b = ksurf2;
+		SReal a = 2 * (hr*hr*hr) * (len*len*len);
+		SReal b = ksurf2;
 		return  poly * (a-b);
 	}
 	else
@@ -195,14 +197,14 @@ __device__ __host__ float Cakinci(float3 r, float h, float ksurf1, float ksurf2)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float Aboundary(float3 r, float h, float bpol)
+__device__ __host__ SReal Aboundary(float3 r, SReal h, SReal bpol)
 {
-	float rl = length(r);
+	SReal rl = length(r);
 	if (2.f*rl > h && rl <= h) 
 	{
-		float a = -((4*(rl*rl))/(h));
-		float b = (6.f*rl - 2.f*h);
-		float res = powf(a + b, 1.f/4.f);
+		SReal a = -((4*(rl*rl))/(h));
+		SReal b = (6.f*rl - 2.f*h);
+		SReal res = powf(a + b, 1.f/4.f);
 		return bpol*res;
 	}
 	else

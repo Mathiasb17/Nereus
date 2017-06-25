@@ -26,7 +26,7 @@ namespace CFD
 //==================================================================================================== 
 //==================================================================================================== 
 SPH::SPH ():
-	m_gridSortBits(18)
+	m_gridSortBits(32)
 {
 	std::cout << "construction of sph based system" << std::endl;
 
@@ -54,7 +54,7 @@ SPH::SPH ():
 	*  GRID PARAMETERS  *
 	*********************/
 	m_params.worldOrigin = make_float3(-1.1,-1.1,-1.1); //slight offset to avoid particles off the domain
-	m_params.gridSize = make_uint3(64,64,64); // power of 2
+	m_params.gridSize = make_uint3(128,128,128); // power of 2
 	m_params.cellSize = make_float3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
 	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
 
@@ -78,6 +78,32 @@ SPH::SPH ():
 	m_numParticles = 0;
 }
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+SPH::SPH (SphSimParams params):
+	m_gridSortBits(32),
+	m_params(params)
+{
+	/****************************************
+	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
+	****************************************/
+	m_params.kpoly = 315.f / (64.f * M_PI * powf(m_params.interactionRadius, 9.f));
+	
+	m_params.kpoly_grad = -945.f/(32.f*M_PI*powf(m_params.interactionRadius, 9.f));
+	m_params.kpress_grad = -45.f/(M_PI*powf(m_params.interactionRadius, 6.f));
+
+	m_params.kvisc_grad = 15.f / (2*M_PI*powf(m_params.interactionRadius, 3.f));
+	m_params.kvisc_denum = 2.f*powf(m_params.interactionRadius, 3.f);
+
+	m_params.ksurf1 = 32.f/(M_PI * powf(m_params.interactionRadius,9));
+	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.f;
+
+	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
+	
+	_intialize();
+	m_numParticles = 0;
+}
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
@@ -234,6 +260,14 @@ void SPH::update()
 
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(float)*4*m_numParticles,cudaMemcpyDeviceToHost);
+}
+
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+void SPH::computeGridMinMax()
+{
+
 }
 
 //==================================================================================================== 

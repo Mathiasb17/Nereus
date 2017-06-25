@@ -10,6 +10,7 @@ class IISPH : public CFD::SPH
 {
 public:
 	IISPH ();
+	IISPH (SphSimParams params);
 	virtual ~IISPH ();
 
 	/****
