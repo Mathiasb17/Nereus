@@ -1,5 +1,6 @@
 #define GLM_FORCE_RADIANS
 
+#include "common.h"
 #include "sph.h"
 #include "iisph/iisph.h"
 #include "common/colored_output.h"
@@ -125,28 +126,28 @@ const char * fragment_shader_basic =
  *                       SOME HELPER FUNCTIONS                        *
  **********************************************************************/
 
-float particle_radius = 0.02;
-glm::vec4 cube_points[8];glm::vec4 cube_colors[8]; unsigned int cube_indices[36];
+SReal particle_radius = 0.02;
+SVec4 cube_points[8];SVec4 cube_colors[8]; unsigned int cube_indices[36];
 
 void initCube()
 {
-	cube_points[0] = glm::vec4(-1,-1,2,1.f);
-	cube_points[1] = glm::vec4(-1,-1,-1,1.f);
-	cube_points[2] = glm::vec4(-1,2,-1,1.f);
-	cube_points[3] = glm::vec4(-1,2,2,1.f);
-	cube_points[4] = glm::vec4(2,-1,2,1.f);
-	cube_points[5] = glm::vec4(2,-1,-1,1.f);
-	cube_points[6] = glm::vec4(2,2,-1,1.f);
-	cube_points[7] = glm::vec4(2,2,2,1.f);
+	cube_points[0] = make_SVec4(-1,-1,2,1.f);
+	cube_points[1] = make_SVec4(-1,-1,-1,1.f);
+	cube_points[2] = make_SVec4(-1,2,-1,1.f);
+	cube_points[3] = make_SVec4(-1,2,2,1.f);
+	cube_points[4] = make_SVec4(2,-1,2,1.f);
+	cube_points[5] = make_SVec4(2,-1,-1,1.f);
+	cube_points[6] = make_SVec4(2,2,-1,1.f);
+	cube_points[7] = make_SVec4(2,2,2,1.f);
 
-	cube_colors[0] = glm::vec4(1,0,0,1);
-	cube_colors[1] = glm::vec4(1,0,0,1);
-	cube_colors[2] = glm::vec4(0,1,0,1);
-	cube_colors[3] = glm::vec4(0,1,0,1);
-	cube_colors[4] = glm::vec4(0,0,1,1);
-	cube_colors[5] = glm::vec4(0,0,1,1);
-	cube_colors[6] = glm::vec4(1,0,0,1);
-	cube_colors[7] = glm::vec4(1,0,0,1);
+	cube_colors[0] = make_SVec4(1,0,0,1);
+	cube_colors[1] = make_SVec4(1,0,0,1);
+	cube_colors[2] = make_SVec4(0,1,0,1);
+	cube_colors[3] = make_SVec4(0,1,0,1);
+	cube_colors[4] = make_SVec4(0,0,1,1);
+	cube_colors[5] = make_SVec4(0,0,1,1);
+	cube_colors[6] = make_SVec4(1,0,0,1);
+	cube_colors[7] = make_SVec4(1,0,0,1);
 
 	//front
 	cube_indices[0] = 0; cube_indices[1] = 4; cube_indices[2] = 3;
@@ -224,7 +225,7 @@ void getNewVao(GLuint *newVao, GLuint vbo_pos)
 	glGenVertexArrays(1, newVao);
 	glBindVertexArray(*newVao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 4, GL_REAL, GL_FALSE, 0, NULL);
 }
 
 void getNewVao(GLuint *newVao, GLuint vbo_pos, GLuint vbo_col)
@@ -232,9 +233,9 @@ void getNewVao(GLuint *newVao, GLuint vbo_pos, GLuint vbo_col)
 	glGenVertexArrays(1, newVao);
 	glBindVertexArray(*newVao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 4, GL_REAL, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_col);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(1, 4, GL_REAL, GL_FALSE, 0, NULL);
 }
 
 void getNewVao(GLuint *newVao, GLuint vbo_pos, GLuint vbo_col, GLuint vbo_indices)
@@ -242,11 +243,11 @@ void getNewVao(GLuint *newVao, GLuint vbo_pos, GLuint vbo_col, GLuint vbo_indice
 	glGenVertexArrays(1, newVao);
 	glBindVertexArray(*newVao);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_pos);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 4, GL_REAL, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_col);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(1, 4, GL_REAL, GL_FALSE, 0, NULL);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_indices);
-	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(2, 4, GL_REAL, GL_FALSE, 0, NULL);
 }
 
 void compileVertexAndFragmentShaders(GLuint *vs, GLuint *fs, const GLchar **string_vs, const GLchar **string_fs)
@@ -498,10 +499,10 @@ void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
 	if (stateK == GLFW_PRESS && dropped == false)
 	{
 		dropped = true;
-		sim_sph->generateParticleCube(glm::vec4(-0.f, 1.4f, 0.0f,1.f), glm::vec4(0.5f, 0.5f, 0.5f, 0.f), glm::vec4(0,0,0,0));
+		sim_sph->generateParticleCube(make_SVec4(-0.f, 1.4f, 0.0f,1.f), make_SVec4(0.5f, 0.5f, 0.5f, 0.f), make_SVec4(0,0,0,0));
 
-		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
-		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostCol(), GL_STATIC_DRAW);
+		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(SVec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
+		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->getNumParticles() * sizeof(SVec4), sim_sph->getHostCol(), GL_STATIC_DRAW);
 		getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
 
 		std::cout << "more particles" << std::endl;
@@ -525,19 +526,19 @@ int main(void)
 
 	CFD::SPH *sim_sph = new CFD::IISPH();
 	sim_sph->_intialize();
-	sim_sph->generateParticleCube(glm::vec4(-0.4f, 0.04f, 0.5f, 1.f), glm::vec4(1.0f, 2.0f, 2.9f, 1.f), glm::vec4(0,0,0,0));
+	sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(1.0f, 2.0f, 2.9f, 1.f), make_SVec4(0,0,0,0));
 
 	//make boundary particles
-	std::vector<glm::vec4> bi;
-	std::vector<float> vbi;
+	std::vector<SVec4> bi;
+	std::vector<SReal> vbi;
 
 	//FIXME VARIABLE FOR RADIUS
-	sample_spheres::ss::sampleBox(bi, glm::vec3(-1, -1, -1), glm::vec3(3.f, 3.f, 3.f), 0.02 );
+	sample_spheres::ss::sampleBox(bi, make_SVec3(-1, -1, -1), make_SVec3(3.f, 3.f, 3.f), 0.02 );
 	sample_spheres::boundary_forces::getVbi(vbi, bi, sim_sph->getInteractionRadius());
 
 	sim_sph->setNumBoundaries(bi.size());
 
-	sim_sph->setBi((float*)bi.data());
+	sim_sph->setBi((SReal*)bi.data());
 	sim_sph->setVbi(vbi.data());
 
 	sim_sph->updateGpuBoundaries(bi.size());
@@ -551,13 +552,13 @@ int main(void)
 	initCube();
 
 	//opengl sphere buffers handling
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostCol(), GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(SVec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->getNumParticles() * sizeof(SVec4), sim_sph->getHostCol(), GL_STATIC_DRAW);
 	getNewVao(&vao_spheres, vbo_spheres_pos, vbo_spheres_col);
 
 	//opengl cube buffers handling
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_pos, 8 * sizeof(glm::vec4), cube_points, GL_STATIC_DRAW);
-	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_color, 8 *sizeof(glm::vec4), cube_colors, GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_pos, 8 * sizeof(SVec4), cube_points, GL_STATIC_DRAW);
+	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_color, 8 *sizeof(SVec4), cube_colors, GL_STATIC_DRAW);
 	getNewVbo(GL_ELEMENT_ARRAY_BUFFER, &vbo_cube_indices, 36 * sizeof(unsigned int), cube_indices, GL_STATIC_DRAW);
 	getNewVao(&vao_cube, vbo_cube_pos, vbo_cube_color, vbo_cube_indices);
 
@@ -575,7 +576,7 @@ int main(void)
 		displayFPS(window);
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo_spheres_pos);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sim_sph->getNumParticles() * sizeof(glm::vec4), sim_sph->getHostPos());
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sim_sph->getNumParticles() * sizeof(SVec4), sim_sph->getHostPos());
 
 		//step 1 : clear screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

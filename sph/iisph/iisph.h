@@ -26,20 +26,20 @@ public:
 
 private:
 	//float
-	float *m_dSortedDensAdv;
-	float *m_dSortedDensCorr;
-	float *m_dSortedP_l;
-	float *m_dSortedPreviousP;
-	float *m_dSortedAii;
+	SReal *m_dSortedDensAdv;
+	SReal *m_dSortedDensCorr;
+	SReal *m_dSortedP_l;
+	SReal *m_dSortedPreviousP;
+	SReal *m_dSortedAii;
 
 	//float4
-	float *m_dSortedVelAdv;
-	float *m_dSortedForcesAdv;
-	float *m_dSortedForcesP;
-	float *m_dSortedDiiFluid;
-	float *m_dSortedDiiBoundary;
-	float *m_dSortedSumDij;
-	float *m_dSortedNormal;
+	SReal *m_dSortedVelAdv;
+	SReal *m_dSortedForcesAdv;
+	SReal *m_dSortedForcesP;
+	SReal *m_dSortedDiiFluid;
+	SReal *m_dSortedDiiBoundary;
+	SReal *m_dSortedSumDij;
+	SReal *m_dSortedNormal;
 
 };
 

@@ -25,7 +25,7 @@ extern "C"
 //==================================================================================================== 
 //==================================================================================================== 
 
-__device__ void debug3(const char* valname, float3 val)
+__device__ void debug3(const char* valname, SVec3 val)
 {
 	if(( length(val) != length(val) ) || isinf(length(val)))
 	{
@@ -46,7 +46,7 @@ __device__ void debug(const char* valname, SReal val)
 //==================================================================================================== 
 struct comp
 {
-	__host__ __device__ bool operator()(float3 p1, float3 p2)
+	__host__ __device__ bool operator()(SVec3 p1, SVec3 p2)
 	{
 		return length(p1) < length(p2);
 	}
@@ -55,7 +55,7 @@ struct comp
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SReal Wdefault(float3 r, SReal h, SReal kpoly)
+__device__ __host__ SReal Wdefault(SVec3 r, SReal h, SReal kpoly)
 {
 	SReal l_r = length(r);
 
@@ -72,13 +72,13 @@ __device__ __host__ SReal Wdefault(float3 r, SReal h, SReal kpoly)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float3 Wdefault_grad(float3 r, SReal h, SReal kpoly_grad)
+__device__ __host__ SVec3 Wdefault_grad(SVec3 r, SReal h, SReal kpoly_grad)
 {
 	SReal l_r = length(r);
 
 	if (l_r > h) 
 	{
-		return make_float3(0.f, 0.f, 0.f);
+		return make_SVec3(0.f, 0.f, 0.f);
 	}
 
 	SReal b = powf(h*h - l_r*l_r, 2);
@@ -89,13 +89,13 @@ __device__ __host__ float3 Wdefault_grad(float3 r, SReal h, SReal kpoly_grad)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float3 Wpressure_grad(float3 r, SReal h, SReal kpress_grad)
+__device__ __host__ SVec3 Wpressure_grad(SVec3 r, SReal h, SReal kpress_grad)
 {
 	SReal l_r = length(r);
 
 	if (l_r > h) 
 	{
-		return make_float3(0.f, 0.f, 0.f);
+		return make_SVec3(0.f, 0.f, 0.f);
 	}
 
 	SReal c = (h - l_r)*(h - l_r);
@@ -106,13 +106,13 @@ __device__ __host__ float3 Wpressure_grad(float3 r, SReal h, SReal kpress_grad)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float3 Wviscosity_grad(float3 r, SReal h, SReal kvisc_grad, SReal kvisc_denum)
+__device__ __host__ SVec3 Wviscosity_grad(SVec3 r, SReal h, SReal kvisc_grad, SReal kvisc_denum)
 {
 	SReal l_r = length(r);
 
 	if (l_r > h) 
 	{
-		return make_float3(0.f, 0.f, 0.f);
+		return make_SVec3(0.f, 0.f, 0.f);
 	}
 
 	SReal c = -(3*l_r / kvisc_denum ) + ( 2/(h*h) ) - ( h / (2*l_r*l_r*l_r));
@@ -123,7 +123,7 @@ __device__ __host__ float3 Wviscosity_grad(float3 r, SReal h, SReal kvisc_grad, 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SReal Wmonaghan(float3 r, SReal h, SReal kp)
+__device__ __host__ SReal Wmonaghan(SVec3 r, SReal h, SReal kp)
 {
 	SReal value = 0.f;
 	SReal m_invH = 1.f  / h;
@@ -147,14 +147,14 @@ __device__ __host__ SReal Wmonaghan(float3 r, SReal h, SReal kp)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ float3 Wmonaghan_grad(float3 r, SReal h, SReal kpg)
+__device__ __host__ SVec3 Wmonaghan_grad(SVec3 r, SReal h, SReal kpg)
 {
 
     SReal m_g = 1.0/(4.0*M_PI*h*h*h);
 	SReal dist = length(r);
 	SReal m_invH = 1.f/h;
     SReal q = dist*m_invH;
-    float3 gradient = make_float3(0.f, 0.f, 0.f);
+    SVec3 gradient = make_SVec3(0.f, 0.f, 0.f);
     if( q >= 0 && q < 1 )
     {
         SReal scalar = -3.0f*(2-q)*(2-q);
@@ -172,7 +172,7 @@ __device__ __host__ float3 Wmonaghan_grad(float3 r, SReal h, SReal kpg)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SReal Cakinci(float3 r, SReal h, SReal ksurf1, SReal ksurf2)
+__device__ __host__ SReal Cakinci(SVec3 r, SReal h, SReal ksurf1, SReal ksurf2)
 {
 	SReal len = length(r);
 	SReal poly = ksurf1;
@@ -197,7 +197,7 @@ __device__ __host__ SReal Cakinci(float3 r, SReal h, SReal ksurf1, SReal ksurf2)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SReal Aboundary(float3 r, SReal h, SReal bpol)
+__device__ __host__ SReal Aboundary(SVec3 r, SReal h, SReal bpol)
 {
 	SReal rl = length(r);
 	if (2.f*rl > h && rl <= h) 

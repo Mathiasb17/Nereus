@@ -28,7 +28,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 #maybe copy used files in project to avoid doing this horror
 include_directories(/usr/local/cuda/include/)
-include_directories(/usr/local/cuda/samples/common/inc)
+#include_directories(/usr/local/cuda/samples/common/inc)
 
 #LIBS
 find_package(glfw3 3.2 REQUIRED)
