@@ -37,9 +37,9 @@ cmake ..
 make -j8
 ```
 
-#Configuration
+# Configuration
 
-##Precision
+## Precision
 
 Natively, this simulator was developped to work in single-precision. However, you may want to work using double precision floating numbers. This was made possible with preprocessor. 
 In **CMakeLists.txt**, just replace this line 
@@ -56,7 +56,7 @@ add_definitions(-DDOUBLE_PRECISION=1)
 
 I largely insist on the fact you will have poor performances using double precision because of bad memory coalescence with CUDA. In most cases you'll only need single precision.
 
-##Recording
+## Recording
 
 If you want to record the animation, you'll first need **ffmpeg**. Then replace
 
