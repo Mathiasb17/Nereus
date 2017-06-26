@@ -54,7 +54,7 @@ SPH::SPH ():
 	*  GRID PARAMETERS  *
 	*********************/
 	m_params.worldOrigin = make_SVec3(-1.1,-1.1,-1.1); //slight offset to avoid particles off the domain
-	m_params.gridSize = make_uint3(128,128,128); // power of 2
+	m_params.gridSize = make_uint3(64,64,64); // power of 2
 	m_params.cellSize = make_SVec3(m_params.interactionRadius, m_params.interactionRadius, m_params.interactionRadius);
 	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
 

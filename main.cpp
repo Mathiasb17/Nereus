@@ -491,6 +491,9 @@ void displayFPS(GLFWwindow *window)
 	}
 }
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
 void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
 {
 	static bool dropped = false;
@@ -525,7 +528,7 @@ int main(void)
 	openVideoStream();
 #endif
 
-	CFD::SPH *sim_sph = new CFD::IISPH();
+	CFD::SPH *sim_sph = new CFD::SPH();
 	sim_sph->_intialize();
 	sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(1.0f, 2.0f, 2.9f, 1.f), make_SVec4(0,0,0,0));
 
@@ -627,7 +630,9 @@ int main(void)
 
 	sim_sph->_finalize();
 
+#if RECORD_SIMULATION == 1
 	closeVideoStream();
+#endif
 	glfwTerminate();
 	exit(EXIT_SUCCESS);
 }

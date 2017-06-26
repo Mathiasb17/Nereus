@@ -459,8 +459,8 @@ __device__ void computeCellForces(
 	const SReal kvg  = sph_params.kvisc_grad;
 	const SReal kvd  = sph_params.kvisc_denum;
 
-	const SReal ksurf1 = sph_params.ksurf1;
-	const SReal ksurf2 = sph_params.ksurf2;
+	/*const SReal ksurf1 = sph_params.ksurf1;*/
+	/*const SReal ksurf2 = sph_params.ksurf2;*/
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -618,8 +618,6 @@ __device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPo
 
 	SVec3 res  = make_SVec3(0.f, 0.f, 0.f);
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
-
-	const SReal dt = sph_params.timestep;
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -1463,8 +1461,6 @@ __global__ void computePressureForce(
 	if (length(fpres_res) <= 0.f) fpres_res = make_SVec3(0.f, 0.f, 0.f);
 
 	oldForcesP[originalIndex] = make_SVec4(fpres_res.x, fpres_res.y, fpres_res.z, 0.f);
-
-	double4 toto;
 }
 
 __global__ void iisph_integrate(
