@@ -521,8 +521,10 @@ void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
  **********************************************************************/
 int main(void)
 {
+#if RECORD_SIMULATION == 1
 	static unsigned int save = 0;
 	openVideoStream();
+#endif
 
 	CFD::SPH *sim_sph = new CFD::IISPH();
 	sim_sph->_intialize();
@@ -605,18 +607,23 @@ int main(void)
 		if(do_simulation)
 		{
 			sim_sph->update();
+
+#if RECORD_SIMULATION == 1
 			if (save % 10 == 0) 
 			{
 				exportFrame(window);
 				save = 0;
 			}
+#endif
 		}
 
 		//last step : read new events if some
 		glfwPollEvents();
 		glfwSwapBuffers(window);
 
+#if RECORD_SIMULATION == 1
 		save++;
+#endif
 	}
 
 	sim_sph->_finalize();

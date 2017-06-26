@@ -9,6 +9,10 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++-4.9")
 
 project(sph)
 
+#CPP MACROS USED IN PROJECT
+add_definitions(-DDOUBLE_PRECISION=0)
+add_definitions(-DRECORD_SIMULATION=0)
+
 #BEGIN SUBMODULES DEPENDENCIES
 if (NOT IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/external/sph_boundary_particles/src")
   message(FATAL_ERROR "The sph boundary particles dependency repositories are missing! "

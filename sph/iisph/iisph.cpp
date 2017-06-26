@@ -80,6 +80,10 @@ IISPH::IISPH():
 	_intialize();
 	m_numParticles = 0;
 
+	#ifdef DOUBLE_PRECISION
+		std::cout << "JAJAJAJAJA" << std::endl;
+	#endif
+
 }
 
 IISPH::~IISPH()
