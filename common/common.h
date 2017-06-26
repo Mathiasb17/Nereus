@@ -1,6 +1,9 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define MONAGHAN 0
+#define MULLER   1
+
 #include <cuda_runtime.h>
 
 #if DOUBLE_PRECISION == 1

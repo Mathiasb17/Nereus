@@ -56,6 +56,15 @@ add_definitions(-DDOUBLE_PRECISION=1)
 
 I largely insist on the fact you will have poor performances using double precision because of bad memory coalescence with CUDA. In most cases you'll only need single precision.
 
+## SPH Kernels
+
+In SPH there are mainly two sets of kernels : the ones introduced by Monaghan, and the one introduced by Mueller et al. [MCG03]. There is no consensus about what set of kernels to use and both
+gives pretty good results. In this project you can choose the set of kernel you want at compile time by tuning this define instruction :
+
+```
+add_definitions(-DKERNEL_SET=1) #0 for monaghan, 1 for muller kernels
+```
+
 ## Recording
 
 If you want to record the animation, you'll first need **ffmpeg**. Then replace

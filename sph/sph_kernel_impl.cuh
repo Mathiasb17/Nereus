@@ -303,7 +303,11 @@ __device__ SReal computeCellDensity(int *nb, int3 gridPos, unsigned int index, S
 				const SVec3 p1p2 = pos1 - pos2;
 				if(length(p1p2) < ir)
 				{
+#if KERNEL_SET == MULLER
 					dens += pm * Wdefault(p1p2, ir, kp);
+#elif KERNEL_SET == MONAGHAN
+					dens += pm * Wmonaghan(p1p2, ir);
+#endif
 				}
 			}
 		}
@@ -337,7 +341,11 @@ __device__ SReal computeBoundaryCellDensity(int3 gridPos, SVec3 pos, unsigned in
 
 			if (length(p1p2) < ir) 
 			{
-				dens += (rd* vbi) * Wdefault(p1p2, ir, kp);
+#if KERNEL_SET == MULLER
+					dens +=  (rd* vbi) * Wdefault(p1p2, ir, kp);
+#elif KERNEL_SET == MONAGHAN
+					dens += (rd* vbi) * Wmonaghan(p1p2, ir);
+#endif
 			}
 		}
 	}
@@ -481,10 +489,16 @@ __device__ void computeCellForces(
 				const SReal d1sq = dens*dens;
 				const SReal d2sq = dens2*dens2;
 
-				const SReal kdefault = Wdefault(p1p2, ir, kp);
-				const SVec3 kdefault_grad = Wdefault_grad(p1p2, ir, kpg);
+				/*const SReal kdefault = Wdefault(p1p2, ir, kp);*/
+				/*const SVec3 kdefault_grad = Wdefault_grad(p1p2, ir, kpg);*/
+
+#if KERNEL_SET == MONAGHAN
+				const SVec3 kpressure_grad = Wmonaghan_grad(p1p2, ir);
+				const SVec3 kvisco_grad = kpressure_grad;
+#elif KERNEL_SET == MULLER
 				const SVec3 kpressure_grad = Wpressure_grad(p1p2, ir, kprg);
 				const SVec3 kvisco_grad = Wviscosity_grad(p1p2, ir, kvg, kvd);
+#endif
 
 				if (length(p1p2) < ir)
 				{
@@ -523,9 +537,13 @@ __device__ void computeCellForces(
 			const SReal psi = (rd*vbi);
 			const SVec3 p1p2 = pos1 - vpos;
 
-			const SReal kdefault = Wdefault(p1p2, ir, sph_params.kpoly);
+#if KERNEL_SET == MONAGHAN
+			const SReal kernel = Wmonaghan(p1p2, ir);
+#elif KERNEL_SET == MULLER
+			const SReal kernel = Wdefault(p1p2, ir, sph_params.kpoly);
+#endif
 
-			SVec3 contrib = (beta * psi * p1p2 * kdefault);
+			SVec3 contrib = (beta * psi * p1p2 * kernel);
 			*fbound = *fbound + contrib;
 		}
 	}
