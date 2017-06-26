@@ -27,7 +27,6 @@
 /**********************************************************************
  *                WINDOW AND MOUSE/KEYBOARD PARAMETERS                *
  **********************************************************************/
-
 GLFWwindow* window;
 
 int width = 1024;
@@ -37,7 +36,7 @@ int height = 768;
 *                EXPORT VIDEO LIKE IN MMACKLIN BLOG                  *
 **********************************************************************/
 
-const char* cmd = "ffmpeg -r 60 -f rawvideo -pix_fmt rgba -s 1024x768 -i - "
+const char* cmd = "ffmpeg -r 100 -f rawvideo -pix_fmt rgba -s 1024x768 -i - "
                   "-threads 0 -preset fast -y -pix_fmt yuv420p -crf 21 -vf vflip output.mp4";
 
 int* buffer = new int[width*height];
