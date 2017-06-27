@@ -460,8 +460,8 @@ __device__ void computeCellForces(
 
 	const SReal m2 = sph_params.particleMass;
 	const SReal ir = sph_params.interactionRadius;
-	const SReal kp = sph_params.kpoly;
-	const SReal kpg= sph_params.kpoly_grad;
+	/*const SReal kp = sph_params.kpoly;*/
+	/*const SReal kpg= sph_params.kpoly_grad;*/
 
 	const SReal kprg = sph_params.kpress_grad;
 	const SReal kvg  = sph_params.kvisc_grad;
@@ -647,10 +647,17 @@ __device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPo
 			{
 				const SVec3 pos2 = make_SVec3(FETCH(oldPos, j));
 				const SVec3 p1p2 = pos1 - pos2;
+				const SReal kpg = sph_params.kpoly_grad;
 
 				if(length(p1p2) < ir)
 				{
-					res = res + ( - ( pm/(dens*dens) )) * Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
+					SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+					grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+					grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+					res = res + ( - ( pm/(dens*dens) )) * grad;
 				}
 			}
 		}
@@ -683,7 +690,14 @@ __device__ SVec3 computeDisplacementFactorBoundaryCell(SReal dens, SReal mj, int
 			const SReal psi  = rd*vbi;
 			if(length(p1p2) < ir)
 			{
-				res = res + (-dt*dt*psi/(dens*dens))*Wdefault_grad(p1p2, ir, kpg);
+				SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+					grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+					grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+
+				res = res + (-dt*dt*psi/(dens*dens))*grad;
 			}
 		}
 	}
@@ -860,10 +874,6 @@ __global__ void computeDisplacementFactor(
 	SVec3 vel_adv = vel1 + dt*(force_adv/pm);
 	oldVelAdv[originalIndex] = make_SVec4(vel_adv.x, vel_adv.y, vel_adv.z, 0.f);
 
-	//debug3("vel_adv", vel_adv);
-
-	/*__syncthreads();*/
-
 	/*****************
 	*  COMPUTE Dii  *
 	*****************/
@@ -891,7 +901,6 @@ __global__ void computeDisplacementFactor(
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-
 __device__ SReal rho_adv_fluid(SReal ir, SReal pm, unsigned int index, SVec3 pos1, SVec3 velAdv1, SReal kpg, SVec4* oldPos, SVec4* oldVelAdv, int3 neighbourPos, unsigned int* cellStart, unsigned int* cellEnd)
 {
 	const unsigned int gridHash = calcGridHash(neighbourPos);
@@ -913,7 +922,13 @@ __device__ SReal rho_adv_fluid(SReal ir, SReal pm, unsigned int index, SVec3 pos
 
 				if(length(p1p2) < ir)
 				{
-					res += (pm  * dot(v1v2, Wdefault_grad(p1p2, ir, kpg)) );
+					SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+					grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+					grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+					res += (pm  * dot(v1v2, grad));
 				}
 			}
 		}
@@ -944,7 +959,13 @@ __device__ SReal rho_adv_boundary(SVec3 pos1, SVec3 vel1, SReal rd, SReal pm, SR
 
 
 			const SReal psi = (rd * vbi);
-			res += (psi* dot(v1v2, Wdefault_grad(p1p2, ir, kpg)));
+			SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+			grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+			grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+			res += (psi* dot(v1v2, grad));
 		}
 	}
 	return res;
@@ -968,11 +989,17 @@ __device__ SReal compute_aii_cell(SReal ir, SReal dt, SReal pm, SReal kpg, SReal
 				const SVec3 pos2 = make_SVec3(FETCH(oldPos, j));
 				const SVec3 p1p2 = pos1 - pos2;
 
-				const SVec3 grad = Wdefault_grad(p1p2, ir, kpg)*-1.f;
 				const SReal  a    = ( -(dt*dt*pm)/(dens*dens) );
+				SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+				grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+				grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
 
-				SVec3 dji = a*grad;
-				res += (pm * dot((diif+diib)-dji, Wdefault_grad(p1p2, ir, kpg)));
+
+				SVec3 dji = a*-grad;
+				res += (pm * dot((diif+diib)-dji, grad));
 			}
 		}
 	}
@@ -998,7 +1025,13 @@ __device__ SReal compute_aii_cell_boundary(SReal rd, SReal ir, SReal kpg, SVec3 
 			const SReal  vbi  = FETCH(oldBoundaryVbi, j);
 
 			const SReal psi = rd*vbi;
-			res += psi * dot(diif + diib, Wdefault_grad(p1p2, ir, kpg));
+			SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+			grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+			grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+			res += psi * dot(diif + diib, grad);
 		}
 	}
 	return res;
@@ -1137,8 +1170,15 @@ __device__ SVec3 dijpjcell(SReal ir, SReal pm, SReal kpg, SVec3 pos1, SVec4* old
 				const SVec3 p1p2 = pos1 - pos2;
 				const SReal p_lj = FETCH(oldP_l, j);
 				const SReal densj = FETCH(oldDens, j);
+				SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+				grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+				grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
 
-				res = res + ((-pm/(densj*densj))*p_lj*Wdefault_grad(p1p2, ir, kpg));
+
+				res = res + ((-pm/(densj*densj))*p_lj*grad);
 			}
 		}
 	}
@@ -1304,9 +1344,16 @@ __global__ void computePressure(
 							const SVec3 p1p2 = pos1 - pos2;
 							const SReal p_lj = FETCH(oldP_l, j);
 
-							const SVec3 grad = Wdefault_grad(p1p2, ir, kpg)*(-1.f);
 
-							const SVec3 dji = -(dt*dt*pm)/(dens*dens)*( grad );//FIXME nan issues
+							SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+				grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+				grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+
+
+							const SVec3 dji = -(dt*dt*pm)/(dens*dens)*( -grad );//FIXME nan issues
 
 							const SVec3 diifj = make_SVec3(FETCH(oldDiiFluid, j));
 							const SVec3 diibj = make_SVec3(FETCH(oldDiiBoundary, j));
@@ -1314,7 +1361,7 @@ __global__ void computePressure(
 
 							const SVec3 aux = sum_dij - (diifj+diibj)*p_lj - (sum_dijj - dji*p_l);
 
-							fsum += pm*dot(aux, Wdefault_grad(p1p2, ir, kpg));
+							fsum += pm*dot(aux, grad);
 						}
 					}
 				}
@@ -1329,7 +1376,13 @@ __global__ void computePressure(
 						const SVec3 p1p2 = pos1 - posb;
 						const SReal vbi = FETCH(oldBoundaryVbi, j);
 						const SReal psi = rd * vbi;
-						bsum += psi * dot(sum_dij, Wdefault_grad(p1p2, ir, kpg)); 
+						SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+						grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+						grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+						bsum += psi * dot(sum_dij, grad); 
 					}
 				}
 			}
@@ -1364,7 +1417,6 @@ __global__ void computePressure(
 
 	oldPres[originalIndex] = p_l;
 	oldDensCorr[originalIndex] = rho_corr;
-
 }
 
 //====================================================================================================  
@@ -1448,8 +1500,13 @@ __global__ void computePressureForce(
 							const SVec3 p1p2 = pos1 - pos2;
 							const SReal pj = FETCH(oldPres, j);
 							const SReal densj = FETCH(oldDens, j);
-
-							const SVec3 contrib = -pm*pm*( p/(dens*dens) + pj/(densj*densj) ) * Wdefault_grad(p1p2, ir, kpg);
+							SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+							grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+							grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+							const SVec3 contrib = -pm*pm*( p/(dens*dens) + pj/(densj*densj) ) * grad;
 
 							fpres_res = fpres_res  + contrib;
 						}
@@ -1467,7 +1524,14 @@ __global__ void computePressureForce(
 						const SReal vbi = FETCH(oldBoundaryVbi, j);
 						const SReal psi = rd * vbi;
 
-						const SVec3 contrib = (pm*psi*( p/(dens*dens) ) * Wdefault_grad(p1p2, ir, kpg));
+						SVec3 grad;
+#if KERNEL_SET == MONAGHAN
+						grad = Wmonaghan_grad(p1p2, ir);
+#elif KERNEL_SET == MULLER
+						grad = Wdefault_grad(p1p2, ir, kpg);
+#endif
+
+						const SVec3 contrib = (pm*psi*( p/(dens*dens) ) * grad);
 						fpres_res = fpres_res + contrib;
 					}
 				}

@@ -36,7 +36,7 @@ IISPH::IISPH():
 	m_params.restDensity = 1000.0;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1e-3f;
-	m_params.viscosity = 0.004f;
+	m_params.viscosity = 0.005;
 	m_params.surfaceTension = 0.04f;
 
 	m_params.gravity.x = 0.0;
@@ -47,7 +47,7 @@ IISPH::IISPH():
 	m_params.interactionRadius = 0.0537f;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 1400.0;
+	m_params.beta = 1200.0;
 
 	/*********************
 	*  GRID PARAMETERS  *
