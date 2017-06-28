@@ -1,2 +1,0 @@
-/usr/bin/ar qc libss.a  CMakeFiles/ss.dir/src/ss.cpp.o CMakeFiles/ss.dir/src/boundary_forces.cpp.o CMakeFiles/cuda_compile_1.dir/src/cuda_compile_1_generated_boundary.cu.o
-/usr/bin/ranlib libss.a

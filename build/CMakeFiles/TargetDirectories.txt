@@ -1,6 +1,0 @@
-/home/mathias/sph_opengl/build/CMakeFiles/rebuild_cache.dir
-/home/mathias/sph_opengl/build/CMakeFiles/edit_cache.dir
-/home/mathias/sph_opengl/build/CMakeFiles/sph.dir
-/home/mathias/sph_opengl/build/ext_build/sph_boundary_particles/CMakeFiles/edit_cache.dir
-/home/mathias/sph_opengl/build/ext_build/sph_boundary_particles/CMakeFiles/rebuild_cache.dir
-/home/mathias/sph_opengl/build/ext_build/sph_boundary_particles/CMakeFiles/ss.dir
