@@ -35,6 +35,7 @@ struct SphSimParams
 	SReal timestep;
     SReal particleRadius;
     SVec3 gravity;
+	SReal soundSpeed;
 
 	/*********************
 	*  BOUNDARY PARAMS  *

@@ -304,15 +304,15 @@ __device__ SReal computeCellDensity(int *nb, int3 gridPos, unsigned int index, S
 				if(length(p1p2) < ir)
 				{
 #if KERNEL_SET == MULLER
-					dens += pm * Wdefault(p1p2, ir, kp);
+					dens += Wdefault(p1p2, ir, kp);
 #elif KERNEL_SET == MONAGHAN
-					dens += pm * Wmonaghan(p1p2, ir);
+					dens += Wmonaghan(p1p2, ir);
 #endif
 				}
 			}
 		}
 	}
-	return dens;
+	return dens*pm;
 }
 
 //====================================================================================================  
@@ -489,9 +489,6 @@ __device__ void computeCellForces(
 				const SReal d1sq = dens*dens;
 				const SReal d2sq = dens2*dens2;
 
-				/*const SReal kdefault = Wdefault(p1p2, ir, kp);*/
-				/*const SVec3 kdefault_grad = Wdefault_grad(p1p2, ir, kpg);*/
-
 #if KERNEL_SET == MONAGHAN
 				const SVec3 kpressure_grad = Wmonaghan_grad(p1p2, ir);
 				const SVec3 kvisco_grad = kpressure_grad;
@@ -520,6 +517,15 @@ __device__ void computeCellForces(
 	startIndex = FETCH(cellBoundaryStart, gridHash);
 	SVec3 forces_boundaries = make_SVec3(0.f, 0.f, 0.f);
 
+	//friction nu
+	const SReal cs = sph_params.soundSpeed;
+	const SReal vis= 0.1;
+	const SReal adh= sph_params.beta;
+	const SReal nu = (vis*ir*cs)/(2.0*dens);
+	const SReal epsilon = 0.01;
+	const SReal pm = sph_params.particleMass;
+	const SReal kp = sph_params.kpoly;
+
 	if (startIndex != 0xffffffff)
 	{
 		const SReal beta = sph_params.beta;
@@ -536,15 +542,28 @@ __device__ void computeCellForces(
 
 			const SReal psi = (rd*vbi);
 			const SVec3 p1p2 = pos1 - vpos;
+			const SVec3 v1v2 = vel1;
+
+			const SReal mdot = max(dot(v1v2, p1p2), 0.0);
+			const SReal denum = (length(p1p2)*length(p1p2)) + epsilon*ir*ir;
+			const SReal Pij = -nu * (mdot / denum);
 
 #if KERNEL_SET == MONAGHAN
 			const SReal kernel = Wmonaghan(p1p2, ir);
+			const SVec3 grad   = Wmonaghan_grad(p1p2, ir);
+			
 #elif KERNEL_SET == MULLER
 			const SReal kernel = Wdefault(p1p2, ir, sph_params.kpoly);
+			const SVec3 grad   = Wdefault_grad(p1p2, ir, sph_params.kpoly_grad);
 #endif
 
-			SVec3 contrib = (beta * psi * p1p2 * kernel);
-			*fbound = *fbound + contrib;
+			//adhesion
+			SVec3 contrib_adh = (beta * psi * p1p2 * Aboundary(p1p2, ir, sph_params.bpol)/length(p1p2));
+			/*SVec3 contrib_adh = (beta * psi * p1p2 * kernel);*/
+			/*SVec3 contrib_adh = -(adh*pm*psi*Aboundary(p1p2, ir, sph_params.bpol))*p1p2;*/
+
+			SVec3 contrib_visc= (-pm*psi*Pij*grad);
+			*fbound = *fbound + contrib_adh + contrib_visc;
 		}
 	}
 }

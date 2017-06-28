@@ -25,7 +25,7 @@ extern "C"
 //==================================================================================================== 
 //==================================================================================================== 
 
-__device__ void debug3(const char* valname, SVec3 val)
+__forceinline__ __device__ void debug3(const char* valname, SVec3 val)
 {
 	if(( length(val) != length(val) ) || isinf(length(val)))
 	{
@@ -33,7 +33,7 @@ __device__ void debug3(const char* valname, SVec3 val)
 	}
 }
 
-__device__ void debug(const char* valname, SReal val)
+__forceinline__ __device__ void debug(const char* valname, SReal val)
 {	
 	if ( (val != val) || isinf(val)) 
 	{
@@ -55,7 +55,7 @@ struct comp
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SReal Wdefault(SVec3 r, SReal h, SReal kpoly)
+__forceinline__ __device__ __host__ SReal Wdefault(SVec3 r, SReal h, SReal kpoly)
 {
 	SReal l_r = length(r);
 
@@ -72,7 +72,7 @@ __device__ __host__ SReal Wdefault(SVec3 r, SReal h, SReal kpoly)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SVec3 Wdefault_grad(SVec3 r, SReal h, SReal kpoly_grad)
+__forceinline__ __device__ __host__ SVec3 Wdefault_grad(SVec3 r, SReal h, SReal kpoly_grad)
 {
 	SReal l_r = length(r);
 
@@ -89,7 +89,7 @@ __device__ __host__ SVec3 Wdefault_grad(SVec3 r, SReal h, SReal kpoly_grad)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SVec3 Wpressure_grad(SVec3 r, SReal h, SReal kpress_grad)
+__forceinline__ __device__ __host__ SVec3 Wpressure_grad(SVec3 r, SReal h, SReal kpress_grad)
 {
 	SReal l_r = length(r);
 
@@ -106,7 +106,7 @@ __device__ __host__ SVec3 Wpressure_grad(SVec3 r, SReal h, SReal kpress_grad)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SVec3 Wviscosity_grad(SVec3 r, SReal h, SReal kvisc_grad, SReal kvisc_denum)
+__forceinline__ __device__ __host__ SVec3 Wviscosity_grad(SVec3 r, SReal h, SReal kvisc_grad, SReal kvisc_denum)
 {
 	SReal l_r = length(r);
 
@@ -123,7 +123,7 @@ __device__ __host__ SVec3 Wviscosity_grad(SVec3 r, SReal h, SReal kvisc_grad, SR
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SReal Wmonaghan(SVec3 r, SReal h)
+__forceinline__ __device__ __host__ SReal Wmonaghan(SVec3 r, SReal h)
 {
 	SReal value = 0.f;
 	SReal m_invH = 1.f  / h;
@@ -147,7 +147,7 @@ __device__ __host__ SReal Wmonaghan(SVec3 r, SReal h)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SVec3 Wmonaghan_grad(SVec3 r, SReal h)
+__forceinline__ __device__ __host__ SVec3 Wmonaghan_grad(SVec3 r, SReal h)
 {
 
     SReal m_g = 1.0/(4.0*M_PI*h*h*h);
@@ -172,7 +172,7 @@ __device__ __host__ SVec3 Wmonaghan_grad(SVec3 r, SReal h)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SReal Cakinci(SVec3 r, SReal h, SReal ksurf1, SReal ksurf2)
+__forceinline__ __device__ __host__ SReal Cakinci(SVec3 r, SReal h, SReal ksurf1, SReal ksurf2)
 {
 	SReal len = length(r);
 	SReal poly = ksurf1;
@@ -197,7 +197,7 @@ __device__ __host__ SReal Cakinci(SVec3 r, SReal h, SReal ksurf1, SReal ksurf2)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-__device__ __host__ SReal Aboundary(SVec3 r, SReal h, SReal bpol)
+__forceinline__ __device__ __host__ SReal Aboundary(SVec3 r, SReal h, SReal bpol)
 {
 	SReal rl = length(r);
 	if (2.f*rl > h && rl <= h) 

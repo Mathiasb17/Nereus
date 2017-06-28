@@ -47,7 +47,12 @@ IISPH::IISPH():
 	m_params.interactionRadius = 0.0537f;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 1200.0;
+	m_params.beta = 1500.0;
+
+	const SReal eta = 0.01;
+    const SReal H = 0.1;
+    const SReal vf = sqrt( 2*9.81*H );
+    m_params.soundSpeed = vf/(sqrt(eta));
 
 	/*********************
 	*  GRID PARAMETERS  *
