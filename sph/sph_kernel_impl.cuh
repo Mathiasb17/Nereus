@@ -558,7 +558,7 @@ __device__ void computeCellForces(
 #endif
 
 			//adhesion
-			SVec3 contrib_adh = (beta * psi * p1p2 * Aboundary(p1p2, ir, sph_params.bpol)/length(p1p2));
+			SVec3 contrib_adh = (beta * psi * p1p2 * kernel/length(p1p2));
 			/*SVec3 contrib_adh = (beta * psi * p1p2 * kernel);*/
 			/*SVec3 contrib_adh = -(adh*pm*psi*Aboundary(p1p2, ir, sph_params.bpol))*p1p2;*/
 
@@ -676,7 +676,7 @@ __device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPo
 #elif KERNEL_SET == MULLER
 					grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-					res = res + ( - ( pm/(dens*dens) )) * grad;
+					res = res - (  pm/(dens*dens) ) * grad;
 				}
 			}
 		}
@@ -716,7 +716,7 @@ __device__ SVec3 computeDisplacementFactorBoundaryCell(SReal dens, SReal mj, int
 					grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
 
-				res = res + (-dt*dt*psi/(dens*dens))*grad;
+				res = res - (psi/(dens*dens))*grad;
 			}
 		}
 	}
@@ -912,6 +912,7 @@ __global__ void computeDisplacementFactor(
     }
 
 	displacement_factor_fluid = displacement_factor_fluid * (dt*dt);
+	displacement_factor_boundary = displacement_factor_boundary * (dt*dt);
 
 	oldDiiFluid[originalIndex] = make_SVec4(displacement_factor_fluid.x, displacement_factor_fluid.y, displacement_factor_fluid.z, 0.f);
 	oldDiiBoundary[originalIndex] = make_SVec4(displacement_factor_boundary.x, displacement_factor_boundary.y, displacement_factor_boundary.z, 0.f);

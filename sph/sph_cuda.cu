@@ -691,7 +691,7 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 	unsigned int l=0; 
 	SReal rho_avg = 0.f;
 	const SReal rd = 1000.f;
-	const SReal max_rho_err = 10.f;
+	const SReal max_rho_err = 1.f;
 
 	while( ((rho_avg - rd) > max_rho_err) || (l<2))
 	{
@@ -772,6 +772,8 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 
 		l++;
 	}
+
+	printf("l = %d\n", l );
 
 	computePressureForce<<<numBlocks, numThreads>>>(
 				(SVec4                      *) sortedPos,
