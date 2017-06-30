@@ -288,7 +288,7 @@ __device__ SReal computeCellDensity(int *nb, int3 gridPos, unsigned int index, S
     const unsigned int gridHash = calcGridHash(gridPos);
 	const unsigned int startIndex = FETCH(cellStart, gridHash);
 
-	SReal dens = 0.f;
+	SReal dens = 0.0;
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
 
 	if (startIndex != 0xffffffff)
@@ -304,9 +304,9 @@ __device__ SReal computeCellDensity(int *nb, int3 gridPos, unsigned int index, S
 				if(length(p1p2) < ir)
 				{
 #if KERNEL_SET == MULLER
-					dens += pm * Wdefault(p1p2, ir, kp);
+					dens += (pm * Wdefault(p1p2, ir, kp));
 #elif KERNEL_SET == MONAGHAN
-					dens += pm * Wmonaghan(p1p2, ir);
+					dens += (pm * Wmonaghan(p1p2, ir));
 #endif
 				}
 			}
@@ -324,7 +324,7 @@ __device__ SReal computeBoundaryCellDensity(int3 gridPos, SVec3 pos, unsigned in
 	const unsigned int gridHash = calcGridHash(gridPos);
 	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
 
-	SReal dens = 0.f;
+	SReal dens = 0.0;
 	const SVec3 pos1 = pos;
 
 	if (startIndex != 0xffffffff) 
@@ -343,9 +343,9 @@ __device__ SReal computeBoundaryCellDensity(int3 gridPos, SVec3 pos, unsigned in
 			{
 				const SReal psi = rd* vbi;
 #if KERNEL_SET == MULLER
-					dens += psi * Wdefault(p1p2, ir, kp);
+					dens += ( psi * Wdefault(p1p2, ir, kp) );
 #elif KERNEL_SET == MONAGHAN
-					dens += psi * Wmonaghan(p1p2, ir);
+					dens += ( psi * Wmonaghan(p1p2, ir) );
 #endif
 			}
 		}
@@ -397,6 +397,7 @@ __global__ void computeDensityPressure(
 	const SReal rd = sph_params.restDensity;
 	const SReal pm = sph_params.particleMass;
 
+	//DOES A PARTICLE CONTRIBUTE TO ITS OWN DENSITY YES OR NO ?!?
 /*#if KERNEL_SET == MULLER*/
 					/*dens += pm * Wdefault(make_SVec3(0.0, 0.0, 0.0), ir, kp);*/
 /*#elif KERNEL_SET == MONAGHAN*/
@@ -461,9 +462,9 @@ __device__ void computeCellForces(
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
 	const SVec3 vel1 = make_SVec3(vel.x, vel.y, vel.z);
 
-	SVec3 forces = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 forces_pres = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 forces_visc = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 forces = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 forces_pres = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 forces_visc = make_SVec3(0.0, 0.0, 0.0);
 
 	const SReal pm = sph_params.particleMass;
 	const SReal m2 = sph_params.particleMass;
@@ -475,8 +476,8 @@ __device__ void computeCellForces(
 	const SReal kvg  = sph_params.kvisc_grad;
 	const SReal kvd  = sph_params.kvisc_denum;
 
-	const SReal ksurf1 = sph_params.ksurf1;
-	const SReal ksurf2 = sph_params.ksurf2;
+	/*const SReal ksurf1 = sph_params.ksurf1;*/
+	/*const SReal ksurf2 = sph_params.ksurf2;*/
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -507,8 +508,10 @@ __device__ void computeCellForces(
 
 				if (length(p1p2) < ir)
 				{
+					//pressure
 					*fpres = *fpres + (m2 * ( pres/d1sq + pres2/d2sq ) *kpressure_grad);
 
+					//viscosity
 					const SReal a = dot(p1p2, kvisco_grad);
 					const SReal b = dot(p1p2,p1p2) + 0.01f*(ir*ir);
 					*fvisc = *fvisc + (m2/dens2  * v1v2 * (a/b));
@@ -516,8 +519,10 @@ __device__ void computeCellForces(
 					/**fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;*/
 					/*SReal gamma = sph_params.surfaceTension;*/
 					/**fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));*/
+
+					//surface tension
 					SReal kappa = sph_params.surfaceTension;
-					*fsurf = *fsurf - (kappa/pm) * pm * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly);
+					*fsurf = *fsurf - ( (kappa/pm) * pm * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) );
 				}
 			}
 		}
@@ -525,7 +530,7 @@ __device__ void computeCellForces(
 
 	//start again with boundaries
 	startIndex = FETCH(cellBoundaryStart, gridHash);
-	SVec3 forces_boundaries = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 forces_boundaries = make_SVec3(0.0, 0.0, 0.0);
 
 	//friction nu
 	const SReal cs = sph_params.soundSpeed;
@@ -565,21 +570,17 @@ __device__ void computeCellForces(
 #endif
 
 			//adhesion
-			/*SVec3 contrib_adh = (beta * psi * p1p2 * kernel/length(p1p2));*/
-			SVec3 contrib_adh = (beta * psi * p1p2 * kernel);
-			/*SVec3 contrib_adh = -(adh*pm*psi*Aboundary(p1p2, ir, sph_params.bpol))*p1p2;*/
+			*fbound = *fbound + (beta * psi * p1p2 * kernel);
 
-			*fbound = *fbound + contrib_adh;
+			//pressure
+			*fpres  = *fpres + ( -pm * psi * (pres/(dens*dens)) * grad );
 
-			*fpres = *fpres - pm * psi * (pres/(dens*dens)) * grad;
-
+			//friction
 			const SReal nu = (sph_params.viscosity * ir * sph_params.soundSpeed)/(dens*dens);
 			const SReal nom= fmax(dot(v1v2, p1p2),0);
 			const SReal denom= dot(p1p2/length(p1p2), p1p2/length(p1p2)) + epsilon *ir * ir;
-
 			const SReal Pij = -nu * (nom/denom);
-
-			*fvisc = *fvisc - pm * psi * Pij * grad;
+			*fvisc = *fvisc - ( pm * psi * Pij * grad );
 		}
 	}
 }
@@ -623,10 +624,10 @@ void computeForces(
     const int3 gridPos = calcGridPos(pos);
 
 	//accumulators
-	SVec3 fpres = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 fvisc = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 fsurf = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 fbound= make_SVec3(0.f, 0.f, 0.f);
+	SVec3 fpres = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fvisc = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fsurf = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fbound= make_SVec3(0.0, 0.0, 0.0);
 
 	for (int z=-1; z<=1; z++)
 	{
@@ -642,13 +643,13 @@ void computeForces(
 	}
 
 	//finishing gradient and laplacian computations
-	fpres = dens * fpres;
-	fvisc = 2.f * fvisc;
+	fpres = fpres * dens;
+	fvisc = fvisc * 2.0;
 	/*fsurf = -(sph_params.surfaceTension/m1) * fsurf;*/
 
 	//computing forces
-	fpres = -(m1 / dens) * fpres;
-	fvisc = (m1*sph_params.viscosity) * fvisc;
+	fpres = fpres * -(m1 / dens);
+	fvisc = fvisc * (m1*sph_params.viscosity);
 
 	SVec3 f = fpres + fvisc + (sph_params.gravity*m1) + fsurf + fbound;
 	SVec4 res = make_SVec4(f.x, f.y, f.z, 0);
@@ -669,12 +670,14 @@ __device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPo
 	const unsigned int gridHash = calcGridHash(gridPos);
 	const unsigned int startIndex = FETCH(cellStart, gridHash);
 
-	SVec3 res  = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 res  = make_SVec3(0.0, 0.0, 0.0);
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
 
 	if (startIndex != 0xffffffff)
 	{ 
 		const unsigned int endIndex = FETCH(cellEnd, gridHash);
+
+		const SReal dt = sph_params.timestep;
 
         for (unsigned int j=startIndex; j<endIndex; j++)
 		{
@@ -692,7 +695,7 @@ __device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPo
 #elif KERNEL_SET == MULLER
 					grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-					res = res - (  pm/(dens*dens) ) * grad;
+					res -= (  pm/(dens*dens) ) * grad * (dt*dt);
 				}
 			}
 		}
@@ -709,12 +712,13 @@ __device__ SVec3 computeDisplacementFactorBoundaryCell(SReal dens, SReal mj, int
 	const unsigned int gridHash = calcGridHash(gridPos);
 	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
 
-	SVec3 res  = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 res  = make_SVec3(0.0, 0.0, 0.0);
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
 
 	if (startIndex != 0xffffffff)
 	{ 
 		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
+		const SReal dt = sph_params.timestep;
 
         for (unsigned int j=startIndex; j<endIndex; j++)
 		{
@@ -732,7 +736,7 @@ __device__ SVec3 computeDisplacementFactorBoundaryCell(SReal dens, SReal mj, int
 					grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
 
-				res = res - (psi/(dens*dens))*grad;
+				res -= (psi/(dens*dens)) * grad * (dt*dt);
 			}
 		}
 	}
@@ -794,7 +798,7 @@ __global__ void computeIisphDensity(
 	/*********************
 	*  COMPUTE DENSITY  *
 	*********************/
-	SReal dens = 0.f;
+	SReal dens = 0.0;
 	int nb = 0;
 
 	//loop over each neighbor cell
@@ -811,9 +815,9 @@ __global__ void computeIisphDensity(
 		}
 	}
 
-	if (dens <= 1.f) 
+	if (dens <= 1.0) 
 	{
-		dens = 1.f;
+		dens = 1.0;
 	}
 
 	oldDens[originalIndex] = dens;
@@ -853,6 +857,9 @@ __global__ void computeDisplacementFactor(
 	unsigned int numBoundaries,
 	unsigned int numCells)
 {
+	/****************************
+	*  COMPUTE PARTICLE INDEX  *
+	****************************/
     const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
 	const unsigned int originalIndex = gridParticleIndex[index];
@@ -860,7 +867,7 @@ __global__ void computeDisplacementFactor(
 	//global memory reads
 	const SVec3 pos1 = make_SVec3(FETCH(oldPos, originalIndex));
 	const SVec3 vel1 = make_SVec3(FETCH(oldVel, originalIndex));
-	const SReal pres = 0.f; //useless, just to reuse computeCellForces below
+	const SReal pres = 0.0; //useless, just to reuse computeCellForces below
 	const SReal dens = FETCH(oldDens, originalIndex);
 
 	//const memory reads
@@ -876,12 +883,13 @@ __global__ void computeDisplacementFactor(
 	/***********************
 	*  PREDICT ADVECTION  *
 	***********************/
-	SVec3 fvisc = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 fsurf = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 fgrav = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 fbound= make_SVec3(0.f, 0.f, 0.f);
-	SVec3 fpres = make_SVec3(0.f, 0.f, 0.f); //ignored here, just to reuse computeCellForces
+	SVec3 fvisc = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fsurf = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fgrav = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fbound= make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fpres = make_SVec3(0.0, 0.0, 0.0); //ignored here, just to reuse computeCellForces
 
+	//loop over neighbor cells
 	for (int z=-1; z<=1; z++)
 	{
 		for (int y=-1; y<=1; y++)
@@ -889,31 +897,29 @@ __global__ void computeDisplacementFactor(
 			for (int x=-1; x<=1; x++)
 			{
 				const int3 neighbourPos = gridPos + make_int3(x, y, z);
-				//a optimiser !!!
 				computeCellForces(&fpres, &fvisc, &fsurf, &fbound, neighbourPos, originalIndex, pos1, vel1, dens, pres, oldPos, oldDens, oldPres, oldVel, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellStart, cellEnd, cellBoundaryStart, cellBoundaryEnd);
 			}
 		}
 	}
 
-	//finishing gradient and laplacian computations
-	fvisc = 2.f * fvisc;
-	fsurf = -(sph_params.surfaceTension/pm) * fsurf;
-
-	//computing forces
+	//end force computation
+	fvisc = 2.0 * fvisc;
 	fvisc = (pm*sph_params.viscosity) * fvisc;
 	fgrav =  pm*sph_params.gravity;
 
+	/*********************************************
+	*  COMPUTE AND STORE FORCE_ADV and VEL_ADV  *
+	*********************************************/
 	SVec3 force_adv = fvisc + fsurf + fbound + fgrav;
-	oldForcesAdv[originalIndex] = make_SVec4(force_adv.x, force_adv.y, force_adv.z, 0.f);
-		
 	SVec3 vel_adv = vel1 + dt*(force_adv/pm);
-	oldVelAdv[originalIndex] = make_SVec4(vel_adv.x, vel_adv.y, vel_adv.z, 0.f);
+	oldForcesAdv[originalIndex] = make_SVec4(force_adv.x, force_adv.y, force_adv.z, 0.0);
+	oldVelAdv[originalIndex] = make_SVec4(vel_adv.x, vel_adv.y, vel_adv.z, 0.0);
 
 	/*****************
-	*  COMPUTE Dii  *
+	*  COMPUTE dii  *
 	*****************/
-	SVec3 displacement_factor_fluid = make_SVec3(0.f, 0.f, 0.f);
-	SVec3 displacement_factor_boundary = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 displacement_factor_fluid = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 displacement_factor_boundary = make_SVec3(0.0, 0.0, 0.0);
 	for (int z=-1; z<=1; z++)
     {
         for (int y=-1; y<=1; y++)
@@ -921,17 +927,14 @@ __global__ void computeDisplacementFactor(
             for (int x=-1; x<=1; x++)
             {
                 const int3 neighbourPos = gridPos + make_int3(x, y, z);
-				displacement_factor_fluid = displacement_factor_fluid + computeDisplacementFactorCell(dens, pm, neighbourPos, pos1, oldPos, originalIndex, cellStart, cellEnd, ir, kpg, rd, pm);
-				displacement_factor_boundary = displacement_factor_boundary + computeDisplacementFactorBoundaryCell(dens, pm, gridPos, pos1, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kpg, rd, pm, dt);
+				displacement_factor_fluid += computeDisplacementFactorCell(dens, pm, neighbourPos, pos1, oldPos, originalIndex, cellStart, cellEnd, ir, kpg, rd, pm);
+				displacement_factor_boundary += displacement_factor_boundary + computeDisplacementFactorBoundaryCell(dens, pm, gridPos, pos1, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kpg, rd, pm, dt);
 			}
         }
     }
 
-	displacement_factor_fluid = displacement_factor_fluid * (dt*dt);
-	displacement_factor_boundary = displacement_factor_boundary * (dt*dt);
-
-	oldDiiFluid[originalIndex] = make_SVec4(displacement_factor_fluid.x, displacement_factor_fluid.y, displacement_factor_fluid.z, 0.f);
-	oldDiiBoundary[originalIndex] = make_SVec4(displacement_factor_boundary.x, displacement_factor_boundary.y, displacement_factor_boundary.z, 0.f);
+	oldDiiFluid[originalIndex] = make_SVec4(displacement_factor_fluid.x, displacement_factor_fluid.y, displacement_factor_fluid.z, 0.0);
+	oldDiiBoundary[originalIndex] = make_SVec4(displacement_factor_boundary.x, displacement_factor_boundary.y, displacement_factor_boundary.z, 0.0);
 }
 
 //====================================================================================================  
@@ -942,7 +945,7 @@ __device__ SReal rho_adv_fluid(SReal ir, SReal pm, unsigned int index, SVec3 pos
 	const unsigned int gridHash = calcGridHash(neighbourPos);
 	const unsigned int startIndex = FETCH(cellStart, gridHash);
 
-	SReal res  = 0.f;
+	SReal res  = 0.0;
 	if (startIndex != 0xffffffff)
 	{ 
 		const unsigned int endIndex = FETCH(cellEnd, gridHash);
@@ -979,7 +982,7 @@ __device__ SReal rho_adv_boundary(SVec3 pos1, SVec3 vel1, SReal rd, SReal pm, SR
 {
 	const unsigned int gridHash = calcGridHash(neighbourPos);
 	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
-	SReal res = 0.f;
+	SReal res = 0.0;
 
 	if (startIndex != 0xffffffff)
 	{
@@ -1014,7 +1017,7 @@ __device__ SReal compute_aii_cell(SReal ir, SReal dt, SReal pm, SReal kpg, SReal
 	const unsigned int gridHash = calcGridHash(neighbourPos);
 	const unsigned int startIndex = FETCH(cellStart, gridHash);
 
-	SReal res  = 0.f;
+	SReal res  = 0.0;
 	if (startIndex != 0xffffffff)
 	{ 
 		const unsigned int endIndex = FETCH(cellEnd, gridHash);
@@ -1049,7 +1052,7 @@ __device__ SReal compute_aii_cell_boundary(SReal rd, SReal ir, SReal kpg, SVec3 
 {
 	const unsigned int gridHash = calcGridHash(neighbourPos);
 	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
-	SReal res = 0.f;
+	SReal res = 0.0;
 
 	if (startIndex != 0xffffffff)
 	{
@@ -1133,8 +1136,8 @@ __global__ void computeAdvectionFactor(
 	/*********************
 	*  COMPUTE RHO_ADV  *
 	*********************/
-	SReal rho_advf= 0.f;
-	SReal rho_advb= 0.f;
+	SReal rho_advf= 0.0;
+	SReal rho_advb= 0.0;
 
 	//loop over fluid particles and boundary particles
 	for (int z=-1; z<=1; z++)
@@ -1166,7 +1169,7 @@ __global__ void computeAdvectionFactor(
 	/*****************
 	*  COMPUTE AII  *
 	*****************/
-	SReal aii = 0.f;
+	SReal aii = 0.0;
 	for (int z=-1; z<=1; z++)
 	{
 		for (int y=-1; y<=1; y++)
@@ -1190,7 +1193,7 @@ __global__ void computeAdvectionFactor(
 
 __device__ SVec3 dijpjcell(SReal ir, SReal pm, SReal kpg, SVec3 pos1, SVec4* oldPos, SReal* oldDens, SReal* oldP_l, unsigned int index, unsigned int *cellStart, unsigned int *cellEnd, int3 neighbourPos)
 {
-	SVec3 res = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 res = make_SVec3(0.0, 0.0, 0.0);
 	const unsigned int gridHash = calcGridHash(neighbourPos);
 	const unsigned int startIndex = FETCH(cellStart, gridHash);
 
@@ -1273,7 +1276,7 @@ __global__ void computeSumDijPj(
 	const SReal kpg= sph_params.kpoly_grad;
 	const SReal dt = sph_params.timestep;
 
-	SVec3 dijpj = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 dijpj = make_SVec3(0.0, 0.0, 0.0);
 	for (int z=-1; z<=1; z++)
 	{
 		for (int y=-1; y<=1; y++)
@@ -1290,7 +1293,7 @@ __global__ void computeSumDijPj(
 
 	//debug3("dijpj", dijpj);
 
-	oldSumDij[originalIndex] = make_SVec4(dijpj.x, dijpj.y, dijpj.z, 0.f);
+	oldSumDij[originalIndex] = make_SVec4(dijpj.x, dijpj.y, dijpj.z, 0.0);
 }
 
 //====================================================================================================  
@@ -1353,10 +1356,10 @@ __global__ void computePressure(
 	const SReal dt = sph_params.timestep;
 	const SReal rd = sph_params.restDensity;
 
-	SVec3 dijpj = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 dijpj = make_SVec3(0.0, 0.0, 0.0);
 
-	SReal fsum = 0.f;
-	SReal bsum = 0.f;
+	SReal fsum = 0.0;
+	SReal bsum = 0.0;
 		
 	for (int z=-1; z<=1; z++)
 	{
@@ -1433,14 +1436,14 @@ __global__ void computePressure(
 
     if(fabs(aii)>FLT_EPSILON)
     {
-        p_l = (1.f-omega)*previous_p_l + (omega/aii)*(rd - rho_corr);
+        p_l = (1.0-omega)*previous_p_l + (omega/aii)*(rd - rho_corr);
     }
     else
     {
         p_l = 0.0;
     }
 
-    SReal p = fmax(p_l, 0.f);
+    SReal p = fmax(p_l, 0.0);
     p_l = p;
 
     rho_corr += aii*previous_p_l;
@@ -1448,8 +1451,13 @@ __global__ void computePressure(
 	//global writes
 	oldP_l[originalIndex] = p_l;
 
-	//debug("p_l", p_l);
-	//debug("rho_corr", rho_corr);
+	/*debug("p_l", p_l);*/
+	/*debug("rho_corr", rho_corr);*/
+
+	if (rho_corr != rho_corr) 
+	{
+		rho_corr = 1.0;
+	}
 
 	oldPres[originalIndex] = p_l;
 	oldDensCorr[originalIndex] = rho_corr;
@@ -1512,7 +1520,7 @@ __global__ void computePressureForce(
 	/***************************
 	*  UPDATE PRESSURE FORCE  *
 	***************************/
-	SVec3 fpres_res = make_SVec3(0.f, 0.f, 0.f);
+	SVec3 fpres_res = make_SVec3(0.0, 0.0, 0.0);
 
 	for (int z=-1; z<=1; z++)
 	{
@@ -1575,10 +1583,10 @@ __global__ void computePressureForce(
 		}
 	}
 
-	if (length(fpres_res) != length(fpres_res)) fpres_res = make_SVec3(0.f, 0.f, 0.f);
-	if (length(fpres_res) <= 0.f) fpres_res = make_SVec3(0.f, 0.f, 0.f);
+	if (length(fpres_res) != length(fpres_res)) fpres_res = make_SVec3(0.0, 0.0, 0.0);
+	if (length(fpres_res) <= 0.0) fpres_res = make_SVec3(0.0, 0.0, 0.0);
 
-	oldForcesP[originalIndex] = make_SVec4(fpres_res.x, fpres_res.y, fpres_res.z, 0.f);
+	oldForcesP[originalIndex] = make_SVec4(fpres_res.x, fpres_res.y, fpres_res.z, 0.0);
 }
 
 __global__ void iisph_integrate(
@@ -1605,8 +1613,8 @@ __global__ void iisph_integrate(
 	SVec3 newVel = velAdv1 + (dt*fpres1/pm);
 	SVec3 newPos = pos1+ (dt*newVel);
 
-	oldPos[originalIndex] = make_SVec4(newPos.x, newPos.y, newPos.z, 1.f);
-	oldVel[originalIndex] = make_SVec4(newVel.x, newVel.y, newVel.z, 0.f);
+	oldPos[originalIndex] = make_SVec4(newPos.x, newPos.y, newPos.z, 1.0);
+	oldVel[originalIndex] = make_SVec4(newVel.x, newVel.y, newVel.z, 0.0);
 }
 
 

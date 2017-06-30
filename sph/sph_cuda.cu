@@ -558,6 +558,7 @@ void predictAdvection(SReal* sortedPos,
 			numBoundaries,
 			numCells);
 
+
 	/*cudaDeviceSynchronize();*/
 
 	computeDisplacementFactor<<<numBlocks, numThreads>>>(
@@ -731,6 +732,10 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 				numCells
 		);
 
+		/*SReal maxd =  maxDensity(sortedDensCorr, numParticles);*/
+		/*printf("maxd = %f\n", maxd);*/
+
+
 		/*cudaDeviceSynchronize();*/
 		//compute pressure
 		computePressure<<<numBlocks, numThreads>>>(
@@ -776,7 +781,7 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 		l++;
 	}
 
-	printf("l = %d\n", l );
+	/*printf("l = %d\n", l );*/
 
 	computePressureForce<<<numBlocks, numThreads>>>(
 				(SVec4                      *) sortedPos,
