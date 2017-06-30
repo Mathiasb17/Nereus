@@ -33,12 +33,12 @@ SPH::SPH ():
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 600;
+	m_params.gasStiffness = 100;
 	m_params.restDensity = 1000;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1E-3;
-	m_params.viscosity = 0.073f;
-	m_params.surfaceTension = 0.02;
+	m_params.viscosity = 0.003;
+	m_params.surfaceTension = 0.1;
 
 	m_params.gravity.x = 0.;
 	m_params.gravity.y = 0.;
@@ -48,7 +48,7 @@ SPH::SPH ():
 	m_params.interactionRadius = 0.0547;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 150.0;
+	m_params.beta = 750.0;
 
 	/*********************
 	*  GRID PARAMETERS  *
@@ -61,15 +61,15 @@ SPH::SPH ():
 	/****************************************
 	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
 	****************************************/
-	m_params.kpoly = 315.0 / (64.0 * M_PI * powf(m_params.interactionRadius, 9.0));
+	m_params.kpoly = 315.0 / (64.0 *  (SReal)M_PI * powf(m_params.interactionRadius, 9.0));
 	
-	m_params.kpoly_grad = -945.0/(32.0*M_PI*powf(m_params.interactionRadius, 9.0));
-	m_params.kpress_grad = -45.0/(M_PI*powf(m_params.interactionRadius, 6.0));
+	m_params.kpoly_grad = -945.0/(32.0* (SReal)M_PI*powf(m_params.interactionRadius, 9.0));
+	m_params.kpress_grad = -45.0/( (SReal)M_PI*powf(m_params.interactionRadius, 6.0));
 
-	m_params.kvisc_grad = 15.0 / (2*M_PI*powf(m_params.interactionRadius, 3.0));
+	m_params.kvisc_grad = 15.0 / (2* (SReal)M_PI*powf(m_params.interactionRadius, 3.0));
 	m_params.kvisc_denum = 2.0*powf(m_params.interactionRadius, 3.0);
 
-	m_params.ksurf1 = 32.0/(M_PI * powf(m_params.interactionRadius,9));
+	m_params.ksurf1 = 32.0/( (SReal)M_PI * powf(m_params.interactionRadius,9));
 	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.0;
 
 	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
@@ -88,15 +88,15 @@ SPH::SPH (SphSimParams params):
 	/****************************************
 	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
 	****************************************/
-	m_params.kpoly = 315.0 / (64.0 * M_PI * powf(m_params.interactionRadius, 9.0));
+	m_params.kpoly = 315.0 / (64.0 * (SReal)M_PI  * powf(m_params.interactionRadius, 9.0));
 	
-	m_params.kpoly_grad = -945.0/(32.0*M_PI*powf(m_params.interactionRadius, 9.0));
-	m_params.kpress_grad = -45.0/(M_PI*powf(m_params.interactionRadius, 6.0));
+	m_params.kpoly_grad = -945.0/(32.0*(SReal)M_PI *powf(m_params.interactionRadius, 9.0));
+	m_params.kpress_grad = -45.0/((SReal)M_PI *powf(m_params.interactionRadius, 6.0));
 
-	m_params.kvisc_grad = 15.0 / (2*M_PI*powf(m_params.interactionRadius, 3.0));
+	m_params.kvisc_grad = 15.0 / (2*(SReal)M_PI *powf(m_params.interactionRadius, 3.0));
 	m_params.kvisc_denum = 2.0*powf(m_params.interactionRadius, 3.0);
 
-	m_params.ksurf1 = 32.0/(M_PI * powf(m_params.interactionRadius,9));
+	m_params.ksurf1 = 32.0/((SReal)M_PI  * powf(m_params.interactionRadius,9));
 	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.0;
 
 	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));

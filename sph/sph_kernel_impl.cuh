@@ -304,15 +304,15 @@ __device__ SReal computeCellDensity(int *nb, int3 gridPos, unsigned int index, S
 				if(length(p1p2) < ir)
 				{
 #if KERNEL_SET == MULLER
-					dens += Wdefault(p1p2, ir, kp);
+					dens += pm * Wdefault(p1p2, ir, kp);
 #elif KERNEL_SET == MONAGHAN
-					dens += Wmonaghan(p1p2, ir);
+					dens += pm * Wmonaghan(p1p2, ir);
 #endif
 				}
 			}
 		}
 	}
-	return dens*pm;
+	return dens;
 }
 
 //====================================================================================================  
@@ -341,10 +341,11 @@ __device__ SReal computeBoundaryCellDensity(int3 gridPos, SVec3 pos, unsigned in
 
 			if (length(p1p2) < ir) 
 			{
+				const SReal psi = rd* vbi;
 #if KERNEL_SET == MULLER
-					dens +=  (rd* vbi) * Wdefault(p1p2, ir, kp);
+					dens += psi * Wdefault(p1p2, ir, kp);
 #elif KERNEL_SET == MONAGHAN
-					dens += (rd* vbi) * Wmonaghan(p1p2, ir);
+					dens += psi * Wmonaghan(p1p2, ir);
 #endif
 			}
 		}
@@ -387,7 +388,7 @@ __global__ void computeDensityPressure(
     const int3 gridPos = calcGridPos(pos);
 
     // examine neighbouring cells
-    SReal dens = 0.f;
+    SReal dens = 0.0;
 	int nbVois = 0;
 
 	//const memory access
@@ -396,7 +397,13 @@ __global__ void computeDensityPressure(
 	const SReal rd = sph_params.restDensity;
 	const SReal pm = sph_params.particleMass;
 
-	//compute pressure
+/*#if KERNEL_SET == MULLER*/
+					/*dens += pm * Wdefault(make_SVec3(0.0, 0.0, 0.0), ir, kp);*/
+/*#elif KERNEL_SET == MONAGHAN*/
+					/*dens += pm * Wmonaghan(make_SVec3(0.0, 0.0, 0.0), ir);*/
+/*#endif*/
+
+	//compute density
     for (int z=-1; z<=1; z++)
     {
         for (int y=-1; y<=1; y++)
@@ -458,6 +465,7 @@ __device__ void computeCellForces(
 	SVec3 forces_pres = make_SVec3(0.f, 0.f, 0.f);
 	SVec3 forces_visc = make_SVec3(0.f, 0.f, 0.f);
 
+	const SReal pm = sph_params.particleMass;
 	const SReal m2 = sph_params.particleMass;
 	const SReal ir = sph_params.interactionRadius;
 	/*const SReal kp = sph_params.kpoly;*/
@@ -467,8 +475,8 @@ __device__ void computeCellForces(
 	const SReal kvg  = sph_params.kvisc_grad;
 	const SReal kvd  = sph_params.kvisc_denum;
 
-	/*const SReal ksurf1 = sph_params.ksurf1;*/
-	/*const SReal ksurf2 = sph_params.ksurf2;*/
+	const SReal ksurf1 = sph_params.ksurf1;
+	const SReal ksurf2 = sph_params.ksurf2;
 
 	if (startIndex != 0xffffffff)
 	{ 
@@ -508,6 +516,8 @@ __device__ void computeCellForces(
 					/**fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;*/
 					/*SReal gamma = sph_params.surfaceTension;*/
 					/**fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));*/
+					SReal kappa = sph_params.surfaceTension;
+					*fsurf = *fsurf - (kappa/pm) * pm * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly);
 				}
 			}
 		}
@@ -523,7 +533,6 @@ __device__ void computeCellForces(
 	const SReal adh= sph_params.beta;
 	const SReal nu = (vis*ir*cs)/(2.0*dens);
 	const SReal epsilon = 0.01;
-	const SReal pm = sph_params.particleMass;
 	const SReal kp = sph_params.kpoly;
 
 	if (startIndex != 0xffffffff)
@@ -628,7 +637,7 @@ void computeForces(
 	//finishing gradient and laplacian computations
 	fpres = dens * fpres;
 	fvisc = 2.f * fvisc;
-	fsurf = -(sph_params.surfaceTension/m1) * fsurf;
+	/*fsurf = -(sph_params.surfaceTension/m1) * fsurf;*/
 
 	//computing forces
 	fpres = -(m1 / dens) * fpres;
