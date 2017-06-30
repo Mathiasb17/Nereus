@@ -4,10 +4,10 @@ http://bromat.fr/2017/gpu-sph-fluid-solver/
 
 CUDA implementation of
 
-* https://cg.informatik.uni-freiburg.de/publications/2014_EG_SPH_STAR.pdf
-* https://cg.informatik.uni-freiburg.de/publications/2013_CASA_elasticSolids.pdf
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/Afgn0iWeDoc" frameborder="0" allowfullscreen></iframe>
+* State-Equation SPH
+* Implicit Incompressible SPH
+* Predictive-Corrective Incompressible SPH (soon finished)
+* See Future Works
 
 # Dependencies
 
@@ -16,7 +16,7 @@ CUDA implementation of
 * Assimp
 * GLFW
 * GLEW
-* https://github.com/Mathiasb17/sph_boundary_particles
+* [SPH boundary particles](https://github.com/Mathiasb17/sph_boundary_particles)
 
 # Installation
 
