@@ -423,6 +423,9 @@ void computeDensityPressure(
 			cellBoundaryEnd,
 			numParticles
 	);
+
+	/*SReal maxd =  maxDensity(sortedDens, numParticles);*/
+	/*printf("maxd = %f\n", maxd);*/
 	
 	cudaDeviceSynchronize();
 
