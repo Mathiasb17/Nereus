@@ -16,7 +16,7 @@ public:
 	/****
 	* Initialize and finalize *
 	****/
-	virtual void _intialize();
+	virtual void _initialize();
 	virtual void _finalize();
 
 	/*********************************

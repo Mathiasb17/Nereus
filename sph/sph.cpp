@@ -17,6 +17,8 @@
 #include <helper_functions.h>
 #include <helper_cuda.h>
 
+#include <colored_output.h>
+
 #include <cuda_runtime.h>
 
 namespace CFD
@@ -28,7 +30,7 @@ namespace CFD
 SPH::SPH ():
 	m_gridSortBits(32)
 {
-	std::cout << "construction of sph based system" << std::endl;
+	std::cout << GREEN << "construction of sph based system" << RESET << std::endl;
 
 	/********************
 	*  SPH PARAMETERS  *
@@ -77,12 +79,17 @@ SPH::SPH ():
 	m_params.kvisc_grad = 15.0 / (2* (SReal)M_PI*powf(m_params.interactionRadius, 3.0));
 	m_params.kvisc_denum = 2.0*powf(m_params.interactionRadius, 3.0);
 
+	/*****************************
+	*  SURFACE TENSION KERNELS  *
+	*****************************/
 	m_params.ksurf1 = 32.0/( (SReal)M_PI * powf(m_params.interactionRadius,9));
 	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.0;
-
 	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
 	
-	_intialize();
+	/**********
+	*  INIT  *
+	**********/
+	_initialize();
 	m_numParticles = 0;
 }
 
@@ -109,7 +116,7 @@ SPH::SPH (SphSimParams params):
 
 	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
 	
-	_intialize();
+	_initialize();
 	m_numParticles = 0;
 }
 //==================================================================================================== 
@@ -123,7 +130,7 @@ SPH::~SPH ()
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void SPH::_intialize()
+void SPH::_initialize()
 {
 	unsigned int memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
 	unsigned int memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
@@ -203,7 +210,6 @@ void SPH::update()
 	/*****************************************
 	*  compute timestep with CFL condition  *
 	*****************************************/
-	
 	float3 res = maxVelocity(m_dSortedVel, m_numParticles);
 	SReal lambda = 0.4f;
 	SReal ir = m_params.interactionRadius;
@@ -325,7 +331,7 @@ void SPH::generateParticleCube(SVec4 center, SVec4 size, SVec4 vel)
 			}
 		}
 	}
-	std::cout << "Il y a eu " << m_numParticles << " particules generees." << std::endl;
+	std::cout << "There were " << m_numParticles << " particles generated." << std::endl;
 }
 
 //==================================================================================================== 
@@ -354,7 +360,7 @@ void SPH::updateGpuBoundaries(unsigned int nb_boundary_spheres)
 	calcHash( m_dGridBoundaryHash, m_dGridBoundaryIndex, m_dbi, m_num_boundaries);
 	sortParticles(m_dGridBoundaryHash, m_dGridBoundaryIndex, m_num_boundaries);
 
-	//appeler le kernel de tri des particules de bord
+	//sort boundary particles
 	reorderDataAndFindCellStartDBoundary(
 			m_dBoundaryCellStart,
 			m_dBoundaryCellEnd,

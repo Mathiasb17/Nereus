@@ -7,6 +7,8 @@ CUDA implementation of
 * https://cg.informatik.uni-freiburg.de/publications/2014_EG_SPH_STAR.pdf
 * https://cg.informatik.uni-freiburg.de/publications/2013_CASA_elasticSolids.pdf
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Afgn0iWeDoc" frameborder="0" allowfullscreen></iframe>
+
 # Dependencies
 
 * GLM

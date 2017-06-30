@@ -13,6 +13,8 @@
 #include "common.h"
 #include "sph_kernel.cuh"
 
+#include <colored_output.h>
+
 #define MAX_PARTICLE_NUMBER 150000
 
 namespace CFD
@@ -28,7 +30,7 @@ public:
 	/**********
 	*  Initialize and finalize  *
 	**********/
-	virtual void _intialize();
+	virtual void _initialize();
 	virtual void _finalize();
 
 	/********************

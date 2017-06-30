@@ -22,17 +22,18 @@
 
 namespace CFD
 {
-
+//=====================================================================================================   
+//=====================================================================================================   
+//=====================================================================================================   
 IISPH::IISPH():
 	SPH()
 {
-	std::cout << "construction of iisph based system" << std::endl;
+	std::cout << GREEN << "construction of iisph based system" << RESET << std::endl;
 
 	//OVERIDING THE FOLLOWING AS FOR NOW FIXME
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 100.0; //useless in iisph
 	m_params.restDensity = 1000.0;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1e-3;
@@ -57,9 +58,6 @@ IISPH::IISPH():
 	/*********************
 	*  GRID PARAMETERS  *
 	*********************/
-	//m_params.worldOrigin = make_float3(-1.1,-1.1,-1.1); //slight offset to avoid particles off the domain
-	//m_params.gridSize = make_uint3(64,64,64); // power of 2
-
 	m_params.worldOrigin = make_SVec3(-1.2,-1.2,-1.2); //slight offset to avoid particles off the domain
 	m_params.gridSize = make_uint3(128,128,128); // power of 2
 
@@ -79,21 +77,52 @@ IISPH::IISPH():
 
 	m_params.ksurf1 = 32.0/(M_PI * powf(m_params.interactionRadius,9));
 	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.0;
+	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
+	
+	/**********
+	*  INIT  *
+	**********/
+	_initialize();
+	m_numParticles = 0;
+}
+//=====================================================================================================   
+//=====================================================================================================   
+//=====================================================================================================   
+IISPH::IISPH (SphSimParams params):
+	SPH(params)
+{
+	/****************************************
+	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
+	****************************************/
+	m_params.kpoly = 315.0 / (64.0 * (SReal)M_PI  * powf(m_params.interactionRadius, 9.0));
+	
+	m_params.kpoly_grad = -945.0/(32.0*(SReal)M_PI *powf(m_params.interactionRadius, 9.0));
+	m_params.kpress_grad = -45.0/((SReal)M_PI *powf(m_params.interactionRadius, 6.0));
+
+	m_params.kvisc_grad = 15.0 / (2*(SReal)M_PI *powf(m_params.interactionRadius, 3.0));
+	m_params.kvisc_denum = 2.0*powf(m_params.interactionRadius, 3.0);
+
+	m_params.ksurf1 = 32.0/((SReal)M_PI  * powf(m_params.interactionRadius,9));
+	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.0;
 
 	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
 	
-	_intialize();
+	_initialize();
 	m_numParticles = 0;
 }
-
+//=====================================================================================================   
+//=====================================================================================================   
+//=====================================================================================================   
 IISPH::~IISPH()
 {
 
 }
-
-void IISPH::_intialize()
+//=====================================================================================================   
+//=====================================================================================================   
+//=====================================================================================================   
+void IISPH::_initialize()
 {
-	SPH::_intialize();
+	SPH::_initialize();
 
 	unsigned int memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
 	unsigned int memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
@@ -128,12 +157,16 @@ void IISPH::_intialize()
 
 	setParameters(&m_params);
 }
-
+//=====================================================================================================   
+//=====================================================================================================   
+//=====================================================================================================   
 void IISPH::_finalize()
 {
 	SPH::_finalize();
 }
-
+//=====================================================================================================   
+//=====================================================================================================   
+//=====================================================================================================   
 void IISPH::update()
 {	
 	cudaMemcpy(m_dpos, m_pos, sizeof(SReal)*4*m_numParticles,cudaMemcpyHostToDevice);
@@ -183,5 +216,7 @@ void IISPH::update()
 	cudaMemcpy(m_pressure, m_dSortedPress, sizeof(SReal)*m_numParticles,cudaMemcpyDeviceToHost);
 	//exit(0);
 }
-
+//=====================================================================================================   
+//=====================================================================================================   
+//=====================================================================================================   
 } /* CFD */ 

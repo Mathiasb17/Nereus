@@ -275,6 +275,7 @@ void displaySpheres(glm::mat4 mat_mvp, glm::mat4 mat_mv, GLuint shader_program, 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 
+	glUniform3f(glGetUniformLocation(shader_program, "col"), 0, 1, 0);
 	glUniform1f(glGetUniformLocation(shader_program, "pointScale"), height / tanf(45.f*0.5f*(float)M_PI/180.0f));
 	glUniform1f(glGetUniformLocation(shader_program, "pointRadius"), particle_radius);
 
@@ -528,8 +529,8 @@ int main(void)
 	openVideoStream();
 #endif
 
-	CFD::SPH *sim_sph = new CFD::IISPH();
-	sim_sph->_intialize();
+	CFD::SPH *sim_sph = new CFD::SPH();
+	sim_sph->_initialize();
 	sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(1.0f, 2.0f, 2.9f, 1.f), make_SVec4(0,0,0,0));
 	//sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(0.5f, 0.5f, 0.5f, 1.f), make_SVec4(0,0,0,0));
 
