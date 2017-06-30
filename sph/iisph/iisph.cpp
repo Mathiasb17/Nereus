@@ -35,16 +35,16 @@ IISPH::IISPH():
 	m_params.gasStiffness = 100.0; //useless in iisph
 	m_params.restDensity = 1000.0;
 	m_params.particleRadius = 0.02;
-	m_params.timestep = 1e-3f;
+	m_params.timestep = 1e-3;
 	m_params.viscosity = 0.005;
-	m_params.surfaceTension = 0.04f;
+	m_params.surfaceTension = 0.0001;
 
 	m_params.gravity.x = 0.0;
 	m_params.gravity.y = 0.0;
 	m_params.gravity.y = -9.81f;
 	m_params.gravity.z = 0.0;
 
-	m_params.interactionRadius = 0.0537f;//better !
+	m_params.interactionRadius = 0.0537;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	m_params.beta = 650.0;

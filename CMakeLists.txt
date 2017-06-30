@@ -23,7 +23,7 @@ project(sph)
 ####################################################################################################
 #CPP MACROS USED IN PROJECT
 add_definitions(-DDOUBLE_PRECISION=0)
-add_definitions(-DRECORD_SIMULATION=0)
+add_definitions(-DRECORD_SIMULATION=1)
 add_definitions(-DKERNEL_SET=1) #0 for monaghan, 1 for muller kernels
 
 ####################################################################################################
