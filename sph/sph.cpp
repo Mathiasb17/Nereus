@@ -48,7 +48,15 @@ SPH::SPH ():
 	m_params.interactionRadius = 0.0547;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 750.0;
+	m_params.beta = 450.0;
+
+	/*****************
+	*  sound speed  *
+	*****************/
+	const SReal eta = 0.01;
+    const SReal H = 0.1;
+    const SReal vf = sqrt( 2*9.81*H );
+    m_params.soundSpeed = vf/(sqrt(eta));
 
 	/*********************
 	*  GRID PARAMETERS  *

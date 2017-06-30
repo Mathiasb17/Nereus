@@ -531,7 +531,6 @@ __device__ void computeCellForces(
 	const SReal cs = sph_params.soundSpeed;
 	const SReal vis= 0.1;
 	const SReal adh= sph_params.beta;
-	const SReal nu = (vis*ir*cs)/(2.0*dens);
 	const SReal epsilon = 0.01;
 	const SReal kp = sph_params.kpoly;
 
@@ -555,7 +554,6 @@ __device__ void computeCellForces(
 
 			const SReal mdot = max(dot(v1v2, p1p2), 0.0);
 			const SReal denum = (length(p1p2)*length(p1p2)) + epsilon*ir*ir;
-			const SReal Pij = -nu * (mdot / denum);
 
 #if KERNEL_SET == MONAGHAN
 			const SReal kernel = Wmonaghan(p1p2, ir);
@@ -567,12 +565,21 @@ __device__ void computeCellForces(
 #endif
 
 			//adhesion
-			SVec3 contrib_adh = (beta * psi * p1p2 * kernel/length(p1p2));
-			/*SVec3 contrib_adh = (beta * psi * p1p2 * kernel);*/
+			/*SVec3 contrib_adh = (beta * psi * p1p2 * kernel/length(p1p2));*/
+			SVec3 contrib_adh = (beta * psi * p1p2 * kernel);
 			/*SVec3 contrib_adh = -(adh*pm*psi*Aboundary(p1p2, ir, sph_params.bpol))*p1p2;*/
 
-			SVec3 contrib_visc= (-pm*psi*Pij*grad);
-			*fbound = *fbound + contrib_adh + contrib_visc;
+			*fbound = *fbound + contrib_adh;
+
+			*fpres = *fpres - pm * psi * (pres/(dens*dens)) * grad;
+
+			const SReal nu = (sph_params.viscosity * ir * sph_params.soundSpeed)/(dens*dens);
+			const SReal nom= fmax(dot(v1v2, p1p2),0);
+			const SReal denom= dot(p1p2/length(p1p2), p1p2/length(p1p2)) + epsilon *ir * ir;
+
+			const SReal Pij = -nu * (nom/denom);
+
+			*fvisc = *fvisc - pm * psi * Pij * grad;
 		}
 	}
 }
