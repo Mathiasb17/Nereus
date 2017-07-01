@@ -3,8 +3,7 @@
 
 #include "sph.h"
 
-namespace CFD
-{
+CFD_NAMESPACE_BEGIN
 	
 class PCISPH : public CFD::SPH
 {
@@ -32,6 +31,6 @@ private:
 	SReal * m_dSortedVelAdv;
 };
 
-} /* CFD */ 
+CFD_NAMESPACE_END
 
 #endif /* ifndef PCISPH_ */

@@ -44,6 +44,8 @@ texture<SVec4, 1, cudaReadModeElementType> oldDiiBoundaryTex;
 texture<SVec4, 1, cudaReadModeElementType> oldSumDijTex;
 texture<SVec4, 1, cudaReadModeElementType> oldNormalTex;
 
+//texture for pcisph
+
 //grid textures
 texture<unsigned int, 1, cudaReadModeElementType> gridParticleHashTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellStartTex;

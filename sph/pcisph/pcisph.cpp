@@ -149,6 +149,37 @@ void PCISPH::_finalize()
 void PCISPH::update()
 {
 	std::cout << RED << "IMPLEMENTATION INCOMING" << std::endl;
+
+	cudaMemcpy(m_dpos, m_pos, sizeof(SReal)*4*m_numParticles,cudaMemcpyHostToDevice);
+	cudaMemcpy(m_dvel, m_vel, sizeof(SReal)*4*m_numParticles,cudaMemcpyHostToDevice);
+
+	setParameters(&m_params);
+
+	calcHash( m_dGridParticleHash, m_dGridParticleIndex, m_dpos, m_numParticles);
+
+	sortParticles(m_dGridParticleHash, m_dGridParticleIndex, m_numParticles);
+
+	reorderDataAndFindCellStart(
+		m_dCellStart,
+		m_dCellEnd,
+		m_dSortedPos,
+		m_dSortedVel,
+		m_dSortedDens,
+		m_dSortedPress,
+		m_dSortedForces,
+		m_dSortedCol,
+		m_dGridParticleHash,
+		m_dGridParticleIndex,
+		m_dpos,
+		m_dvel,
+		m_ddensity,
+		m_dpressure,
+		m_dforces,
+		m_dcolors,
+		m_numParticles,
+		m_params.numCells);
+
+
 }
 //==================================================================================================== 
 //==================================================================================================== 

@@ -43,7 +43,7 @@ struct SphSimParams
 	SReal beta;
 
 	/***********************************
-	*  SPH KERNELS PRE-COMPUTED PART  *
+	*  SPH KERNELS PRE-COMPUTED PARTS *
 	***********************************/
 	SReal kpoly;      //muller03
 	SReal kpoly_grad; //muller03

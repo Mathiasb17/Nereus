@@ -20,8 +20,7 @@
 #include "sph_kernel.cuh"
 #include "sph_kernel_impl.cuh"
 
-extern "C"
-{
+EXTERN_C_BEGIN
 
 	/********************************
 	*  SORT AND THRUST REDUCTIONS  *
@@ -856,9 +855,28 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 #endif
 
 }
+/************
+*  PCISPH  *
+************/
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
+				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+{
 
-}//extern c
+}
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+void pcisph_pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
+				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+{
 
+}
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
+EXTERN_C_END

@@ -3,9 +3,8 @@
 
 #include "sph.h"
 
-namespace CFD
-{
-	
+CFD_NAMESPACE_BEGIN	
+
 class IISPH : public CFD::SPH
 {
 public:
@@ -43,6 +42,6 @@ private:
 
 };
 
-} /* CFD */ 
+CFD_NAMESPACE_END 
 
 #endif /* ifndef IISPH_ */

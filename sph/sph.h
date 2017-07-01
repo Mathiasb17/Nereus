@@ -17,8 +17,7 @@
 
 #define MAX_PARTICLE_NUMBER 150000
 
-namespace CFD
-{
+CFD_NAMESPACE_BEGIN
 
 class SPH
 {
@@ -145,6 +144,6 @@ protected:
 	unsigned int m_num_boundaries;
 };
 
-} /*  CFD */ 
+CFD_NAMESPACE_END
 
 #endif /* ifndef SPH_H */
