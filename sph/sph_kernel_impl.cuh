@@ -45,6 +45,11 @@ texture<SVec4, 1, cudaReadModeElementType> oldSumDijTex;
 texture<SVec4, 1, cudaReadModeElementType> oldNormalTex;
 
 //texture for pcisph
+texture<SReal, 1,cudaReadModeElementType> oldRhoAdvPciTex;
+texture<SVec4, 1,cudaReadModeElementType> oldVelAdvPciTex;
+texture<SVec4, 1,cudaReadModeElementType> oldForcesAdvPciTex;
+texture<SVec4, 1,cudaReadModeElementType> oldForcesPresPciTex;
+texture<SVec4, 1,cudaReadModeElementType> oldPosAdvPciTex;
 
 //grid textures
 texture<unsigned int, 1, cudaReadModeElementType> gridParticleHashTex;
@@ -57,7 +62,6 @@ texture<SReal, 1, cudaReadModeElementType> oldBoundaryVbiTex;
 texture<unsigned int, 1, cudaReadModeElementType> gridBoundaryHashTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellBoundaryStartTex;
 texture<unsigned int, 1, cudaReadModeElementType> cellBoundaryEndTex;
-
 #endif
 
 __constant__ SphSimParams sph_params;
@@ -65,7 +69,7 @@ __constant__ SphSimParams sph_params;
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-struct integrate_functor
+struct integrate_functor //used only for state equation SPH
 {
     SReal deltaTime;
 
@@ -400,11 +404,11 @@ __global__ void computeDensityPressure(
 	const SReal pm = sph_params.particleMass;
 
 	//DOES A PARTICLE CONTRIBUTE TO ITS OWN DENSITY YES OR NO ?!?
-/*#if KERNEL_SET == MULLER*/
-					/*dens += pm * Wdefault(make_SVec3(0.0, 0.0, 0.0), ir, kp);*/
-/*#elif KERNEL_SET == MONAGHAN*/
-					/*dens += pm * Wmonaghan(make_SVec3(0.0, 0.0, 0.0), ir);*/
-/*#endif*/
+#if KERNEL_SET == MULLER
+	dens += pm * Wdefault(make_SVec3(0.0, 0.0, 0.0), ir, kp);
+#elif KERNEL_SET == MONAGHAN
+	dens += pm * Wmonaghan(make_SVec3(0.0, 0.0, 0.0), ir);
+#endif
 
 	//compute density
     for (int z=-1; z<=1; z++)
@@ -836,16 +840,16 @@ __global__ void computeIisphDensity(
 //====================================================================================================  
 //====================================================================================================  
 __global__ void computeDisplacementFactor(
-	SVec4                      * oldPos,
-	SVec4                      * oldVel,
+	SVec4                       * oldPos,
+	SVec4                       * oldVel,
 	SReal                       * oldDens,
 	SReal                       * oldPres,
-	SVec4                      * oldForces,
-	SVec4                      * oldCol,
+	SVec4                       * oldForces,
+	SVec4                       * oldCol,
 	unsigned int                * cellStart,
 	unsigned int                * cellEnd,
 	unsigned int                * gridParticleIndex,
-	SVec4                      * oldBoundaryPos,
+	SVec4                       * oldBoundaryPos,
 	SReal                       * oldBoundaryVbi,
 	unsigned int                * cellBoundaryStart,
 	unsigned int                * cellBoundaryEnd,
@@ -855,13 +859,13 @@ __global__ void computeDisplacementFactor(
 	SReal                       * oldP_l,
 	SReal                       * oldPreviousP,
 	SReal                       * oldAii,
-	SVec4                      * oldVelAdv,
-	SVec4                      * oldForcesAdv,
-	SVec4                      * oldForcesP,
-	SVec4                      * oldDiiFluid,
-	SVec4                      * oldDiiBoundary,
-	SVec4                      * oldSumDij,
-	SVec4                      * oldNormal,
+	SVec4                       * oldVelAdv,
+	SVec4                       * oldForcesAdv,
+	SVec4                       * oldForcesP,
+	SVec4                       * oldDiiFluid,
+	SVec4                       * oldDiiBoundary,
+	SVec4                       * oldSumDij,
+	SVec4                       * oldNormal,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
 	unsigned int numCells)
@@ -1091,32 +1095,32 @@ __device__ SReal compute_aii_cell_boundary(SReal rd, SReal ir, SReal kpg, SVec3 
 //====================================================================================================  
 
 __global__ void computeAdvectionFactor(
-	SVec4                      * oldPos,
-	SVec4                      * oldVel,
-	SReal                       * oldDens,
-	SReal                       * oldPres,
-	SVec4                      * oldForces,
-	SVec4                      * oldCol,
-	unsigned int                * cellStart,
-	unsigned int                * cellEnd,
-	unsigned int                * gridParticleIndex,
-	SVec4					    * oldBoundaryPos,
-	SReal                       * oldBoundaryVbi,
-	unsigned int                * cellBoundaryStart,
-	unsigned int                * cellBoundaryEnd,
-	unsigned int                * gridBoundaryIndex,
-	SReal                       * oldDensAdv,
-	SReal                       * oldDensCorr,
-	SReal                       * oldP_l,
-	SReal                       * oldPreviousP,
-	SReal                       * oldAii,
-	SVec4                      * oldVelAdv,
-	SVec4                      * oldForcesAdv,
-	SVec4                      * oldForcesP,
-	SVec4                      * oldDiiFluid,
-	SVec4                      * oldDiiBoundary,
-	SVec4                      * oldSumDij,
-	SVec4                      * oldNormal,
+	SVec4        * oldPos,
+	SVec4        * oldVel,
+	SReal        * oldDens,
+	SReal        * oldPres,
+	SVec4        * oldForces,
+	SVec4        * oldCol,
+	unsigned int * cellStart,
+	unsigned int * cellEnd,
+	unsigned int * gridParticleIndex,
+	SVec4        * oldBoundaryPos,
+	SReal        * oldBoundaryVbi,
+	unsigned int * cellBoundaryStart,
+	unsigned int * cellBoundaryEnd,
+	unsigned int * gridBoundaryIndex,
+	SReal        * oldDensAdv,
+	SReal        * oldDensCorr,
+	SReal        * oldP_l,
+	SReal        * oldPreviousP,
+	SReal        * oldAii,
+	SVec4        * oldVelAdv,
+	SVec4        * oldForcesAdv,
+	SVec4        * oldForcesP,
+	SVec4        * oldDiiFluid,
+	SVec4        * oldDiiBoundary,
+	SVec4        * oldSumDij,
+	SVec4        * oldNormal,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
 	unsigned int numCells)
@@ -1236,32 +1240,32 @@ __device__ SVec3 dijpjcell(SReal ir, SReal pm, SReal kpg, SVec3 pos1, SVec4* old
 //====================================================================================================  
 
 __global__ void computeSumDijPj(
-	SVec4                      * oldPos,
-	SVec4                      * oldVel,
-	SReal                       * oldDens,
-	SReal                       * oldPres,
-	SVec4                      * oldForces,
-	SVec4                      * oldCol,
-	unsigned int                * cellStart,
-	unsigned int                * cellEnd,
-	unsigned int                * gridParticleIndex,
-	SVec4					    * oldBoundaryPos,
-	SReal                       * oldBoundaryVbi,
-	unsigned int                * cellBoundaryStart,
-	unsigned int                * cellBoundaryEnd,
-	unsigned int                * gridBoundaryIndex,
-	SReal                       * oldDensAdv,
-	SReal                       * oldDensCorr,
-	SReal                       * oldP_l,
-	SReal                       * oldPreviousP,
-	SReal                       * oldAii,
-	SVec4                      * oldVelAdv,
-	SVec4                      * oldForcesAdv,
-	SVec4                      * oldForcesP,
-	SVec4                      * oldDiiFluid,
-	SVec4                      * oldDiiBoundary,
-	SVec4                      * oldSumDij,
-	SVec4                      * oldNormal,
+	SVec4        * oldPos,
+	SVec4        * oldVel,
+	SReal        * oldDens,
+	SReal        * oldPres,
+	SVec4        * oldForces,
+	SVec4        * oldCol,
+	unsigned int * cellStart,
+	unsigned int * cellEnd,
+	unsigned int * gridParticleIndex,
+	SVec4        * oldBoundaryPos,
+	SReal        * oldBoundaryVbi,
+	unsigned int * cellBoundaryStart,
+	unsigned int * cellBoundaryEnd,
+	unsigned int * gridBoundaryIndex,
+	SReal        * oldDensAdv,
+	SReal        * oldDensCorr,
+	SReal        * oldP_l,
+	SReal        * oldPreviousP,
+	SReal        * oldAii,
+	SVec4        * oldVelAdv,
+	SVec4        * oldForcesAdv,
+	SVec4        * oldForcesP,
+	SVec4        * oldDiiFluid,
+	SVec4        * oldDiiBoundary,
+	SVec4        * oldSumDij,
+	SVec4        * oldNormal,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
 	unsigned int numCells
@@ -1308,32 +1312,32 @@ __global__ void computeSumDijPj(
 //====================================================================================================  
 //====================================================================================================  
 __global__ void computePressure(
-	SVec4                      * oldPos,
-	SVec4                      * oldVel,
-	SReal                       * oldDens,
-	SReal                       * oldPres,
-	SVec4                      * oldForces,
-	SVec4                      * oldCol,
-	unsigned int                * cellStart,
-	unsigned int                * cellEnd,
-	unsigned int                * gridParticleIndex,
-	SVec4					    * oldBoundaryPos,
-	SReal                       * oldBoundaryVbi,
-	unsigned int                * cellBoundaryStart,
-	unsigned int                * cellBoundaryEnd,
-	unsigned int                * gridBoundaryIndex,
-	SReal                       * oldDensAdv,
-	SReal                       * oldDensCorr,
-	SReal                       * oldP_l,
-	SReal                       * oldPreviousP,
-	SReal                       * oldAii,
-	SVec4                      * oldVelAdv,
-	SVec4                      * oldForcesAdv,
-	SVec4                      * oldForcesP,
-	SVec4                      * oldDiiFluid,
-	SVec4                      * oldDiiBoundary,
-	SVec4                      * oldSumDij,
-	SVec4                      * oldNormal,
+	SVec4        * oldPos,
+	SVec4        * oldVel,
+	SReal        * oldDens,
+	SReal        * oldPres,
+	SVec4        * oldForces,
+	SVec4        * oldCol,
+	unsigned int * cellStart,
+	unsigned int * cellEnd,
+	unsigned int * gridParticleIndex,
+	SVec4        * oldBoundaryPos,
+	SReal        * oldBoundaryVbi,
+	unsigned int * cellBoundaryStart,
+	unsigned int * cellBoundaryEnd,
+	unsigned int * gridBoundaryIndex,
+	SReal        * oldDensAdv,
+	SReal        * oldDensCorr,
+	SReal        * oldP_l,
+	SReal        * oldPreviousP,
+	SReal        * oldAii,
+	SVec4        * oldVelAdv,
+	SVec4        * oldForcesAdv,
+	SVec4        * oldForcesP,
+	SVec4        * oldDiiFluid,
+	SVec4        * oldDiiBoundary,
+	SVec4        * oldSumDij,
+	SVec4        * oldNormal,
 	unsigned int numParticles,
 	unsigned int numBoundaries,
 	unsigned int numCells
@@ -1475,32 +1479,32 @@ __global__ void computePressure(
 //====================================================================================================  
 //====================================================================================================  
 __global__ void computePressureForce(
-		SVec4                      * oldPos,
-		SVec4                      * oldVel,
-		SReal                       * oldDens,
-		SReal                       * oldPres,
-		SVec4                      * oldForces,
-		SVec4                      * oldCol,
-		unsigned int                * cellStart,
-		unsigned int                * cellEnd,
-		unsigned int                * gridParticleIndex,
-		SVec4					    * oldBoundaryPos,
-		SReal                       * oldBoundaryVbi,
-		unsigned int                * cellBoundaryStart,
-		unsigned int                * cellBoundaryEnd,
-		unsigned int                * gridBoundaryIndex,
-		SReal                       * oldDensAdv,
-		SReal                       * oldDensCorr,
-		SReal                       * oldP_l,
-		SReal                       * oldPreviousP,
-		SReal                       * oldAii,
-		SVec4                      * oldVelAdv,
-		SVec4                      * oldForcesAdv,
-		SVec4                      * oldForcesP,
-		SVec4                      * oldDiiFluid,
-		SVec4                      * oldDiiBoundary,
-		SVec4                      * oldSumDij,
-		SVec4                      * oldNormal,
+		SVec4        * oldPos,
+		SVec4        * oldVel,
+		SReal        * oldDens,
+		SReal        * oldPres,
+		SVec4        * oldForces,
+		SVec4        * oldCol,
+		unsigned int * cellStart,
+		unsigned int * cellEnd,
+		unsigned int * gridParticleIndex,
+		SVec4        * oldBoundaryPos,
+		SReal        * oldBoundaryVbi,
+		unsigned int * cellBoundaryStart,
+		unsigned int * cellBoundaryEnd,
+		unsigned int * gridBoundaryIndex,
+		SReal        * oldDensAdv,
+		SReal        * oldDensCorr,
+		SReal        * oldP_l,
+		SReal        * oldPreviousP,
+		SReal        * oldAii,
+		SVec4        * oldVelAdv,
+		SVec4        * oldForcesAdv,
+		SVec4        * oldForcesP,
+		SVec4        * oldDiiFluid,
+		SVec4        * oldDiiBoundary,
+		SVec4        * oldSumDij,
+		SVec4        * oldNormal,
 		unsigned int numParticles,
 		unsigned int numBoundaries,
 		unsigned int numCells
@@ -1634,6 +1638,21 @@ __global__ void iisph_integrate(
 	oldVel[originalIndex] = make_SVec4(newVel.x, newVel.y, newVel.z, 0.0);
 }
 
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+/************
+*  PCISPH  *
+************/
+__global__ void pciPressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
+				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+{
+	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    if (index >= numParticles) return;
+
+	const unsigned int originalIndex = gridParticleIndex[index];
+}
 
 #endif//_PARTICLES_KERNEL_IMPL_CUH
 

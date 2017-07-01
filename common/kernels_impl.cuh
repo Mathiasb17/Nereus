@@ -22,7 +22,6 @@ EXTERN_C_BEGIN
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-
 __forceinline__ __device__ void debug3(const char* valname, SVec3 val)
 {
 	if(( length(val) != length(val) ) || isinf(length(val)))
@@ -55,14 +54,15 @@ struct comp
 //==================================================================================================== 
 __forceinline__ __device__ __host__ SReal Wdefault(SVec3 r, SReal h, SReal kpoly)
 {
-	SReal l_r = length(r);
+	SReal r2 = length(r)*length(r);
+	SReal h2 = h*h;
 
-	if (l_r > h)
+	if (r2 > h2)
 	{
-		return 0.f ;
+		return 0.0 ;
 	}
 
-	SReal b = pow((h * h - l_r * l_r), 3);
+	SReal b = pow((h2 - r2), 3);
 
 	return (kpoly * b);
 }
@@ -72,14 +72,15 @@ __forceinline__ __device__ __host__ SReal Wdefault(SVec3 r, SReal h, SReal kpoly
 //==================================================================================================== 
 __forceinline__ __device__ __host__ SVec3 Wdefault_grad(SVec3 r, SReal h, SReal kpoly_grad)
 {
-	SReal l_r = length(r);
+	SReal r2 = length(r)*length(r);
+	SReal h2 = h*h;
 
-	if (l_r > h) 
+	if (r2 > h2) 
 	{
-		return make_SVec3(0.f, 0.f, 0.f);
+		return make_SVec3(0.0, 0.0, 0.0);
 	}
 
-	SReal b = powf(h*h - l_r*l_r, 2);
+	SReal b = powf(h2 - r2, 2);
 
 	return kpoly_grad*r*b;
 }
@@ -90,10 +91,12 @@ __forceinline__ __device__ __host__ SVec3 Wdefault_grad(SVec3 r, SReal h, SReal 
 __forceinline__ __device__ __host__ SVec3 Wpressure_grad(SVec3 r, SReal h, SReal kpress_grad)
 {
 	SReal l_r = length(r);
+	SReal r2 = l_r * l_r;
+	SReal h2 = h*h;
 
-	if (l_r > h) 
+	if (r2 > h2) 
 	{
-		return make_SVec3(0.f, 0.f, 0.f);
+		return make_SVec3(0.0, 0.0, 0.0);
 	}
 
 	SReal c = (h - l_r)*(h - l_r);
@@ -107,13 +110,15 @@ __forceinline__ __device__ __host__ SVec3 Wpressure_grad(SVec3 r, SReal h, SReal
 __forceinline__ __device__ __host__ SVec3 Wviscosity_grad(SVec3 r, SReal h, SReal kvisc_grad, SReal kvisc_denum)
 {
 	SReal l_r = length(r);
+	SReal r2 = l_r * l_r;
+	SReal h2 = h*h;
 
-	if (l_r > h) 
+	if (r2 > h2) 
 	{
-		return make_SVec3(0.f, 0.f, 0.f);
+		return make_SVec3(0.0, 0.0, 0.0);
 	}
 
-	SReal c = -(3*l_r / kvisc_denum ) + ( 2/(h*h) ) - ( h / (2*l_r*l_r*l_r));
+	SReal c = -(3*l_r / kvisc_denum ) + ( 2/(h2) ) - ( h / (2*l_r*l_r*l_r));
 
 	return kvisc_grad * r * c;
 }
@@ -123,8 +128,8 @@ __forceinline__ __device__ __host__ SVec3 Wviscosity_grad(SVec3 r, SReal h, SRea
 //==================================================================================================== 
 __forceinline__ __device__ __host__ SReal Wmonaghan(SVec3 r, SReal h)
 {
-	SReal value = 0.f;
-	SReal m_invH = 1.f  / h;
+	SReal value = 0.0;
+	SReal m_invH = 1.0  / h;
 	SReal m_v = 1.0/(4.0*M_PI*h*h*h);
     SReal q = length(r)*m_invH;
     if( q >= 0 && q < 1 )
@@ -150,9 +155,9 @@ __forceinline__ __device__ __host__ SVec3 Wmonaghan_grad(SVec3 r, SReal h)
 
     SReal m_g = 1.0/(4.0*M_PI*h*h*h);
 	SReal dist = length(r);
-	SReal m_invH = 1.f/h;
+	SReal m_invH = 1.0/h;
     SReal q = dist*m_invH;
-    SVec3 gradient = make_SVec3(0.f, 0.f, 0.f);
+    SVec3 gradient = make_SVec3(0.0, 0.0, 0.0);
     if( q >= 0 && q < 1 )
     {
         SReal scalar = -3.0f*(2-q)*(2-q);
@@ -175,12 +180,12 @@ __forceinline__ __device__ __host__ SReal Cakinci(SVec3 r, SReal h, SReal ksurf1
 	SReal len = length(r);
 	SReal poly = ksurf1;
 	SReal hr = h - len;
-	if (2.f*len > h && len <= h) 
+	if (2.0*len > h && len <= h) 
 	{
 		SReal a = (hr*hr*hr) * (len*len*len);
 		return poly*a;
 	}
-	else if (len > 0.f && 2*len <= h) 
+	else if (len > 0.0 && 2*len <= h) 
 	{
 		SReal a = 2 * (hr*hr*hr) * (len*len*len);
 		SReal b = ksurf2;
@@ -188,7 +193,7 @@ __forceinline__ __device__ __host__ SReal Cakinci(SVec3 r, SReal h, SReal ksurf1
 	}
 	else
 	{
-		return 0.f;
+		return 0.0;
 	}
 }
 
@@ -198,16 +203,16 @@ __forceinline__ __device__ __host__ SReal Cakinci(SVec3 r, SReal h, SReal ksurf1
 __forceinline__ __device__ __host__ SReal Aboundary(SVec3 r, SReal h, SReal bpol)
 {
 	SReal rl = length(r);
-	if (2.f*rl > h && rl <= h) 
+	if (2.0*rl > h && rl <= h) 
 	{
 		SReal a = -((4*(rl*rl))/(h));
-		SReal b = (6.f*rl - 2.f*h);
-		SReal res = powf(a + b, 1.f/4.f);
+		SReal b = (6.0*rl - 2.0*h);
+		SReal res = powf(a + b, 1.0/4.0);
 		return bpol*res;
 	}
 	else
 	{
-		return 0.f;
+		return 0.0;
 	}
 }
 

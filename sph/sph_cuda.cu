@@ -43,7 +43,6 @@ SReal maxDensity(SReal* dDensities, unsigned int numParticles)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-
 SVec3 maxVelocity(SReal* dVelocities, unsigned int numParticles)
 {
 	SVec3 res = *thrust::max_element(thrust::device,
@@ -865,7 +864,7 @@ void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens
 				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
 				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
-
+	printf("pcisph internal forces\n");
 }
 //==================================================================================================== 
 //==================================================================================================== 
@@ -874,7 +873,7 @@ void pcisph_pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens,
 				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
 				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
-
+	printf("pcisph pressure solve\n");
 }
 //==================================================================================================== 
 //==================================================================================================== 

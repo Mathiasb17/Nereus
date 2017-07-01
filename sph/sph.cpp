@@ -34,19 +34,19 @@ SPH::SPH ():
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 100;
+	m_params.gasStiffness = 10;
 	m_params.restDensity = 1000;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1E-3;
-	m_params.viscosity = 0.003;
-	m_params.surfaceTension = 0.1;
+	m_params.viscosity = 0.004;
+	m_params.surfaceTension = 0.3;
 
 	m_params.gravity.x = 0.;
 	m_params.gravity.y = 0.;
 	m_params.gravity.y = -9.81;
 	m_params.gravity.z = 0.;
 
-	m_params.interactionRadius = 0.0547;//better !
+	m_params.interactionRadius = 0.0557;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	m_params.beta = 450.0;
@@ -56,7 +56,7 @@ SPH::SPH ():
 	*****************/
 	const SReal eta = 0.01;
     const SReal H = 0.1;
-    const SReal vf = sqrt( 2*9.81*H );
+    const SReal vf = sqrt( 2.0*9.81*H );
     m_params.soundSpeed = vf/(sqrt(eta));
 
 	/*********************
@@ -71,17 +71,17 @@ SPH::SPH ():
 	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
 	****************************************/
 	m_params.kpoly = 315.0 / (64.0 *  (SReal)M_PI * powf(m_params.interactionRadius, 9.0));
-	
 	m_params.kpoly_grad = -945.0/(32.0* (SReal)M_PI*powf(m_params.interactionRadius, 9.0));
+
 	m_params.kpress_grad = -45.0/( (SReal)M_PI*powf(m_params.interactionRadius, 6.0));
 
-	m_params.kvisc_grad = 15.0 / (2* (SReal)M_PI*powf(m_params.interactionRadius, 3.0));
+	m_params.kvisc_grad = 15.0 / (2.0 * (SReal)M_PI*powf(m_params.interactionRadius, 3.0));
 	m_params.kvisc_denum = 2.0*powf(m_params.interactionRadius, 3.0);
 
 	/*****************************
 	*  SURFACE TENSION KERNELS  *
 	*****************************/
-	m_params.ksurf1 = 32.0/( (SReal)M_PI * powf(m_params.interactionRadius,9));
+	m_params.ksurf1 = 32.0/( (SReal)M_PI * powf(m_params.interactionRadius,9.0));
 	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.0;
 	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
 	

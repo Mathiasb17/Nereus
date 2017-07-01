@@ -29,6 +29,9 @@ private:
 	
 	//float4
 	SReal * m_dSortedVelAdv;
+	SReal * m_dSortedForcesAdv;
+	SReal * m_dSortedForcesPres;
+	SReal * m_dSortedPosAdv;
 };
 
 CFD_NAMESPACE_END
