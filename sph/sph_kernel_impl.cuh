@@ -477,8 +477,8 @@ __device__ void computeCellForces(
 	const SReal pm = sph_params.particleMass;
 	const SReal m2 = sph_params.particleMass;
 	const SReal ir = sph_params.interactionRadius;
-	/*const SReal kp = sph_params.kpoly;*/
-	/*const SReal kpg= sph_params.kpoly_grad;*/
+	const SReal kp = sph_params.kpoly;
+	const SReal kappa = sph_params.surfaceTension;
 
 	const SReal kprg = sph_params.kpress_grad;
 	const SReal kvg  = sph_params.kvisc_grad;
@@ -501,21 +501,31 @@ __device__ void computeCellForces(
 				const SVec3 vel2 = make_SVec3(FETCH(oldVel, j));
 
 				const SVec3 p1p2 = pos1-pos2;
-				const SVec3 v1v2 = vel1-vel2;
 
-				const SReal d1sq = dens*dens;
-				const SReal d2sq = dens2*dens2;
 
-#if KERNEL_SET == MONAGHAN
-				const SVec3 kpressure_grad = Wmonaghan_grad(p1p2, ir);
-				const SVec3 kvisco_grad = kpressure_grad;
-#elif KERNEL_SET == MULLER
-				const SVec3 kpressure_grad = Wpressure_grad(p1p2, ir, kprg);
-				const SVec3 kvisco_grad = Wviscosity_grad(p1p2, ir, kvg, kvd);
-#endif
 
 				if (length(p1p2) < ir)
 				{
+
+					const SReal diameter = 2.0 * sph_params.particleRadius;
+					const SReal diameter2 = diameter*diameter;
+
+					const SVec3 v1v2 = vel1-vel2;
+
+					const SReal d1sq = dens*dens;
+					const SReal d2sq = dens2*dens2;
+#if KERNEL_SET == MONAGHAN
+					const SVec3 kpressure_grad = Wmonaghan_grad(p1p2, ir);
+					const SVec3 kvisco_grad = kpressure_grad;
+					const SReal kernel = Wmonaghan(p1p2, ir);
+					const SReal kernel_diameter = Wmonaghan(make_SVec3(diameter, 0.0, 0.0), ir);
+#elif KERNEL_SET == MULLER
+					const SVec3 kpressure_grad = Wpressure_grad(p1p2, ir, kprg);
+					const SVec3 kvisco_grad = Wviscosity_grad(p1p2, ir, kvg, kvd);
+					const SReal kernel = Wdefault(p1p2, ir, kp);
+					const SReal kernel_diameter = Wdefault(make_SVec3(diameter, 0.0, 0.0), ir, kp);
+#endif
+
 					//pressure
 					*fpres = *fpres + (m2 * ( pres/d1sq + pres2/d2sq ) *kpressure_grad);
 
@@ -523,14 +533,17 @@ __device__ void computeCellForces(
 					const SReal a = dot(p1p2, kvisco_grad);
 					const SReal b = dot(p1p2,p1p2) + 0.01f*(ir*ir);
 					*fvisc = *fvisc + (m2/dens2  * v1v2 * (a/b));
+					
+					//tension surface becker
+					SVec3 ai = make_SVec3(0.0, 0.0, 0.0);
+					const SReal r2 = dot(p1p2, p1p2);
 
-					/**fsurf = *fsurf + m2 * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) ;*/
-					/*SReal gamma = sph_params.surfaceTension;*/
-					/**fsurf = *fsurf + (-gamma * m2*m2 * Cakinci(p1p2, ir, ksurf1, ksurf2)*(p1p2/length(p1p2)));*/
+					if (r2 > diameter2)
+						ai = ai - (kappa / pm * pm * p1p2 * kernel);
+					else
+						ai = ai - (kappa / pm * pm * p1p2 * kernel_diameter);
 
-					//surface tension
-					SReal kappa = sph_params.surfaceTension;
-					*fsurf = *fsurf - ( (kappa/pm) * pm * p1p2 * Wdefault(p1p2, ir, sph_params.kpoly) );
+					*fsurf = *fsurf + ai;
 				}
 			}
 		}
@@ -545,7 +558,6 @@ __device__ void computeCellForces(
 	const SReal vis= 0.1;
 	const SReal adh= sph_params.beta;
 	const SReal epsilon = 0.01;
-	const SReal kp = sph_params.kpoly;
 	const SReal beta = sph_params.beta;
 	const SReal rd = sph_params.restDensity;
 

@@ -128,8 +128,14 @@ void PCISPH::_initialize()
 	unsigned int memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
 	unsigned int memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
 
+	//SReal
 	allocateArray((void**)&m_dSortedRhoAdv, memSizeFloat);
+
+	//SVec4
 	allocateArray((void**)&m_dSortedVelAdv, memSize);
+	allocateArray((void**)&m_dSortedForcesAdv, memSize);
+	allocateArray((void**)&m_dSortedForcesPres, memSize);
+	allocateArray((void**)&m_dSortedPosAdv, memSize);
 
 	//SReal
 	cudaMemset(m_dSortedRhoAdv, 0, memSizeFloat);
@@ -154,7 +160,7 @@ void PCISPH::_finalize()
 //==================================================================================================== 
 void PCISPH::update()
 {
-	std::cout << RED << "IMPLEMENTATION INCOMING" << std::endl;
+	//std::cout << RED << "IMPLEMENTATION INCOMING" << std::endl;
 
 	//copy to device
 	cudaMemcpy(m_dpos, m_pos, sizeof(SReal)*4*m_numParticles,cudaMemcpyHostToDevice);
@@ -186,18 +192,17 @@ void PCISPH::update()
 		m_params.numCells);
 
 	//pcisph computations
-	//void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-			//SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
-			//SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells);
+	pcisph_internalForces(m_dSortedPos, m_dSortedVel, m_dSortedDens, m_dSortedPress, m_dSortedForces, m_dSortedCol, m_dCellStart, m_dCellEnd, m_dGridParticleIndex,
+			m_dbi, m_dvbi, m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedRhoAdv, m_dSortedVelAdv, 
+			m_dSortedForcesAdv, m_dSortedForcesPres, m_dSortedNormal, m_numParticles, m_num_boundaries, m_params.numCells);
 
-	//void pcisph_pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				//SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
-				//SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells);
+	pcisph_pressureSolve(m_dSortedPos, m_dSortedVel, m_dSortedDens, m_dSortedPress, m_dSortedForces, m_dSortedCol, m_dCellStart, m_dCellEnd, m_dGridParticleIndex,
+			m_dbi, m_dvbi, m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedRhoAdv, m_dSortedVelAdv, 
+			m_dSortedForcesAdv, m_dSortedForcesPres, m_dSortedNormal, m_numParticles, m_num_boundaries, m_params.numCells);
 
 	//copy to host
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(SReal)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(SReal)*4*m_numParticles,cudaMemcpyDeviceToHost);
-
 }
 //==================================================================================================== 
 //==================================================================================================== 

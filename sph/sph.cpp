@@ -34,20 +34,20 @@ SPH::SPH ():
 	/********************
 	*  SPH PARAMETERS  *
 	********************/
-	m_params.gasStiffness = 10;
+	m_params.gasStiffness = 1000;
 	m_params.restDensity = 1000;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1E-3;
-	m_params.viscosity = 0.004;
-	m_params.surfaceTension = 0.3;
+	m_params.viscosity = 0.005;
+	m_params.surfaceTension = 0.1;
 
 	m_params.gravity.x = 0.;
 	m_params.gravity.y = 0.;
 	m_params.gravity.y = -9.81;
 	m_params.gravity.z = 0.;
 
-	m_params.interactionRadius = 0.0557;//better !
-	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
+	m_params.interactionRadius = 0.0457;//better !
+	m_params.particleMass = 0.5 * powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	m_params.beta = 450.0;
 
@@ -168,6 +168,7 @@ void SPH::_initialize()
 	allocateArray((void **)&m_dSortedPress, memSizeFloat);
 	allocateArray((void **)&m_dSortedForces, memSize);
 	allocateArray((void **)&m_dSortedCol, memSize);
+	allocateArray((void**)&m_dSortedNormal, memSize);
 
 	allocateArray((void **)&m_dGridParticleHash, MAX_PARTICLE_NUMBER*sizeof(unsigned int));
 	allocateArray((void **)&m_dGridParticleIndex, MAX_PARTICLE_NUMBER*sizeof(unsigned int));
@@ -188,6 +189,7 @@ void SPH::_initialize()
 	cudaMemset(m_dSortedPress, 0, memSizeFloat);
 	cudaMemset(m_dSortedForces, 0, memSize);
 	cudaMemset(m_dSortedCol, 0, memSize);
+	cudaMemset(m_dSortedNormal, 0, memSize);
 
 	setParameters(&m_params);
 }

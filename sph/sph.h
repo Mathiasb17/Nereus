@@ -79,6 +79,7 @@ public:
 	void setParticleMass(SReal new_particlemass){m_params.particleMass = new_particlemass;}
 	void setViscosity(SReal new_viscosity){m_params.viscosity = new_viscosity;}
 	void setSurfaceTension(SReal new_surfacetension){m_params.surfaceTension = new_surfacetension;}
+	void setGravity(SReal new_gravity){m_params.gravity.y = new_gravity;}
 
 	void setBi(SReal* bi){m_bi = bi;}
 	void setVbi(SReal* vbi){m_vbi = vbi;}
@@ -104,6 +105,7 @@ protected:
 	SReal *m_dSortedPress;
 	SReal *m_dSortedForces;
 	SReal *m_dSortedCol;
+	SReal *m_dSortedNormal;
 
 	unsigned int *m_dGridParticleHash; 
 	unsigned int *m_dGridParticleIndex;
