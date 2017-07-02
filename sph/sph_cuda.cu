@@ -248,11 +248,9 @@ void calcHash(unsigned int  *gridParticleHash,
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-
-	/*********************
-	*  REORDERING CALL  *
-	*********************/
-
+/*********************
+ *  REORDERING CALL  *
+ *********************/
 void reorderDataAndFindCellStartDBoundary(unsigned int *cellStart,
 										unsigned int *cellEnd,
 										SReal *sortedPos,
@@ -273,7 +271,6 @@ void reorderDataAndFindCellStartDBoundary(unsigned int *cellStart,
 #if USE_TEX
 	checkCudaErrors(cudaBindTexture(0, oldBoundaryPosTex, oldPos, numBoundaries*sizeof(SVec4)));
 	checkCudaErrors(cudaBindTexture(0, oldBoundaryVbiTex, oldVbi, numBoundaries*sizeof(SReal)));
-
 #endif
 	unsigned int smemSize = sizeof(unsigned int)*(numThreads+1);
 
@@ -289,8 +286,6 @@ void reorderDataAndFindCellStartDBoundary(unsigned int *cellStart,
 			numBoundaries);
 
 	getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
-
-
 #if USE_TEX
 	checkCudaErrors(cudaBindTexture(0, cellBoundaryStartTex, cellStart, numCells*sizeof(unsigned int)));
 	checkCudaErrors(cudaBindTexture(0, cellBoundaryEndTex, cellEnd, numCells*sizeof(unsigned int)));
@@ -425,7 +420,7 @@ void computeDensityPressure(
 	/*SReal maxd =  maxDensity(sortedDens, numParticles);*/
 	/*printf("maxd = %f\n", maxd);*/
 	
-	cudaDeviceSynchronize();
+	/*cudaDeviceSynchronize();*/
 
 	computeForces<<< numBlocks, numThreads >>>(
 		  (SVec4*) sortedPos,               // input: sorted positions
@@ -686,7 +681,6 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 	checkCudaErrors(cudaBindTexture(0, oldSumDijTex, sortedSumDij, numParticles*sizeof(SVec4)));
 	checkCudaErrors(cudaBindTexture(0, oldNormalTex, sortedNormal, numParticles*sizeof(SVec4)));
 #endif
-	/*printf("avant\n");*/
 	unsigned int numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
@@ -861,19 +855,51 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 //==================================================================================================== 
 //==================================================================================================== 
 void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
 				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
-	printf("pcisph internal forces\n");
+#if USE_TEX
+	//add texture management someday
+#endif
+
+	// thread per particle
+	unsigned int numThreads, numBlocks;
+	computeGridSize(numParticles, 64, numBlocks, numThreads);
+
+	computeDensityPressure<<<numBlocks, numThreads>>>(
+			(SVec4 *)sortedPos,
+			(SVec4 *)sortedVel,
+			(SReal *)sortedDens,
+			(SReal *)sortedPres,
+			(SVec4 *)sortedForces,
+			(SVec4 *)sortedCol,
+			(SVec4 *)sortedBoundaryPos,
+			(SReal *)sortedBoundaryVbi,
+			gridParticleIndex,    // input: sorted particle indices
+			cellStart,
+			cellEnd,
+			gridBoundaryIndex,
+			cellBoundaryStart,
+			cellBoundaryEnd,
+			numParticles
+	);
+
+
+#if USE_TEX
+	//add texture management someday
+#endif
 }
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
 void pcisph_pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
 				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
-	printf("pcisph pressure solve\n");
+#if USE_TEX
+	//add texture management someday
+#endif
+	/*printf("pcisph pressure solve\n");*/
 }
 //==================================================================================================== 
 //==================================================================================================== 

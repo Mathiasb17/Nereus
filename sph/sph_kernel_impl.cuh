@@ -554,9 +554,6 @@ __device__ void computeCellForces(
 	SVec3 forces_boundaries = make_SVec3(0.0, 0.0, 0.0);
 
 	//friction nu
-	const SReal cs = sph_params.soundSpeed;
-	const SReal vis= 0.1;
-	const SReal adh= sph_params.beta;
 	const SReal epsilon = 0.01;
 	const SReal beta = sph_params.beta;
 	const SReal rd = sph_params.restDensity;
@@ -1656,14 +1653,73 @@ __global__ void iisph_integrate(
 /************
 *  PCISPH  *
 ************/
-__global__ void pciPressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedVelAdv, 
-				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+__global__ void pciComputePosVelAdv(SVec4* oldPos, SVec4* oldVel, SReal* oldDens, SReal* oldPres, SVec4* oldForces, SVec4* oldCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+				SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* oldRhoAdv, SVec4* oldVelAdvPci, 
+				SVec4* oldForcesAdvPci, SVec4* oldForcesP, SVec4* oldNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+{
+	//particle index
+	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    if (index >= numParticles) return;
+	const unsigned int originalIndex = gridParticleIndex[index];
+
+	//global memory reads
+	const SVec3 pos1 = make_SVec3(FETCH(oldPos, originalIndex));
+	const SVec3 vel1 = make_SVec3(FETCH(oldVel, originalIndex));
+	const SReal dens = FETCH(oldDens, originalIndex);
+
+	//grid computation
+    const int3 gridPos = calcGridPos(pos1);
+
+	//const memory reads
+	const SReal pm = sph_params.particleMass;
+	const SReal dt = sph_params.timestep;
+
+	/***********************
+	*  PREDICT ADVECTION  *
+	***********************/
+	SVec3 fvisc = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fsurf = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fgrav = make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fbound= make_SVec3(0.0, 0.0, 0.0);
+	SVec3 fpres = make_SVec3(0.0, 0.0, 0.0); //ignored here, just to reuse computeCellForces
+	SReal pres  = 0.0;//same here
+
+	//loop over neighbor cells
+	for (int z=-1; z<=1; z++)
+	{
+		for (int y=-1; y<=1; y++)
+		{
+			for (int x=-1; x<=1; x++)
+			{
+				const int3 neighbourPos = gridPos + make_int3(x, y, z);
+				computeCellForces(&fpres, &fvisc, &fsurf, &fbound, neighbourPos, originalIndex, pos1, vel1, dens, pres, oldPos, oldDens, oldPres, oldVel, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellStart, cellEnd, cellBoundaryStart, cellBoundaryEnd);
+			}
+		}
+	}
+
+	//end force computation
+	fvisc = 2.0 * fvisc;
+	fvisc = (pm*sph_params.viscosity) * fvisc;
+	fgrav =  pm*sph_params.gravity;
+
+	/*********************************************
+	*  COMPUTE AND STORE FORCE_ADV and VEL_ADV  *
+	*********************************************/
+	SVec3 force_adv             = fvisc + fsurf + fbound + fgrav;
+	SVec3 vel_adv               = vel1 + dt*(force_adv/pm);
+	oldForcesAdvPci[originalIndex] = make_SVec4(force_adv.x, force_adv.y, force_adv.z, 0.0);
+	oldVelAdvPci[originalIndex]    = make_SVec4(vel_adv.x, vel_adv.y, vel_adv.z, 0.0);
+
+}
+
+__global__ void pciPressureSolve(SReal* oldPos, SReal* oldVel, SReal* oldDens, SReal* oldPres, SReal* oldForces, SReal* oldCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+				SReal* oldBoundaryPos, SReal* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* oldRhoAdv, SReal* oldVelAdv, 
+				SReal* oldForcesAdv, SReal* oldForcesP, SReal* oldNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
 {
 	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
 
-	const unsigned int originalIndex = gridParticleIndex[index];
+	/*const unsigned int originalIndex = gridParticleIndex[index];*/
 }
 
 #endif//_PARTICLES_KERNEL_IMPL_CUH

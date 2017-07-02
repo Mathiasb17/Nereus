@@ -160,8 +160,6 @@ void PCISPH::_finalize()
 //==================================================================================================== 
 void PCISPH::update()
 {
-	//std::cout << RED << "IMPLEMENTATION INCOMING" << std::endl;
-
 	//copy to device
 	cudaMemcpy(m_dpos, m_pos, sizeof(SReal)*4*m_numParticles,cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvel, m_vel, sizeof(SReal)*4*m_numParticles,cudaMemcpyHostToDevice);
@@ -193,11 +191,11 @@ void PCISPH::update()
 
 	//pcisph computations
 	pcisph_internalForces(m_dSortedPos, m_dSortedVel, m_dSortedDens, m_dSortedPress, m_dSortedForces, m_dSortedCol, m_dCellStart, m_dCellEnd, m_dGridParticleIndex,
-			m_dbi, m_dvbi, m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedRhoAdv, m_dSortedVelAdv, 
+			m_dbi, m_dvbi, m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedRhoAdv, m_dSortedPosAdv, m_dSortedVelAdv, 
 			m_dSortedForcesAdv, m_dSortedForcesPres, m_dSortedNormal, m_numParticles, m_num_boundaries, m_params.numCells);
 
 	pcisph_pressureSolve(m_dSortedPos, m_dSortedVel, m_dSortedDens, m_dSortedPress, m_dSortedForces, m_dSortedCol, m_dCellStart, m_dCellEnd, m_dGridParticleIndex,
-			m_dbi, m_dvbi, m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedRhoAdv, m_dSortedVelAdv, 
+			m_dbi, m_dvbi, m_dBoundaryCellStart, m_dBoundaryCellEnd, m_dGridBoundaryIndex, m_dSortedRhoAdv, m_dSortedPosAdv, m_dSortedVelAdv, 
 			m_dSortedForcesAdv, m_dSortedForcesPres, m_dSortedNormal, m_numParticles, m_num_boundaries, m_params.numCells);
 
 	//copy to host
