@@ -48,7 +48,7 @@ IISPH::IISPH():
 	m_params.interactionRadius = 0.0537;//better !
 	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 650.0;
+	m_params.beta = 3850.0;
 
 	const SReal eta = 0.01;
     const SReal H = 0.1;

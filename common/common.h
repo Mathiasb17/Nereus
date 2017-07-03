@@ -40,10 +40,12 @@ typedef float4 SVec4;
 /***********************
 *  NAMESPACES MACROS  *
 ***********************/
-#define NEREUS_NAMESPACE_BEGIN namespace NEREUS {
+#define NEREUS_NAMESPACE_BEGIN namespace Nereus {
 #define NEREUS_NAMESPACE_END   }
 
 #define EXTERN_C_BEGIN extern "C" {
 #define EXTERN_C_END   }
+
+
 
 #endif /* ifndef COMMON_H */

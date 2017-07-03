@@ -43,12 +43,12 @@ SReal maxDensity(SReal* dDensities, SUint numParticles)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-SVec3 maxVelocity(SReal* dVelocities, SUint numParticles)
+SVec4 maxVelocity(SReal* dVelocities, SUint numParticles)
 {
-	SVec3 res = *thrust::max_element(thrust::device,
-			thrust::device_ptr<SVec3>((SVec3*)dVelocities),
-			thrust::device_ptr<SVec3>((SVec3*)dVelocities+numParticles),
-			comp());
+	SVec4 res = *thrust::max_element(thrust::device,
+			thrust::device_ptr<SVec4>((SVec4*)dVelocities),
+			thrust::device_ptr<SVec4>((SVec4*)dVelocities+numParticles),
+			comp_length());
 	return res;
 }
 	
@@ -453,6 +453,55 @@ void computeDensityPressure(
 	checkCudaErrors(cudaUnbindTexture(cellStartTex));
 	checkCudaErrors(cudaUnbindTexture(cellEndTex));
 #endif
+}
+
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+SVec3 BBMin(SReal *sortedBoundaryPos, SUint numBoundaries)
+{
+	SVec4 resx = *thrust::min_element(thrust::device,
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos),
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos+numBoundaries),
+			compx());
+
+	SVec4 resy = *thrust::min_element(thrust::device,
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos),
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos+numBoundaries),
+			compy());
+
+	SVec4 resz = *thrust::min_element(thrust::device,
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos),
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos+numBoundaries),
+			compz());
+
+	SVec3 res = make_SVec3(resx.x, resy.y, resz.z);
+
+	return res;
+}
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+SVec3 BBMax(SReal *sortedBoundaryPos, SUint numBoundaries)
+{
+	SVec4 resx = *thrust::max_element(thrust::device,
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos),
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos+numBoundaries),
+			compx());
+
+	SVec4 resy = *thrust::max_element(thrust::device,
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos),
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos+numBoundaries),
+			compy());
+
+	SVec4 resz = *thrust::max_element(thrust::device,
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos),
+			thrust::device_ptr<SVec4>((SVec4*)sortedBoundaryPos+numBoundaries),
+			compz());
+
+	SVec3 res = make_SVec3(resx.x, resy.y, resz.z);
+
+	return res;
 }
 
 //==================================================================================================== 

@@ -70,12 +70,12 @@ SPH::SPH ():
 	/****************************************
 	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
 	****************************************/
-	m_params.kpoly = 315.0 / (64.0 *  (SReal)M_PI * powf(m_params.interactionRadius, 9.0));
-	m_params.kpoly_grad = -945.0/(32.0* (SReal)M_PI*powf(m_params.interactionRadius, 9.0));
+	m_params.kpoly       = 315.0 / (64.0 *  (SReal)M_PI * powf(m_params.interactionRadius, 9.0));
+	m_params.kpoly_grad  = -945.0/(32.0* (SReal)M_PI*powf(m_params.interactionRadius, 9.0));
 
 	m_params.kpress_grad = -45.0/( (SReal)M_PI*powf(m_params.interactionRadius, 6.0));
 
-	m_params.kvisc_grad = 15.0 / (2.0 * (SReal)M_PI*powf(m_params.interactionRadius, 3.0));
+	m_params.kvisc_grad  = 15.0 / (2.0 * (SReal)M_PI*powf(m_params.interactionRadius, 3.0));
 	m_params.kvisc_denum = 2.0*powf(m_params.interactionRadius, 3.0);
 
 	/*****************************
@@ -83,7 +83,7 @@ SPH::SPH ():
 	*****************************/
 	m_params.ksurf1 = 32.0/( (SReal)M_PI * powf(m_params.interactionRadius,9.0));
 	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.0;
-	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
+	m_params.bpol   = 0.007f / (powf(m_params.interactionRadius, 3.25));
 	
 	/**********
 	*  INIT  *
@@ -102,18 +102,18 @@ SPH::SPH (SphSimParams params):
 	/****************************************
 	*  SMOOTHING KERNELS PRE-COMPUTATIONS  *
 	****************************************/
-	m_params.kpoly = 315.0 / (64.0 * (SReal)M_PI  * powf(m_params.interactionRadius, 9.0));
-	
-	m_params.kpoly_grad = -945.0/(32.0*(SReal)M_PI *powf(m_params.interactionRadius, 9.0));
+	m_params.kpoly       = 315.0 / (64.0 * (SReal)M_PI  * powf(m_params.interactionRadius, 9.0));
+
+	m_params.kpoly_grad  = -945.0/(32.0*(SReal)M_PI *powf(m_params.interactionRadius, 9.0));
 	m_params.kpress_grad = -45.0/((SReal)M_PI *powf(m_params.interactionRadius, 6.0));
 
-	m_params.kvisc_grad = 15.0 / (2*(SReal)M_PI *powf(m_params.interactionRadius, 3.0));
+	m_params.kvisc_grad  = 15.0 / (2*(SReal)M_PI *powf(m_params.interactionRadius, 3.0));
 	m_params.kvisc_denum = 2.0*powf(m_params.interactionRadius, 3.0);
 
-	m_params.ksurf1 = 32.0/((SReal)M_PI  * powf(m_params.interactionRadius,9));
-	m_params.ksurf2 = powf(m_params.interactionRadius,6)/64.0;
+	m_params.ksurf1      = 32.0/((SReal)M_PI  * powf(m_params.interactionRadius,9));
+	m_params.ksurf2      = powf(m_params.interactionRadius,6)/64.0;
 
-	m_params.bpol = 0.007f / (powf(m_params.interactionRadius, 3.25));
+	m_params.bpol        = 0.007f / (powf(m_params.interactionRadius, 3.25));
 	
 	_initialize();
 	m_numParticles = 0;
@@ -145,13 +145,6 @@ void SPH::_initialize()
 	cudaMallocHost((void**)&m_forces, memSize);
 	cudaMallocHost((void**)&m_colors, memSize);
 
-	cudaMallocHost((void**)&m_hParticleHash, sizeof(SUint)* MAX_PARTICLE_NUMBER);
-	cudaMallocHost((void**)&m_hCellStart, memSizeUint);
-	cudaMallocHost((void**)&m_hCellEnd, memSizeUint);
-
-	memset(m_hCellStart, 0, m_params.numCells*sizeof(uint));
-    memset(m_hCellEnd, 0, m_params.numCells*sizeof(uint));
-
 	/******************
 	 *  GPU MEM INIT  *
 	 ******************/
@@ -168,7 +161,7 @@ void SPH::_initialize()
 	allocateArray((void **)&m_dSortedPress, memSizeFloat);
 	allocateArray((void **)&m_dSortedForces, memSize);
 	allocateArray((void **)&m_dSortedCol, memSize);
-	allocateArray((void**)&m_dSortedNormal, memSize);
+	allocateArray((void **)&m_dSortedNormal, memSize);
 
 	allocateArray((void **)&m_dGridParticleHash, MAX_PARTICLE_NUMBER*sizeof(SUint));
 	allocateArray((void **)&m_dGridParticleIndex, MAX_PARTICLE_NUMBER*sizeof(SUint));
@@ -176,22 +169,36 @@ void SPH::_initialize()
 	allocateArray((void **)&m_dCellStart, memSizeUint);
 	allocateArray((void **)&m_dCellEnd, memSizeUint);
 
-	cudaMemset(m_dpos, 0, memSize);
-	cudaMemset(m_dvel, 0, memSize);
-	cudaMemset(m_ddensity, 0, memSizeFloat);
-	cudaMemset(m_dpressure, 0, memSizeFloat);
-	cudaMemset(m_dforces, 0, memSize);
-	cudaMemset(m_dcolors, 0, memSize);
+	cudaMemset(m_dpos,      0 , memSize);
+	cudaMemset(m_dvel,      0 , memSize);
+	cudaMemset(m_ddensity,  0 , memSizeFloat);
+	cudaMemset(m_dpressure, 0 , memSizeFloat);
+	cudaMemset(m_dforces,   0 , memSize);
+	cudaMemset(m_dcolors,   0 , memSize);
 
-	cudaMemset(m_dSortedPos, 0, memSize);
-	cudaMemset(m_dSortedVel, 0, memSize);
-	cudaMemset(m_dSortedDens, 0, memSizeFloat);
-	cudaMemset(m_dSortedPress, 0, memSizeFloat);
-	cudaMemset(m_dSortedForces, 0, memSize);
-	cudaMemset(m_dSortedCol, 0, memSize);
-	cudaMemset(m_dSortedNormal, 0, memSize);
+	cudaMemset(m_dSortedPos,    0 , memSize);
+	cudaMemset(m_dSortedVel,    0 , memSize);
+	cudaMemset(m_dSortedDens,   0 , memSizeFloat);
+	cudaMemset(m_dSortedPress,  0 , memSizeFloat);
+	cudaMemset(m_dSortedForces, 0 , memSize);
+	cudaMemset(m_dSortedCol,    0 , memSize);
+	cudaMemset(m_dSortedNormal, 0 , memSize);
 
 	setParameters(&m_params);
+}
+
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+void SPH::_initializeGrid()
+{
+	cudaFree(m_dCellStart);
+	cudaFree(m_dCellEnd);
+
+	SUint memSizeUint = sizeof(SUint) * m_params.numCells;
+
+	allocateArray((void **)&m_dCellStart, memSizeUint);
+	allocateArray((void **)&m_dCellEnd, memSizeUint);
 }
 
 //==================================================================================================== 
@@ -219,7 +226,7 @@ void SPH::update()
 	{
 		SReal newDeltat = lambda * (ir / length(res));
 		m_params.timestep = newDeltat;
-		std::cout << "new timestep is " << newDeltat << std::endl;
+		//std::cout << "new timestep is " << newDeltat << std::endl;
 	}
 #endif	
 
@@ -280,16 +287,53 @@ void SPH::update()
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-SVec3 SPH::computeGridMinMax() const
+std::pair<SVec3, SVec3> SPH::computeGridMinMax() const
 {
+	SVec3 bbmin = BBMin(m_dbi, m_num_boundaries);
+	SVec3 bbmax = BBMax(m_dbi, m_num_boundaries);
 
+	return std::make_pair(bbmin, bbmax);
 }
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
+SUint nextPower2(SUint v)
+{
+	//from bit twiddling hacks
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v++;
+	return v;
+}
+
 void SPH::updateGrid()
 {
+	std::pair<SVec3, SVec3> bb = computeGridMinMax();
 
+	/*********************
+	*  GRID PARAMETERS  *
+	*********************/
+	m_params.worldOrigin = make_SVec3(bb.first.x - 0.1, bb.first.y - 0.1, bb.first.z - 0.1); //slight offset to avoid particles off the domain
+
+	//gridsize
+	SUint sizex = std::ceil((bb.second.x - bb.first.x + 0.1) / m_params.interactionRadius);
+	SUint sizey = std::ceil((bb.second.y - bb.first.y + 0.1) / m_params.interactionRadius);
+	SUint sizez = std::ceil((bb.second.z - bb.first.z + 0.1) / m_params.interactionRadius);
+
+	SUint gridx = nextPower2(sizex);
+	SUint gridy = nextPower2(sizey);
+	SUint gridz = nextPower2(sizez);
+
+	m_params.gridSize = make_uint3(gridx,gridy,gridz); // power of 2
+	m_params.numCells = m_params.gridSize.x * m_params.gridSize.y * m_params.gridSize.z;
+
+	this->_initializeGrid();
+
+	setParameters(&m_params);
 }
 //==================================================================================================== 
 //==================================================================================================== 
@@ -358,11 +402,13 @@ void SPH::updateGpuBoundaries(SUint nb_boundary_spheres)
 	cudaMalloc((void**)&m_dGridBoundaryIndex, sizeof(SUint)*nb_boundary_spheres);
 	cudaMalloc((void**)&m_dGridBoundaryHash, sizeof(SUint)*nb_boundary_spheres);
 
-	cudaMalloc((void**)&m_dBoundaryCellEnd, sizeof(SUint)*getNumCells());
-	cudaMalloc((void**)&m_dBoundaryCellStart, sizeof(SUint)*getNumCells());
-
 	cudaMemcpy(m_dbi, m_bi, 4*sizeof(SReal)*nb_boundary_spheres, cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvbi, m_vbi, sizeof(SReal)*nb_boundary_spheres, cudaMemcpyHostToDevice);
+
+	updateGrid();
+
+	cudaMalloc((void**)&m_dBoundaryCellEnd, sizeof(SUint)*m_params.numCells);
+	cudaMalloc((void**)&m_dBoundaryCellStart, sizeof(SUint)*m_params.numCells);
 
 	calcHash( m_dGridBoundaryHash, m_dGridBoundaryIndex, m_dbi, m_num_boundaries);
 	sortParticles(m_dGridBoundaryHash, m_dGridBoundaryIndex, m_num_boundaries);
@@ -381,7 +427,6 @@ void SPH::updateGpuBoundaries(SUint nb_boundary_spheres)
 			getNumCells()
 			);
 
-	updateGrid();
 
 	std::cout << "boundaries updated !" << std::endl;
 }

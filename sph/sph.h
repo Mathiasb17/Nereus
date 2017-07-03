@@ -2,6 +2,7 @@
 #define SPH_H 
 
 #include <vector>
+#include <utility>
 
 #ifndef GLM_SWIZZLE
 #define GLM_SWIZZLE
@@ -32,6 +33,8 @@ public:
 	virtual void _initialize();
 	virtual void _finalize();
 
+	virtual void _initializeGrid();
+
 	/********************
 	 *  GENERATE FLUID  *
 	 ********************/
@@ -47,7 +50,7 @@ public:
 	*  GRID  *
 	**********/
 	void updateGrid();
-	SVec3 computeGridMinMax() const;
+	std::pair<SVec3, SVec3> computeGridMinMax() const;
 
 	/*************
 	 *  GETTERS  *
@@ -127,9 +130,6 @@ protected:
 	/******************
 	 *  HOST MEMBERS  *
 	 ******************/
-	SUint* m_hParticleHash;
-	SUint* m_hCellStart;
-	SUint* m_hCellEnd;
 	SUint  m_gridSortBits;
 
 	SReal *m_pos;
