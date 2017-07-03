@@ -91,6 +91,21 @@ we can work together. Here are some improvement i would like to implement :
 * Two way coupling
 * Nanogui integration for better user control
 
+# Cite
+
+If you found this project useful for academic research projects, you can cite this work with the following bibtex reference :
+
+```bibtex
+@misc{Mitsuba,
+   Author = {Mathias Brousset},
+   Year = {2016},
+   Note = {https://github.com/Mathiasb17/Nereus},
+   Title = {Nereus library}
+} 
+```
+
+Thanks a lot ! :^)
+
 # License
 
 Please see LICENSE.txt
