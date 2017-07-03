@@ -1,6 +1,6 @@
 # Nereus
 
-Nereus is a CUDA parallelized libray for particle based fluid dynamics.
+Nereus is a CUDA parallelized library for particle based fluid dynamics.
 
 It includes a CUDA implementation of :
 
