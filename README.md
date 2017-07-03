@@ -1,13 +1,13 @@
-# sph_opengl
+# Nereus
 
-http://bromat.fr/2017/gpu-sph-fluid-solver/
+Nereus is a CUDA parallelized libray for particle based fluid dynamics.
 
-CUDA implementation of
+It includes a CUDA implementation of :
 
 * State-Equation SPH
 * Implicit Incompressible SPH
 * Predictive-Corrective Incompressible SPH (soon finished)
-* See Future Works
+* Much more incoming : see Future Works below
 
 # Dependencies
 
