@@ -17,7 +17,7 @@
 
 #define MAX_PARTICLE_NUMBER 150000
 
-CFD_NAMESPACE_BEGIN
+NEREUS_NAMESPACE_BEGIN
 
 class SPH
 {
@@ -26,9 +26,9 @@ public:
 	SPH (SphSimParams params);
 	virtual ~SPH ();
 
-	/**********
-	*  Initialize and finalize  *
-	**********/
+	/************************************
+	*  INITIALIZE AND FINALIZE SOLVER  *
+	************************************/
 	virtual void _initialize();
 	virtual void _finalize();
 
@@ -46,21 +46,22 @@ public:
 	/**********
 	*  GRID  *
 	**********/
-	void computeGridMinMax();
+	void updateGrid();
+	SVec3 computeGridMinMax() const;
 
 	/*************
 	 *  GETTERS  *
 	 *************/
-	SReal getGasStiffness() const {return m_params.gasStiffness;}
-	SReal getRestDensity() const {return m_params.restDensity;}
-	SReal getParticleMass() const {return m_params.particleMass;}
-	SReal getParticleRadius() const {return m_params.particleRadius;}
-	SReal getTimestep() const {return m_params.timestep;}
-	SReal getViscosity() const {return m_params.viscosity;}
-	SReal getSurfaceTension() const {return m_params.surfaceTension;}
+	SReal getGasStiffness()      const {return m_params.gasStiffness;}
+	SReal getRestDensity()       const {return m_params.restDensity;}
+	SReal getParticleMass()      const {return m_params.particleMass;}
+	SReal getParticleRadius()    const {return m_params.particleRadius;}
+	SReal getTimestep()          const {return m_params.timestep;}
+	SReal getViscosity()         const {return m_params.viscosity;}
+	SReal getSurfaceTension()    const {return m_params.surfaceTension;}
 	SReal getInteractionRadius() const {return m_params.interactionRadius;}
 
-	unsigned int getNumCells() const {return m_params.numCells;}
+	SUint getNumCells() const {return m_params.numCells;}
 
 	SReal* & getPos() {return m_pos;}
 	SReal* & getCol() {return m_colors;}
@@ -69,24 +70,25 @@ public:
 	SReal* getHostPos() const {return m_pos;}
 	SReal* getHostCol() const {return m_colors;}
 
-	unsigned int getNumParticles() const {return m_numParticles;}
+	SUint getNumParticles() const {return m_numParticles;}
 
 	/*************
 	*  SETTERS  *
 	*************/
-	void setGasStiffness(SReal new_stiffness){m_params.gasStiffness = new_stiffness;}
-	void setRestDensity(SReal new_restdensity){m_params.restDensity = new_restdensity;}
-	void setParticleMass(SReal new_particlemass){m_params.particleMass = new_particlemass;}
-	void setViscosity(SReal new_viscosity){m_params.viscosity = new_viscosity;}
-	void setSurfaceTension(SReal new_surfacetension){m_params.surfaceTension = new_surfacetension;}
-	void setGravity(SReal new_gravity){m_params.gravity.y = new_gravity;}
+	//setters for physics constants
+	void setGasStiffness   ( SReal new_stiffness)      { m_params.gasStiffness   = new_stiffness;}
+	void setRestDensity    ( SReal new_restdensity)    { m_params.restDensity    = new_restdensity;}
+	void setParticleMass   ( SReal new_particlemass)   { m_params.particleMass   = new_particlemass;}
+	void setViscosity      ( SReal new_viscosity)      { m_params.viscosity      = new_viscosity;}
+	void setSurfaceTension ( SReal new_surfacetension) { m_params.surfaceTension = new_surfacetension;}
+	void setGravity        ( SReal new_gravity)        { m_params.gravity.y      = new_gravity;}
 
-	void setBi(SReal* bi){m_bi = bi;}
-	void setVbi(SReal* vbi){m_vbi = vbi;}
+	//setters for boundaries
+	void setBi(SReal* bi)   { m_bi = bi;}
+	void setVbi(SReal* vbi) { m_vbi = vbi;}
+	void setNumBoundaries(SUint nb){m_num_boundaries = nb;}
 
-	void setNumBoundaries(unsigned int nb){m_num_boundaries = nb;}
-
-	void updateGpuBoundaries(unsigned int nb_boundary_spheres);
+	void updateGpuBoundaries(SUint nb_boundary_spheres);
 
 protected:
 	/********************
@@ -107,10 +109,10 @@ protected:
 	SReal *m_dSortedCol;
 	SReal *m_dSortedNormal;
 
-	unsigned int *m_dGridParticleHash; 
-	unsigned int *m_dGridParticleIndex;
-	unsigned int *m_dCellStart;
-	unsigned int *m_dCellEnd;
+	SUint *m_dGridParticleHash; 
+	SUint *m_dGridParticleIndex;
+	SUint *m_dCellStart;
+	SUint *m_dCellEnd;
 
 	SReal* m_dbi;//gpu boundaries
 	SReal* m_dvbi;
@@ -118,17 +120,17 @@ protected:
 	SReal* m_dSortedbi;
 	SReal* m_dSortedVbi;
 
-	unsigned int* m_dGridBoundaryHash, *m_dGridBoundaryIndex;
-	unsigned int *m_dBoundaryCellStart;
-	unsigned int *m_dBoundaryCellEnd;
+	SUint* m_dGridBoundaryHash, *m_dGridBoundaryIndex;
+	SUint *m_dBoundaryCellStart;
+	SUint *m_dBoundaryCellEnd;
 
 	/******************
 	 *  HOST MEMBERS  *
 	 ******************/
-	unsigned int* m_hParticleHash;
-	unsigned int* m_hCellStart;
-	unsigned int* m_hCellEnd;
-	unsigned int  m_gridSortBits;
+	SUint* m_hParticleHash;
+	SUint* m_hCellStart;
+	SUint* m_hCellEnd;
+	SUint  m_gridSortBits;
 
 	SReal *m_pos;
 	SReal *m_vel;
@@ -137,15 +139,16 @@ protected:
 	SReal *m_forces;
 	SReal *m_colors;
 
-	unsigned int m_numParticles;
+	SUint m_numParticles;
 
+	//physics constants
 	SphSimParams m_params;
 
 	SReal* m_bi; //boundary particles
 	SReal* m_vbi;//boundary particles volume
-	unsigned int m_num_boundaries;
+	SUint m_num_boundaries;
 };
 
-CFD_NAMESPACE_END
+NEREUS_NAMESPACE_END
 
 #endif /* ifndef SPH_H */

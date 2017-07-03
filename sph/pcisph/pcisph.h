@@ -3,9 +3,9 @@
 
 #include "sph.h"
 
-CFD_NAMESPACE_BEGIN
+NEREUS_NAMESPACE_BEGIN
 	
-class PCISPH : public CFD::SPH
+class PCISPH : public SPH
 {
 public:
 	PCISPH ();
@@ -34,6 +34,6 @@ private:
 	SReal * m_dSortedPosAdv;
 };
 
-CFD_NAMESPACE_END
+NEREUS_NAMESPACE_END
 
 #endif /* ifndef PCISPH_ */

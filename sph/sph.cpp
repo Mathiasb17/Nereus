@@ -21,7 +21,7 @@
 
 #include <cuda_runtime.h>
 
-CFD_NAMESPACE_BEGIN
+NEREUS_NAMESPACE_BEGIN
 
 //==================================================================================================== 
 //==================================================================================================== 
@@ -131,9 +131,9 @@ SPH::~SPH ()
 //==================================================================================================== 
 void SPH::_initialize()
 {
-	unsigned int memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
-	unsigned int memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
-	unsigned int memSizeUint = sizeof(unsigned int) * m_params.numCells;
+	SUint memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
+	SUint memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
+	SUint memSizeUint = sizeof(SUint) * m_params.numCells;
 
 	/*******************
 	 *  HOST MEM INIT  *
@@ -145,7 +145,7 @@ void SPH::_initialize()
 	cudaMallocHost((void**)&m_forces, memSize);
 	cudaMallocHost((void**)&m_colors, memSize);
 
-	cudaMallocHost((void**)&m_hParticleHash, sizeof(unsigned int)* MAX_PARTICLE_NUMBER);
+	cudaMallocHost((void**)&m_hParticleHash, sizeof(SUint)* MAX_PARTICLE_NUMBER);
 	cudaMallocHost((void**)&m_hCellStart, memSizeUint);
 	cudaMallocHost((void**)&m_hCellEnd, memSizeUint);
 
@@ -170,8 +170,8 @@ void SPH::_initialize()
 	allocateArray((void **)&m_dSortedCol, memSize);
 	allocateArray((void**)&m_dSortedNormal, memSize);
 
-	allocateArray((void **)&m_dGridParticleHash, MAX_PARTICLE_NUMBER*sizeof(unsigned int));
-	allocateArray((void **)&m_dGridParticleIndex, MAX_PARTICLE_NUMBER*sizeof(unsigned int));
+	allocateArray((void **)&m_dGridParticleHash, MAX_PARTICLE_NUMBER*sizeof(SUint));
+	allocateArray((void **)&m_dGridParticleIndex, MAX_PARTICLE_NUMBER*sizeof(SUint));
 
 	allocateArray((void **)&m_dCellStart, memSizeUint);
 	allocateArray((void **)&m_dCellEnd, memSizeUint);
@@ -280,11 +280,17 @@ void SPH::update()
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void SPH::computeGridMinMax()
+SVec3 SPH::computeGridMinMax() const
 {
 
 }
+//==================================================================================================== 
+//==================================================================================================== 
+//==================================================================================================== 
+void SPH::updateGrid()
+{
 
+}
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
@@ -338,7 +344,7 @@ void SPH::generateParticleCube(SVec4 center, SVec4 size, SVec4 vel)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void SPH::updateGpuBoundaries(unsigned int nb_boundary_spheres)
+void SPH::updateGpuBoundaries(SUint nb_boundary_spheres)
 {
 	cudaFree(m_dbi);
 	cudaFree(m_dvbi);
@@ -349,11 +355,11 @@ void SPH::updateGpuBoundaries(unsigned int nb_boundary_spheres)
 	cudaMalloc((void**)&m_dbi, 4*sizeof(SReal)*nb_boundary_spheres);
 	cudaMalloc((void**)&m_dvbi, sizeof(SReal)*nb_boundary_spheres);
 
-	cudaMalloc((void**)&m_dGridBoundaryIndex, sizeof(unsigned int)*nb_boundary_spheres);
-	cudaMalloc((void**)&m_dGridBoundaryHash, sizeof(unsigned int)*nb_boundary_spheres);
+	cudaMalloc((void**)&m_dGridBoundaryIndex, sizeof(SUint)*nb_boundary_spheres);
+	cudaMalloc((void**)&m_dGridBoundaryHash, sizeof(SUint)*nb_boundary_spheres);
 
-	cudaMalloc((void**)&m_dBoundaryCellEnd, sizeof(unsigned int)*getNumCells());
-	cudaMalloc((void**)&m_dBoundaryCellStart, sizeof(unsigned int)*getNumCells());
+	cudaMalloc((void**)&m_dBoundaryCellEnd, sizeof(SUint)*getNumCells());
+	cudaMalloc((void**)&m_dBoundaryCellStart, sizeof(SUint)*getNumCells());
 
 	cudaMemcpy(m_dbi, m_bi, 4*sizeof(SReal)*nb_boundary_spheres, cudaMemcpyHostToDevice);
 	cudaMemcpy(m_dvbi, m_vbi, sizeof(SReal)*nb_boundary_spheres, cudaMemcpyHostToDevice);
@@ -375,9 +381,11 @@ void SPH::updateGpuBoundaries(unsigned int nb_boundary_spheres)
 			getNumCells()
 			);
 
+	updateGrid();
+
 	std::cout << "boundaries updated !" << std::endl;
 }
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-CFD_NAMESPACE_END
+NEREUS_NAMESPACE_END

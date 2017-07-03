@@ -3,18 +3,18 @@
 
 #include "sph.h"
 
-CFD_NAMESPACE_BEGIN	
+NEREUS_NAMESPACE_BEGIN	
 
-class IISPH : public CFD::SPH
+class IISPH : public SPH
 {
 public:
 	IISPH ();
 	IISPH (SphSimParams params);
 	virtual ~IISPH ();
 
-	/****
-	* Initialize and finalize *
-	****/
+	/************************************
+	*  INITIALIZE AND FINALIZE SOLVER  *
+	************************************/
 	virtual void _initialize();
 	virtual void _finalize();
 
@@ -24,14 +24,14 @@ public:
 	void update();
 
 private:
-	//float
+	//real
 	SReal *m_dSortedDensAdv;
 	SReal *m_dSortedDensCorr;
 	SReal *m_dSortedP_l;
 	SReal *m_dSortedPreviousP;
 	SReal *m_dSortedAii;
 
-	//float4
+	//vec4
 	SReal *m_dSortedVelAdv;
 	SReal *m_dSortedForcesAdv;
 	SReal *m_dSortedForcesP;
@@ -42,6 +42,6 @@ private:
 
 };
 
-CFD_NAMESPACE_END 
+NEREUS_NAMESPACE_END 
 
 #endif /* ifndef IISPH_ */

@@ -52,16 +52,16 @@ texture<SVec4, 1,cudaReadModeElementType> oldForcesPresPciTex;
 texture<SVec4, 1,cudaReadModeElementType> oldPosAdvPciTex;
 
 //grid textures
-texture<unsigned int, 1, cudaReadModeElementType> gridParticleHashTex;
-texture<unsigned int, 1, cudaReadModeElementType> cellStartTex;
-texture<unsigned int, 1, cudaReadModeElementType> cellEndTex;
+texture<SUint, 1, cudaReadModeElementType> gridParticleHashTex;
+texture<SUint, 1, cudaReadModeElementType> cellStartTex;
+texture<SUint, 1, cudaReadModeElementType> cellEndTex;
 
 //boundaries
 texture<SVec4, 1, cudaReadModeElementType> oldBoundaryPosTex;
 texture<SReal, 1, cudaReadModeElementType> oldBoundaryVbiTex;
-texture<unsigned int, 1, cudaReadModeElementType> gridBoundaryHashTex;
-texture<unsigned int, 1, cudaReadModeElementType> cellBoundaryStartTex;
-texture<unsigned int, 1, cudaReadModeElementType> cellBoundaryEndTex;
+texture<SUint, 1, cudaReadModeElementType> gridBoundaryHashTex;
+texture<SUint, 1, cudaReadModeElementType> cellBoundaryStartTex;
+texture<SUint, 1, cudaReadModeElementType> cellBoundaryEndTex;
 #endif
 
 __constant__ SphSimParams sph_params;
@@ -116,7 +116,7 @@ __device__ int3 calcGridPos(SVec3 p)
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ unsigned int calcGridHash(int3 gridPos)
+__device__ SUint calcGridHash(int3 gridPos)
 {
     gridPos.x = gridPos.x & (sph_params.gridSize.x-1);  // wrap grid, assumes size is power of 2
     gridPos.y = gridPos.y & (sph_params.gridSize.y-1);
@@ -125,12 +125,12 @@ __device__ unsigned int calcGridHash(int3 gridPos)
     return __umul24(__umul24(gridPos.z, sph_params.gridSize.y), sph_params.gridSize.x) + __umul24(gridPos.y, sph_params.gridSize.x) + gridPos.x;
 }
 
-__global__ void calcHashD(unsigned int   *gridParticleHash,  // output
-               unsigned int   *gridParticleIndex, // output
+__global__ void calcHashD(SUint   *gridParticleHash,  // output
+               SUint   *gridParticleIndex, // output
                SVec4 *pos,               // input: positions
-               unsigned int    numParticles)
+               SUint    numParticles)
 {
-    unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    SUint index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if (index >= numParticles) return;
 
@@ -138,7 +138,7 @@ __global__ void calcHashD(unsigned int   *gridParticleHash,  // output
 
     // get address in grid
     int3 gridPos = calcGridPos(make_SVec3(p.x, p.y, p.z));
-    unsigned int hash = calcGridHash(gridPos);
+    SUint hash = calcGridHash(gridPos);
 
     // store grid hash and particle index
     gridParticleHash[index] = hash;
@@ -148,20 +148,20 @@ __global__ void calcHashD(unsigned int   *gridParticleHash,  // output
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__global__ void reorderDataAndFindCellStartDBoundary(unsigned int *cellBoundaryStart,
-												unsigned int * cellBoundaryEnd,
+__global__ void reorderDataAndFindCellStartDBoundary(SUint *cellBoundaryStart,
+												SUint * cellBoundaryEnd,
 												SVec4* sortedBoundaryPos,
 												SReal* sortedBoundaryVbi,
-												unsigned int *gridBoundaryHash,
-												unsigned int *gridBoundaryIndex,
+												SUint *gridBoundaryHash,
+												SUint *gridBoundaryIndex,
 												SVec4* oldBoundaryPos,
 												SReal*  oldBoundaryVbi,
-												unsigned int numBoundaries)
+												SUint numBoundaries)
 {
-	extern __shared__ unsigned int sharedHash[];
-	unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
+	extern __shared__ SUint sharedHash[];
+	SUint index = blockIdx.x * blockDim.x + threadIdx.x;
 
-	unsigned int hash;
+	SUint hash;
 
 	if (index < numBoundaries) 
 	{
@@ -195,7 +195,7 @@ __global__ void reorderDataAndFindCellStartDBoundary(unsigned int *cellBoundaryS
 		}
 
 		// Now use the sorted index to reorder the pos and vel data
-		unsigned int sortedIndex = gridBoundaryIndex[index];
+		SUint sortedIndex = gridBoundaryIndex[index];
 
 		SVec4 pos = FETCH(oldBoundaryPos, sortedIndex);       // macro does either global read or texture fetch
 		SReal vbi = FETCH(oldBoundaryVbi, sortedIndex);       // see particles_kernel.cuh
@@ -208,28 +208,28 @@ __global__ void reorderDataAndFindCellStartDBoundary(unsigned int *cellBoundaryS
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        // output: cell start index
-                                  unsigned int   *cellEnd,          // output: cell end index
+__global__ void reorderDataAndFindCellStartD(SUint   *cellStart,        // output: cell start index
+                                  SUint   *cellEnd,          // output: cell end index
                                   SVec4 *sortedPos,        // output: sorted positions
                                   SVec4 *sortedVel,        // output: sorted velocities
                                   SReal *sortedDens,       // output: sorted densities
                                   SReal *sortedPres,       // output: sorted pressures
                                   SVec4 *sortedForces,     // output: sorted forces
                                   SVec4 *sortedCol,        // output: sorted colors
-                                  unsigned int   *gridParticleHash, // input: sorted grid hashes
-                                  unsigned int   *gridParticleIndex,// input: sorted particle indices
+                                  SUint   *gridParticleHash, // input: sorted grid hashes
+                                  SUint   *gridParticleIndex,// input: sorted particle indices
                                   SVec4 *oldPos,           // input: sorted position array
                                   SVec4 *oldVel,           // input: sorted velocity array
                                   SReal *oldDens,          // input: sorted density  array
                                   SReal *oldPres,          // input: sorted pressure array
                                   SVec4 *oldForces,        // input: sorted forces   array
                                   SVec4 *oldCol,           // input: sorted color    array
-                                  unsigned int    numParticles)
+                                  SUint    numParticles)
 {
-    extern __shared__ unsigned int sharedHash[];    // blockSize + 1 elements
-    unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    extern __shared__ SUint sharedHash[];    // blockSize + 1 elements
+    SUint index = blockIdx.x*blockDim.x + threadIdx.x;
 
-    unsigned int hash;
+    SUint hash;
 
 	// handle case when no. of particles not multiple of block size
 	if (index < numParticles)
@@ -271,7 +271,7 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 		}
 
 		// Now use the sorted index to reorder the pos and vel data
-		unsigned int sortedIndex = gridParticleIndex[index];
+		SUint sortedIndex = gridParticleIndex[index];
 		SVec4 pos = FETCH(oldPos, sortedIndex);       // macro does either global read or texture fetch
 		SVec4 vel = FETCH(oldVel, sortedIndex);       // see particles_kernel.cuh
 		SReal pressure = FETCH(oldPres, sortedIndex);       // see particles_kernel.cuh
@@ -288,20 +288,20 @@ __global__ void reorderDataAndFindCellStartD(unsigned int   *cellStart,        /
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ SReal computeCellDensity(int *nb, int3 gridPos, unsigned int index, SVec3 pos, SVec4 *oldPos, unsigned int *cellStart, unsigned int *cellEnd,
+__device__ SReal computeCellDensity(int *nb, int3 gridPos, SUint index, SVec3 pos, SVec4 *oldPos, SUint *cellStart, SUint *cellEnd,
 		SReal ir, SReal kp, SReal rd, SReal pm)
 {
-    const unsigned int gridHash = calcGridHash(gridPos);
-	const unsigned int startIndex = FETCH(cellStart, gridHash);
+    const SUint gridHash = calcGridHash(gridPos);
+	const SUint startIndex = FETCH(cellStart, gridHash);
 
 	SReal dens = 0.0;
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
 
 	if (startIndex != 0xffffffff)
 	{ 
-		const unsigned int endIndex = FETCH(cellEnd, gridHash);
+		const SUint endIndex = FETCH(cellEnd, gridHash);
 
-        for (unsigned int j=startIndex; j<endIndex; j++)
+        for (SUint j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
 			{
@@ -324,22 +324,22 @@ __device__ SReal computeCellDensity(int *nb, int3 gridPos, unsigned int index, S
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ SReal computeBoundaryCellDensity(int3 gridPos, SVec3 pos, unsigned int* gridBoundaryIndex, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd,
+__device__ SReal computeBoundaryCellDensity(int3 gridPos, SVec3 pos, SUint* gridBoundaryIndex, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd,
 		SReal ir, SReal kp, SReal rd, SReal pm)
 {
-	const unsigned int gridHash = calcGridHash(gridPos);
-	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
+	const SUint gridHash = calcGridHash(gridPos);
+	const SUint startIndex = FETCH(cellBoundaryStart, gridHash);
 
 	SReal dens = 0.0;
 	const SVec3 pos1 = pos;
 
 	if (startIndex != 0xffffffff) 
 	{
-		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
+		const SUint endIndex = FETCH(cellBoundaryEnd, gridHash);
 
 		for (unsigned  int j = startIndex; j < endIndex; ++j)
 		{
-			const unsigned int originalIndex = gridBoundaryIndex[j];
+			const SUint originalIndex = gridBoundaryIndex[j];
 
 			const SVec3 pos2 = make_SVec3(FETCH(oldBoundaryPos, originalIndex));
 			const SReal  vbi  = FETCH(oldBoundaryVbi, originalIndex);
@@ -372,19 +372,19 @@ __global__ void computeDensityPressure(
               SVec4 *oldCol,               // input: sorted velocities
 			  SVec4 *oldBoundaryPos,
 			  SReal  *oldBoundaryVbi,
-              unsigned int   *gridParticleIndex,    // input: sorted particle indices
-              unsigned int   *cellStart,
-              unsigned int   *cellEnd,
-			  unsigned int   *gridBoundaryIndex,
-			  unsigned int   *cellBoundaryStart,
-			  unsigned int   *cellBoundaryEnd,
-              unsigned int    numParticles)
+              SUint   *gridParticleIndex,    // input: sorted particle indices
+              SUint   *cellStart,
+              SUint   *cellEnd,
+			  SUint   *gridBoundaryIndex,
+			  SUint   *cellBoundaryStart,
+			  SUint   *cellBoundaryEnd,
+              SUint    numParticles)
 {
-    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if (index >= numParticles) return;
 
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 
     // read particle data from sorted arrays
     const SVec3 pos = make_SVec3(FETCH(oldPos, originalIndex));
@@ -456,16 +456,16 @@ __device__ void computeCellForces(
 		SReal      *oldDens,
 		SReal*     oldPres,
 		SVec4*    oldVel,
-		unsigned int* gridBoundaryIndex,
+		SUint* gridBoundaryIndex,
 		SVec4*    oldBoundaryPos,
 		SReal*     oldBoundaryVbi,
-		unsigned int *cellStart,
-		unsigned int *cellEnd,
-		unsigned int *cellBoundaryStart,
-		unsigned int *cellBoundaryEnd)
+		SUint *cellStart,
+		SUint *cellEnd,
+		SUint *cellBoundaryStart,
+		SUint *cellBoundaryEnd)
 {
-    const unsigned int gridHash = calcGridHash(gridPos);
-	unsigned int startIndex = FETCH(cellStart, gridHash);
+    const SUint gridHash = calcGridHash(gridPos);
+	SUint startIndex = FETCH(cellStart, gridHash);
 
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
 	const SVec3 vel1 = make_SVec3(vel.x, vel.y, vel.z);
@@ -489,9 +489,9 @@ __device__ void computeCellForces(
 
 	if (startIndex != 0xffffffff)
 	{ 
-		const unsigned int endIndex = FETCH(cellEnd, gridHash);
+		const SUint endIndex = FETCH(cellEnd, gridHash);
 
-        for (unsigned int j=startIndex; j<endIndex; j++)
+        for (SUint j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
 			{
@@ -560,12 +560,12 @@ __device__ void computeCellForces(
 
 	if (startIndex != 0xffffffff)
 	{
-		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
+		const SUint endIndex = FETCH(cellBoundaryEnd, gridHash);
 
 		//loop over rigid boundary particles
-        for (unsigned int j=startIndex; j<endIndex; j++)
+        for (SUint j=startIndex; j<endIndex; j++)
 		{
-			const unsigned int originalIndex = gridBoundaryIndex[j];
+			const SUint originalIndex = gridBoundaryIndex[j];
 
 			//boundary data
 			const SReal vbi  = FETCH(oldBoundaryVbi, originalIndex);
@@ -614,21 +614,21 @@ void computeForces(
               SReal        * oldPres,           
               SVec4       * oldForces,        
               SVec4       * oldCol,          
-			  unsigned int * gridBoundaryIndex,
+			  SUint * gridBoundaryIndex,
 			  SVec4       * oldBoundaryPos,
 			  SReal        * oldBoundaryVbi,
-              unsigned int * gridParticleIndex, 
-              unsigned int * cellStart,
-              unsigned int * cellEnd,
-			  unsigned int * cellBoundaryStart,
-			  unsigned int * cellBoundaryEnd,
-              unsigned int    numParticles)
+              SUint * gridParticleIndex, 
+              SUint * cellStart,
+              SUint * cellEnd,
+			  SUint * cellBoundaryStart,
+			  SUint * cellBoundaryEnd,
+              SUint    numParticles)
 {
-    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if (index >= numParticles) return;
 
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 
     // read particle data from sorted arrays
     const SVec3 pos = make_SVec3(FETCH(oldPos, originalIndex));
@@ -686,22 +686,22 @@ void computeForces(
 /***********
 *  IISPH  *
 ***********/
-__device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPos, SVec3 pos, SVec4* oldPos, unsigned int index, unsigned int* cellStart, unsigned int* cellEnd,
+__device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPos, SVec3 pos, SVec4* oldPos, SUint index, SUint* cellStart, SUint* cellEnd,
 		SReal ir, SReal kp, SReal rd, SReal pm)
 {
-	const unsigned int gridHash = calcGridHash(gridPos);
-	const unsigned int startIndex = FETCH(cellStart, gridHash);
+	const SUint gridHash = calcGridHash(gridPos);
+	const SUint startIndex = FETCH(cellStart, gridHash);
 
 	SVec3 res  = make_SVec3(0.0, 0.0, 0.0);
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
 
 	if (startIndex != 0xffffffff)
 	{ 
-		const unsigned int endIndex = FETCH(cellEnd, gridHash);
+		const SUint endIndex = FETCH(cellEnd, gridHash);
 
 		const SReal dt = sph_params.timestep;
 
-        for (unsigned int j=startIndex; j<endIndex; j++)
+        for (SUint j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
 			{
@@ -728,21 +728,21 @@ __device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPo
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ SVec3 computeDisplacementFactorBoundaryCell(SReal dens, SReal mj, int3 gridPos, SVec3 pos, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd,
+__device__ SVec3 computeDisplacementFactorBoundaryCell(SReal dens, SReal mj, int3 gridPos, SVec3 pos, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd,
 		SReal ir, SReal kpg, SReal rd, SReal pm, SReal dt)
 {
-	const unsigned int gridHash = calcGridHash(gridPos);
-	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
+	const SUint gridHash = calcGridHash(gridPos);
+	const SUint startIndex = FETCH(cellBoundaryStart, gridHash);
 
 	SVec3 res  = make_SVec3(0.0, 0.0, 0.0);
 	const SVec3 pos1 = make_SVec3(pos.x, pos.y, pos.z);
 
 	if (startIndex != 0xffffffff)
 	{ 
-		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
+		const SUint endIndex = FETCH(cellBoundaryEnd, gridHash);
 		const SReal dt = sph_params.timestep;
 
-        for (unsigned int j=startIndex; j<endIndex; j++)
+        for (SUint j=startIndex; j<endIndex; j++)
 		{
 			const SVec3 pos2 = make_SVec3(FETCH(oldBoundaryPos, j));
 			const SReal  vbi = FETCH(oldBoundaryVbi, j);
@@ -775,14 +775,14 @@ __global__ void computeIisphDensity(
 	SReal                       * oldPres,
 	SVec4                      * oldForces,
 	SVec4                      * oldCol,
-	unsigned int                * cellStart,
-	unsigned int                * cellEnd,
-	unsigned int                * gridParticleIndex,
+	SUint                * cellStart,
+	SUint                * cellEnd,
+	SUint                * gridParticleIndex,
 	SVec4                      * oldBoundaryPos,
 	SReal                       * oldBoundaryVbi,
-	unsigned int                * cellBoundaryStart,
-	unsigned int                * cellBoundaryEnd,
-	unsigned int                * gridBoundaryIndex,
+	SUint                * cellBoundaryStart,
+	SUint                * cellBoundaryEnd,
+	SUint                * gridBoundaryIndex,
 	SReal                       * oldDensAdv,
 	SReal                       * oldDensCorr,
 	SReal                       * oldP_l,
@@ -795,14 +795,14 @@ __global__ void computeIisphDensity(
 	SVec4                      * oldDiiBoundary,
 	SVec4                      * oldSumDij,
 	SVec4                      * oldNormal,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int numCells
+	SUint numParticles,
+	SUint numBoundaries,
+	SUint numCells
 )
 {
-	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+	const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 	
 	//global memory reads
 	const SVec3 pos1 = make_SVec3(FETCH(oldPos, originalIndex));
@@ -855,14 +855,14 @@ __global__ void computeDisplacementFactor(
 	SReal                       * oldPres,
 	SVec4                       * oldForces,
 	SVec4                       * oldCol,
-	unsigned int                * cellStart,
-	unsigned int                * cellEnd,
-	unsigned int                * gridParticleIndex,
+	SUint                * cellStart,
+	SUint                * cellEnd,
+	SUint                * gridParticleIndex,
 	SVec4                       * oldBoundaryPos,
 	SReal                       * oldBoundaryVbi,
-	unsigned int                * cellBoundaryStart,
-	unsigned int                * cellBoundaryEnd,
-	unsigned int                * gridBoundaryIndex,
+	SUint                * cellBoundaryStart,
+	SUint                * cellBoundaryEnd,
+	SUint                * gridBoundaryIndex,
 	SReal                       * oldDensAdv,
 	SReal                       * oldDensCorr,
 	SReal                       * oldP_l,
@@ -875,16 +875,16 @@ __global__ void computeDisplacementFactor(
 	SVec4                       * oldDiiBoundary,
 	SVec4                       * oldSumDij,
 	SVec4                       * oldNormal,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int numCells)
+	SUint numParticles,
+	SUint numBoundaries,
+	SUint numCells)
 {
 	/****************************
 	*  COMPUTE PARTICLE INDEX  *
 	****************************/
-    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 	
 	//global memory reads
 	const SVec3 pos1 = make_SVec3(FETCH(oldPos, originalIndex));
@@ -965,16 +965,16 @@ __global__ void computeDisplacementFactor(
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ SReal rho_adv_fluid(SReal ir, SReal pm, unsigned int index, SVec3 pos1, SVec3 velAdv1, SReal kpg, SVec4* oldPos, SVec4* oldVelAdv, int3 neighbourPos, unsigned int* cellStart, unsigned int* cellEnd)
+__device__ SReal rho_adv_fluid(SReal ir, SReal pm, SUint index, SVec3 pos1, SVec3 velAdv1, SReal kpg, SVec4* oldPos, SVec4* oldVelAdv, int3 neighbourPos, SUint* cellStart, SUint* cellEnd)
 {
-	const unsigned int gridHash = calcGridHash(neighbourPos);
-	const unsigned int startIndex = FETCH(cellStart, gridHash);
+	const SUint gridHash = calcGridHash(neighbourPos);
+	const SUint startIndex = FETCH(cellStart, gridHash);
 
 	SReal res  = 0.0;
 	if (startIndex != 0xffffffff)
 	{ 
-		const unsigned int endIndex = FETCH(cellEnd, gridHash);
-        for (unsigned int j=startIndex; j<endIndex; j++)
+		const SUint endIndex = FETCH(cellEnd, gridHash);
+        for (SUint j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
 			{
@@ -1003,16 +1003,16 @@ __device__ SReal rho_adv_fluid(SReal ir, SReal pm, unsigned int index, SVec3 pos
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ SReal rho_adv_boundary(SVec3 pos1, SVec3 vel1, SReal rd, SReal pm, SReal ir, SReal kpg, int3 neighbourPos, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd)
+__device__ SReal rho_adv_boundary(SVec3 pos1, SVec3 vel1, SReal rd, SReal pm, SReal ir, SReal kpg, int3 neighbourPos, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd)
 {
-	const unsigned int gridHash = calcGridHash(neighbourPos);
-	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
+	const SUint gridHash = calcGridHash(neighbourPos);
+	const SUint startIndex = FETCH(cellBoundaryStart, gridHash);
 	SReal res = 0.0;
 
 	if (startIndex != 0xffffffff)
 	{
-		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
-		for (unsigned int j=startIndex; j<endIndex; j++)
+		const SUint endIndex = FETCH(cellBoundaryEnd, gridHash);
+		for (SUint j=startIndex; j<endIndex; j++)
 		{
 			const SVec3 vb   = make_SVec3(0.1f, 0.1f, 0.1f);
 			const SVec3 bpos = make_SVec3(FETCH(oldBoundaryPos, j));
@@ -1036,16 +1036,16 @@ __device__ SReal rho_adv_boundary(SVec3 pos1, SVec3 vel1, SReal rd, SReal pm, SR
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ SReal compute_aii_cell(SReal ir, SReal dt, SReal pm, SReal kpg, SReal dens, SVec3 pos1, SVec3 diif, SVec3 diib, SVec4* oldPos, unsigned int* cellStart, unsigned int* cellEnd, int3 neighbourPos, unsigned int index)
+__device__ SReal compute_aii_cell(SReal ir, SReal dt, SReal pm, SReal kpg, SReal dens, SVec3 pos1, SVec3 diif, SVec3 diib, SVec4* oldPos, SUint* cellStart, SUint* cellEnd, int3 neighbourPos, SUint index)
 {
-	const unsigned int gridHash = calcGridHash(neighbourPos);
-	const unsigned int startIndex = FETCH(cellStart, gridHash);
+	const SUint gridHash = calcGridHash(neighbourPos);
+	const SUint startIndex = FETCH(cellStart, gridHash);
 
 	SReal res  = 0.0;
 	if (startIndex != 0xffffffff)
 	{ 
-		const unsigned int endIndex = FETCH(cellEnd, gridHash);
-        for (unsigned int j=startIndex; j<endIndex; j++)
+		const SUint endIndex = FETCH(cellEnd, gridHash);
+        for (SUint j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
 			{
@@ -1071,16 +1071,16 @@ __device__ SReal compute_aii_cell(SReal ir, SReal dt, SReal pm, SReal kpg, SReal
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ SReal compute_aii_cell_boundary(SReal rd, SReal ir, SReal kpg, SVec3 diif, SVec3 diib, SVec3 pos1, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, int3 neighbourPos)
+__device__ SReal compute_aii_cell_boundary(SReal rd, SReal ir, SReal kpg, SVec3 diif, SVec3 diib, SVec3 pos1, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, int3 neighbourPos)
 {
-	const unsigned int gridHash = calcGridHash(neighbourPos);
-	const unsigned int startIndex = FETCH(cellBoundaryStart, gridHash);
+	const SUint gridHash = calcGridHash(neighbourPos);
+	const SUint startIndex = FETCH(cellBoundaryStart, gridHash);
 	SReal res = 0.0;
 
 	if (startIndex != 0xffffffff)
 	{
-		const unsigned int endIndex = FETCH(cellBoundaryEnd, gridHash);
-		for (unsigned int j=startIndex; j<endIndex; j++)
+		const SUint endIndex = FETCH(cellBoundaryEnd, gridHash);
+		for (SUint j=startIndex; j<endIndex; j++)
 		{
 			const SVec3 pos2 = make_SVec3(FETCH(oldBoundaryPos, j));
 			const SVec3 p1p2 = pos1 - pos2;
@@ -1110,14 +1110,14 @@ __global__ void computeAdvectionFactor(
 	SReal        * oldPres,
 	SVec4        * oldForces,
 	SVec4        * oldCol,
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * gridParticleIndex,
+	SUint * cellStart,
+	SUint * cellEnd,
+	SUint * gridParticleIndex,
 	SVec4        * oldBoundaryPos,
 	SReal        * oldBoundaryVbi,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	unsigned int * gridBoundaryIndex,
+	SUint * cellBoundaryStart,
+	SUint * cellBoundaryEnd,
+	SUint * gridBoundaryIndex,
 	SReal        * oldDensAdv,
 	SReal        * oldDensCorr,
 	SReal        * oldP_l,
@@ -1130,13 +1130,13 @@ __global__ void computeAdvectionFactor(
 	SVec4        * oldDiiBoundary,
 	SVec4        * oldSumDij,
 	SVec4        * oldNormal,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int numCells)
+	SUint numParticles,
+	SUint numBoundaries,
+	SUint numCells)
 {
-    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 
 	//global memory reads
 	const SVec3 pos1 = make_SVec3(FETCH(oldPos, originalIndex));
@@ -1212,16 +1212,16 @@ __global__ void computeAdvectionFactor(
 //====================================================================================================  
 //====================================================================================================  
 
-__device__ SVec3 dijpjcell(SReal ir, SReal pm, SReal kpg, SVec3 pos1, SVec4* oldPos, SReal* oldDens, SReal* oldP_l, unsigned int index, unsigned int *cellStart, unsigned int *cellEnd, int3 neighbourPos)
+__device__ SVec3 dijpjcell(SReal ir, SReal pm, SReal kpg, SVec3 pos1, SVec4* oldPos, SReal* oldDens, SReal* oldP_l, SUint index, SUint *cellStart, SUint *cellEnd, int3 neighbourPos)
 {
 	SVec3 res = make_SVec3(0.0, 0.0, 0.0);
-	const unsigned int gridHash = calcGridHash(neighbourPos);
-	const unsigned int startIndex = FETCH(cellStart, gridHash);
+	const SUint gridHash = calcGridHash(neighbourPos);
+	const SUint startIndex = FETCH(cellStart, gridHash);
 
 	if (startIndex != 0xffffffff)
 	{ 
-		const unsigned int endIndex = FETCH(cellEnd, gridHash);
-        for (unsigned int j=startIndex; j<endIndex; j++)
+		const SUint endIndex = FETCH(cellEnd, gridHash);
+        for (SUint j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
 			{
@@ -1255,14 +1255,14 @@ __global__ void computeSumDijPj(
 	SReal        * oldPres,
 	SVec4        * oldForces,
 	SVec4        * oldCol,
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * gridParticleIndex,
+	SUint * cellStart,
+	SUint * cellEnd,
+	SUint * gridParticleIndex,
 	SVec4        * oldBoundaryPos,
 	SReal        * oldBoundaryVbi,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	unsigned int * gridBoundaryIndex,
+	SUint * cellBoundaryStart,
+	SUint * cellBoundaryEnd,
+	SUint * gridBoundaryIndex,
 	SReal        * oldDensAdv,
 	SReal        * oldDensCorr,
 	SReal        * oldP_l,
@@ -1275,14 +1275,14 @@ __global__ void computeSumDijPj(
 	SVec4        * oldDiiBoundary,
 	SVec4        * oldSumDij,
 	SVec4        * oldNormal,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int numCells
+	SUint numParticles,
+	SUint numBoundaries,
+	SUint numCells
 		)
 {
-    const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 
 	//global reads
 	const SVec3 pos1 = make_SVec3(FETCH(oldPos, originalIndex));
@@ -1327,14 +1327,14 @@ __global__ void computePressure(
 	SReal        * oldPres,
 	SVec4        * oldForces,
 	SVec4        * oldCol,
-	unsigned int * cellStart,
-	unsigned int * cellEnd,
-	unsigned int * gridParticleIndex,
+	SUint * cellStart,
+	SUint * cellEnd,
+	SUint * gridParticleIndex,
 	SVec4        * oldBoundaryPos,
 	SReal        * oldBoundaryVbi,
-	unsigned int * cellBoundaryStart,
-	unsigned int * cellBoundaryEnd,
-	unsigned int * gridBoundaryIndex,
+	SUint * cellBoundaryStart,
+	SUint * cellBoundaryEnd,
+	SUint * gridBoundaryIndex,
 	SReal        * oldDensAdv,
 	SReal        * oldDensCorr,
 	SReal        * oldP_l,
@@ -1347,14 +1347,14 @@ __global__ void computePressure(
 	SVec4        * oldDiiBoundary,
 	SVec4        * oldSumDij,
 	SVec4        * oldNormal,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int numCells
+	SUint numParticles,
+	SUint numBoundaries,
+	SUint numCells
 		)
 {
-	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+	const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 
 	//global reads
 	const SVec3 pos1         = make_SVec3(FETCH(oldPos, originalIndex));
@@ -1389,15 +1389,15 @@ __global__ void computePressure(
 			for (int x=-1; x<=1; x++)
 			{
 				const int3 neighbourPos = gridPos + make_int3(x, y, z);
-				const unsigned int gridHash = calcGridHash(neighbourPos);
-				const unsigned int startIndex = FETCH(cellStart, gridHash);
+				const SUint gridHash = calcGridHash(neighbourPos);
+				const SUint startIndex = FETCH(cellStart, gridHash);
 
 				if (startIndex != 0xffffffff)
 				{ 
-					const unsigned int endIndex = FETCH(cellEnd, gridHash);
+					const SUint endIndex = FETCH(cellEnd, gridHash);
 
 					//loop over fluid neighbors
-					for (unsigned int j=startIndex; j<endIndex; j++)
+					for (SUint j=startIndex; j<endIndex; j++)
 					{
 						if(j != index)
 						{
@@ -1428,13 +1428,13 @@ __global__ void computePressure(
 					}
 				}
 
-				const unsigned int startIndexB = FETCH(cellBoundaryStart, gridHash);
+				const SUint startIndexB = FETCH(cellBoundaryStart, gridHash);
 				if (startIndexB != 0xffffffff) 
 				{
-					const unsigned int endIndexB = FETCH(cellBoundaryEnd, gridHash);
+					const SUint endIndexB = FETCH(cellBoundaryEnd, gridHash);
 
 					//loop over boundary neighbors
-					for (unsigned int j=startIndex; j<endIndexB; j++)
+					for (SUint j=startIndex; j<endIndexB; j++)
 					{
 						const SVec3 posb = make_SVec3(FETCH(oldBoundaryPos, j));
 						const SVec3 p1p2 = pos1 - posb;
@@ -1494,14 +1494,14 @@ __global__ void computePressureForce(
 		SReal        * oldPres,
 		SVec4        * oldForces,
 		SVec4        * oldCol,
-		unsigned int * cellStart,
-		unsigned int * cellEnd,
-		unsigned int * gridParticleIndex,
+		SUint * cellStart,
+		SUint * cellEnd,
+		SUint * gridParticleIndex,
 		SVec4        * oldBoundaryPos,
 		SReal        * oldBoundaryVbi,
-		unsigned int * cellBoundaryStart,
-		unsigned int * cellBoundaryEnd,
-		unsigned int * gridBoundaryIndex,
+		SUint * cellBoundaryStart,
+		SUint * cellBoundaryEnd,
+		SUint * gridBoundaryIndex,
 		SReal        * oldDensAdv,
 		SReal        * oldDensCorr,
 		SReal        * oldP_l,
@@ -1514,14 +1514,14 @@ __global__ void computePressureForce(
 		SVec4        * oldDiiBoundary,
 		SVec4        * oldSumDij,
 		SVec4        * oldNormal,
-		unsigned int numParticles,
-		unsigned int numBoundaries,
-		unsigned int numCells
+		SUint numParticles,
+		SUint numBoundaries,
+		SUint numCells
 		)
 {
-	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+	const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 
 	//global reads
 	const SVec3 pos1 = make_SVec3(FETCH(oldPos, originalIndex));
@@ -1550,13 +1550,13 @@ __global__ void computePressureForce(
 			for (int x=-1; x<=1; x++)
 			{
 				const int3 neighbourPos = gridPos + make_int3(x, y, z);
-				const unsigned int gridHash = calcGridHash(neighbourPos);
-				const unsigned int startIndex = FETCH(cellStart, gridHash);
+				const SUint gridHash = calcGridHash(neighbourPos);
+				const SUint startIndex = FETCH(cellStart, gridHash);
 
 				if (startIndex != 0xffffffff)
 				{ 
-					const unsigned int endIndex = FETCH(cellEnd, gridHash);
-					for (unsigned int j=startIndex; j<endIndex; j++)
+					const SUint endIndex = FETCH(cellEnd, gridHash);
+					for (SUint j=startIndex; j<endIndex; j++)
 					{
 						if(j != index)
 						{
@@ -1578,11 +1578,11 @@ __global__ void computePressureForce(
 					}
 				}
 
-				const unsigned int startIndexB = FETCH(cellBoundaryStart, gridHash);
+				const SUint startIndexB = FETCH(cellBoundaryStart, gridHash);
 				if (startIndexB != 0xffffffff) 
 				{
-					const unsigned int endIndexB = FETCH(cellBoundaryEnd, gridHash);
-					for (unsigned int j=startIndex; j<endIndexB; j++)
+					const SUint endIndexB = FETCH(cellBoundaryEnd, gridHash);
+					for (SUint j=startIndex; j<endIndexB; j++)
 					{
 						const SVec3 posb = make_SVec3(FETCH(oldBoundaryPos, j));
 						const SVec3 p1p2 = pos1 - posb;
@@ -1620,14 +1620,14 @@ __global__ void iisph_integrate(
 			SVec4* oldVel,
 			SVec4* oldVelAdv,
 			SVec4* oldForcesP,
-			unsigned int* gridParticleIndex,
-			unsigned int numParticles
+			SUint* gridParticleIndex,
+			SUint numParticles
 			)
 {
-	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+	const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
 
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 
 	const SVec3 pos1    = make_SVec3(FETCH(oldPos, originalIndex));
 	const SVec3 velAdv1 = make_SVec3(FETCH(oldVelAdv, originalIndex));
@@ -1653,14 +1653,14 @@ __global__ void iisph_integrate(
 /************
 *  PCISPH  *
 ************/
-__global__ void pciComputePosVelAdv(SVec4* oldPos, SVec4* oldVel, SReal* oldDens, SReal* oldPres, SVec4* oldForces, SVec4* oldCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* oldRhoAdv, SVec4* oldVelAdvPci, 
-				SVec4* oldForcesAdvPci, SVec4* oldForcesP, SVec4* oldNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+__global__ void pciComputePosVelAdv(SVec4* oldPos, SVec4* oldVel, SReal* oldDens, SReal* oldPres, SVec4* oldForces, SVec4* oldCol, SUint* cellStart, SUint* cellEnd, SUint* gridParticleIndex,
+				SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, SUint* gridBoundaryIndex, SReal* oldRhoAdv, SVec4* oldVelAdvPci, 
+				SVec4* oldForcesAdvPci, SVec4* oldForcesP, SVec4* oldNormal, SUint numParticles, SUint numBoundaries, SUint numCells)
 {
 	//particle index
-	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+	const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
-	const unsigned int originalIndex = gridParticleIndex[index];
+	const SUint originalIndex = gridParticleIndex[index];
 
 	//global memory reads
 	const SVec3 pos1 = make_SVec3(FETCH(oldPos, originalIndex));
@@ -1712,14 +1712,14 @@ __global__ void pciComputePosVelAdv(SVec4* oldPos, SVec4* oldVel, SReal* oldDens
 
 }
 
-__global__ void pciPressureSolve(SReal* oldPos, SReal* oldVel, SReal* oldDens, SReal* oldPres, SReal* oldForces, SReal* oldCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SReal* oldBoundaryPos, SReal* oldBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* oldRhoAdv, SReal* oldVelAdv, 
-				SReal* oldForcesAdv, SReal* oldForcesP, SReal* oldNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+__global__ void pciPressureSolve(SReal* oldPos, SReal* oldVel, SReal* oldDens, SReal* oldPres, SReal* oldForces, SReal* oldCol, SUint* cellStart, SUint* cellEnd, SUint* gridParticleIndex,
+				SReal* oldBoundaryPos, SReal* oldBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, SUint* gridBoundaryIndex, SReal* oldRhoAdv, SReal* oldVelAdv, 
+				SReal* oldForcesAdv, SReal* oldForcesP, SReal* oldNormal, SUint numParticles, SUint numBoundaries, SUint numCells)
 {
-	const unsigned int index = blockIdx.x*blockDim.x + threadIdx.x;
+	const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
 
-	/*const unsigned int originalIndex = gridParticleIndex[index];*/
+	/*const SUint originalIndex = gridParticleIndex[index];*/
 }
 
 #endif//_PARTICLES_KERNEL_IMPL_CUH

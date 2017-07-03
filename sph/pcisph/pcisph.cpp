@@ -20,8 +20,8 @@
 
 #include <cuda_runtime.h>
 
-namespace CFD
-{
+NEREUS_NAMESPACE_BEGIN
+
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
@@ -125,8 +125,8 @@ void PCISPH::_initialize()
 {
 	SPH::_initialize();
 
-	unsigned int memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
-	unsigned int memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
+	SUint memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
+	SUint memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
 
 	//SReal
 	allocateArray((void**)&m_dSortedRhoAdv, memSizeFloat);
@@ -205,4 +205,4 @@ void PCISPH::update()
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-}
+NEREUS_NAMESPACE_END

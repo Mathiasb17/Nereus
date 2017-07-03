@@ -29,7 +29,7 @@ EXTERN_C_BEGIN
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-SReal maxDensity(SReal* dDensities, unsigned int numParticles)
+SReal maxDensity(SReal* dDensities, SUint numParticles)
 {
 	
 	SReal res = *thrust::max_element(thrust::device, 
@@ -43,7 +43,7 @@ SReal maxDensity(SReal* dDensities, unsigned int numParticles)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-SVec3 maxVelocity(SReal* dVelocities, unsigned int numParticles)
+SVec3 maxVelocity(SReal* dVelocities, SUint numParticles)
 {
 	SVec3 res = *thrust::max_element(thrust::device,
 			thrust::device_ptr<SVec3>((SVec3*)dVelocities),
@@ -55,11 +55,11 @@ SVec3 maxVelocity(SReal* dVelocities, unsigned int numParticles)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles)
+void sortParticles(SUint *dGridParticleHash, SUint *dGridParticleIndex, SUint numParticles)
 {
-	thrust::sort_by_key(thrust::device_ptr<unsigned int>(dGridParticleHash),
-			thrust::device_ptr<unsigned int>(dGridParticleHash + numParticles),
-			thrust::device_ptr<unsigned int>(dGridParticleIndex));
+	thrust::sort_by_key(thrust::device_ptr<SUint>(dGridParticleHash),
+			thrust::device_ptr<SUint>(dGridParticleHash + numParticles),
+			thrust::device_ptr<SUint>(dGridParticleIndex));
 }
 
 //==================================================================================================== 
@@ -123,7 +123,7 @@ void copyArrayToDevice(void *device, const void *host, int offset, int size)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void registerGLBufferObject(unsigned int vbo, struct cudaGraphicsResource **cuda_vbo_resource)
+void registerGLBufferObject(SUint vbo, struct cudaGraphicsResource **cuda_vbo_resource)
 {
 	checkCudaErrors(cudaGraphicsGLRegisterBuffer(cuda_vbo_resource, vbo,
 				cudaGraphicsMapFlagsNone));
@@ -190,7 +190,7 @@ void setParameters(SphSimParams *hostParams)
 //==================================================================================================== 
 //==================================================================================================== 
 //Round a / b to nearest higher integer value
-unsigned int iDivUp(unsigned int a, unsigned int b)
+SUint iDivUp(SUint a, SUint b)
 {
 	return (a % b != 0) ? (a / b + 1) : (a / b);
 }
@@ -199,7 +199,7 @@ unsigned int iDivUp(unsigned int a, unsigned int b)
 //==================================================================================================== 
 //==================================================================================================== 
 // compute grid and thread block size for a given number of elements
-void computeGridSize(unsigned int n, unsigned int blockSize, unsigned int &numBlocks, unsigned int &numThreads)
+void computeGridSize(SUint n, SUint blockSize, SUint &numBlocks, SUint &numThreads)
 {
 	numThreads = min(blockSize, n);
 	numBlocks = iDivUp(n, numThreads);
@@ -212,7 +212,7 @@ void integrateSystem(SReal *pos,
 		SReal *vel,
 		SReal *forces,
 		SReal deltaTime,
-		unsigned int numParticles)
+		SUint numParticles)
 {
 	thrust::device_ptr<SVec4> d_pos4((SVec4 *)pos);
 	thrust::device_ptr<SVec4> d_vel4((SVec4 *)vel);
@@ -227,12 +227,12 @@ void integrateSystem(SReal *pos,
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void calcHash(unsigned int  *gridParticleHash,
-		unsigned int  *gridParticleIndex,
+void calcHash(SUint  *gridParticleHash,
+		SUint  *gridParticleIndex,
 		SReal *pos,
 		int    numParticles)
 {
-	unsigned int numThreads, numBlocks;
+	SUint numThreads, numBlocks;
 	computeGridSize(numParticles, 256, numBlocks, numThreads);
 
 	// execute the kernel
@@ -251,71 +251,71 @@ void calcHash(unsigned int  *gridParticleHash,
 /*********************
  *  REORDERING CALL  *
  *********************/
-void reorderDataAndFindCellStartDBoundary(unsigned int *cellStart,
-										unsigned int *cellEnd,
+void reorderDataAndFindCellStartDBoundary(SUint *cellStart,
+										SUint *cellEnd,
 										SReal *sortedPos,
 										SReal *sortedVbi,
-										unsigned int *gridParticleHash,
-										unsigned int *gridParticleIndex,
+										SUint *gridParticleHash,
+										SUint *gridParticleIndex,
 										SReal *oldPos,
 										SReal *oldVbi,
-										unsigned int numBoundaries,
-										unsigned int numCells
+										SUint numBoundaries,
+										SUint numCells
 										)
 {
-	unsigned int numThreads, numBlocks;
+	SUint numThreads, numBlocks;
 	computeGridSize(numBoundaries, 64, numBlocks, numThreads);
 
-	checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(unsigned int)));
+	checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(SUint)));
 
 #if USE_TEX
 	checkCudaErrors(cudaBindTexture(0, oldBoundaryPosTex, oldPos, numBoundaries*sizeof(SVec4)));
 	checkCudaErrors(cudaBindTexture(0, oldBoundaryVbiTex, oldVbi, numBoundaries*sizeof(SReal)));
 #endif
-	unsigned int smemSize = sizeof(unsigned int)*(numThreads+1);
+	SUint smemSize = sizeof(SUint)*(numThreads+1);
 
 	reorderDataAndFindCellStartDBoundary<<<numBlocks, numThreads, smemSize>>>(
 			cellStart,
 			cellEnd,
 			(SVec4*) sortedPos,
 			(SReal*)  sortedVbi,
-			(unsigned int *)gridParticleHash,
-			(unsigned int *)gridParticleIndex,
+			(SUint *)gridParticleHash,
+			(SUint *)gridParticleIndex,
 			(SVec4*) oldPos,
 			(SReal*)  oldVbi,
 			numBoundaries);
 
 	getLastCudaError("Kernel execution failed: reorderDataAndFindCellStartD");
 #if USE_TEX
-	checkCudaErrors(cudaBindTexture(0, cellBoundaryStartTex, cellStart, numCells*sizeof(unsigned int)));
-	checkCudaErrors(cudaBindTexture(0, cellBoundaryEndTex, cellEnd, numCells*sizeof(unsigned int)));
+	checkCudaErrors(cudaBindTexture(0, cellBoundaryStartTex, cellStart, numCells*sizeof(SUint)));
+	checkCudaErrors(cudaBindTexture(0, cellBoundaryEndTex, cellEnd, numCells*sizeof(SUint)));
 #endif
 }
 
-void reorderDataAndFindCellStart(unsigned int  *cellStart,
-		unsigned int  *cellEnd,
+void reorderDataAndFindCellStart(SUint  *cellStart,
+		SUint  *cellEnd,
 		SReal *sortedPos,
 		SReal *sortedVel,
 		SReal *sortedDens,
 		SReal *sortedPres,
 		SReal *sortedForces,
 		SReal *sortedCol,
-		unsigned int  *gridParticleHash,
-		unsigned int  *gridParticleIndex,
+		SUint  *gridParticleHash,
+		SUint  *gridParticleIndex,
 		SReal *oldPos,
 		SReal *oldVel,
 		SReal *oldDens,
 		SReal *oldPres,
 		SReal *oldForces,
 		SReal *oldCol,
-		unsigned int   numParticles,
-		unsigned int   numCells)
+		SUint   numParticles,
+		SUint   numCells)
 {
-	unsigned int numThreads, numBlocks;
+	SUint numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 	// set all cells to empty
-	checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(unsigned int)));
+	checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(SUint)));
 
 #if USE_TEX
 	checkCudaErrors(cudaBindTexture(0, oldPosTex, oldPos, numParticles*sizeof(SVec4)));
@@ -326,7 +326,7 @@ void reorderDataAndFindCellStart(unsigned int  *cellStart,
 	checkCudaErrors(cudaBindTexture(0, oldColTex, oldCol, numParticles*sizeof(SVec4)));
 #endif
 
-	unsigned int smemSize = sizeof(unsigned int)*(numThreads+1);
+	SUint smemSize = sizeof(SUint)*(numThreads+1);
 	reorderDataAndFindCellStartD<<< numBlocks, numThreads, smemSize>>>(
 			cellStart,
 			cellEnd,
@@ -372,15 +372,15 @@ void computeDensityPressure(
 		SReal *sortedCol,
 		SReal *sortedBoundaryPos,
 		SReal *sortedBoundaryVbi,
-		unsigned int  *gridParticleIndex,
-		unsigned int  *cellStart,
-		unsigned int  *cellEnd,
-		unsigned int *gridBoundaryIndex,
-		unsigned int *cellBoundaryStart,
-		unsigned int *cellBoundaryEnd,
-		unsigned int   numParticles,
-		unsigned int   numCells,
-		unsigned int   numBoundaries)
+		SUint  *gridParticleIndex,
+		SUint  *cellStart,
+		SUint  *cellEnd,
+		SUint *gridBoundaryIndex,
+		SUint *cellBoundaryStart,
+		SUint *cellBoundaryEnd,
+		SUint   numParticles,
+		SUint   numCells,
+		SUint   numBoundaries)
 {
 #if USE_TEX
 	checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(SVec4)));
@@ -390,12 +390,12 @@ void computeDensityPressure(
 	checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForces, numParticles*sizeof(SVec4)));
 	checkCudaErrors(cudaBindTexture(0, oldColTex, sortedCol, numParticles*sizeof(SVec4)));
 
-	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
-	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
+	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(SUint)));
+	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(SUint)));
 #endif
 
 	// thread per particle
-	unsigned int numThreads, numBlocks;
+	SUint numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 	// execute the kernel
@@ -467,14 +467,14 @@ void predictAdvection(SReal* sortedPos,
 	SReal                       * sortedPres,
 	SReal                       * sortedForces,
 	SReal                       * sortedCol,
-	unsigned int                * cellStart,
-	unsigned int                * cellEnd,
-	unsigned int                * gridParticleIndex,
+	SUint                * cellStart,
+	SUint                * cellEnd,
+	SUint                * gridParticleIndex,
 	SReal						* sortedBoundaryPos,
 	SReal						* sortedBoundaryVbi,
-	unsigned int                * cellBoundaryStart,
-	unsigned int                * cellBoundaryEnd,
-	unsigned int                * gridBoundaryIndex,
+	SUint                * cellBoundaryStart,
+	SUint                * cellBoundaryEnd,
+	SUint                * gridBoundaryIndex,
 	SReal                       * sortedDensAdv,
 	SReal                       * sortedDensCorr,
 	SReal                       * sortedP_l,
@@ -487,9 +487,9 @@ void predictAdvection(SReal* sortedPos,
 	SReal                       * sortedDiiBoundary,
 	SReal                       * sortedSumDij,
 	SReal                       * sortedNormal,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int numCells)
+	SUint numParticles,
+	SUint numBoundaries,
+	SUint numCells)
 {
 #if USE_TEX
 	checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(SVec4)));
@@ -499,8 +499,8 @@ void predictAdvection(SReal* sortedPos,
 	checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForces, numParticles*sizeof(SVec4)));
 	checkCudaErrors(cudaBindTexture(0, oldColTex, sortedCol, numParticles*sizeof(SVec4)));
 
-	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
-	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
+	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(SUint)));
+	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(SUint)));
 
 	checkCudaErrors(cudaBindTexture(0, oldDensAdvTex, sortedDensAdv, numParticles*sizeof(SReal)));
 	checkCudaErrors(cudaBindTexture(0, oldDensCorrTex, sortedDensCorr, numParticles*sizeof(SReal)));
@@ -517,7 +517,7 @@ void predictAdvection(SReal* sortedPos,
 	checkCudaErrors(cudaBindTexture(0, oldNormalTex, sortedNormal, numParticles*sizeof(SVec4)));
 #endif
 
-	unsigned int numThreads, numBlocks;
+	SUint numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 	computeIisphDensity<<<numBlocks, numThreads>>>(
@@ -650,11 +650,11 @@ void predictAdvection(SReal* sortedPos,
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, SUint* cellStart, SUint* cellEnd, SUint* gridParticleIndex,
 					  SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi,
-					  unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedDensAdv, SReal* sortedDensCorr, SReal* sortedP_l,  SReal* sortedPreviousP, 
+					  SUint* cellBoundaryStart, SUint* cellBoundaryEnd, SUint* gridBoundaryIndex, SReal* sortedDensAdv, SReal* sortedDensCorr, SReal* sortedP_l,  SReal* sortedPreviousP, 
 					  SReal* sortedAii, SReal* sortedVelAdv, SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedDiiFluid, SReal* sortedDiiBoundary, SReal* sortedSumDij, SReal* sortedNormal,
-					  unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+					  SUint numParticles, SUint numBoundaries, SUint numCells)
 {
 #if USE_TEX
 	checkCudaErrors(cudaBindTexture(0, oldPosTex, sortedPos, numParticles*sizeof(SVec4)));
@@ -664,8 +664,8 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 	checkCudaErrors(cudaBindTexture(0, oldForcesTex, sortedForces, numParticles*sizeof(SVec4)));
 	checkCudaErrors(cudaBindTexture(0, oldColTex, sortedCol, numParticles*sizeof(SVec4)));
 
-	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(unsigned int)));
-	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(unsigned int)));
+	checkCudaErrors(cudaBindTexture(0, cellStartTex, cellStart, numCells*sizeof(SUint)));
+	checkCudaErrors(cudaBindTexture(0, cellEndTex, cellEnd, numCells*sizeof(SUint)));
 
 	checkCudaErrors(cudaBindTexture(0, oldDensAdvTex, sortedDensAdv, numParticles*sizeof(SReal)));
 	checkCudaErrors(cudaBindTexture(0, oldDensCorrTex, sortedDensCorr, numParticles*sizeof(SReal)));
@@ -681,10 +681,10 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 	checkCudaErrors(cudaBindTexture(0, oldSumDijTex, sortedSumDij, numParticles*sizeof(SVec4)));
 	checkCudaErrors(cudaBindTexture(0, oldNormalTex, sortedNormal, numParticles*sizeof(SVec4)));
 #endif
-	unsigned int numThreads, numBlocks;
+	SUint numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
-	unsigned int l=0; 
+	SUint l=0; 
 	SReal rho_avg = 0.f;
 	const SReal rd = 1000.f;
 	const SReal max_rho_err = 1.f;
@@ -854,16 +854,16 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
-				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, SUint* cellStart, SUint* cellEnd, SUint* gridParticleIndex,
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, SUint* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
+				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, SUint numParticles, SUint numBoundaries, SUint numCells)
 {
 #if USE_TEX
 	//add texture management someday
 #endif
 
 	// thread per particle
-	unsigned int numThreads, numBlocks;
+	SUint numThreads, numBlocks;
 	computeGridSize(numParticles, 64, numBlocks, numThreads);
 
 	computeDensityPressure<<<numBlocks, numThreads>>>(
@@ -892,9 +892,9 @@ void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void pcisph_pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
-				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells)
+void pcisph_pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, SUint* cellStart, SUint* cellEnd, SUint* gridParticleIndex,
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, SUint* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
+				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, SUint numParticles, SUint numBoundaries, SUint numCells)
 {
 #if USE_TEX
 	//add texture management someday

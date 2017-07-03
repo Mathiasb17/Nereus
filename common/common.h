@@ -9,6 +9,8 @@
 #define MONAGHAN 0
 #define MULLER   1
 
+typedef unsigned int SUint;
+
 /**********************************
 *  SIMPLE OR DOUBLE PRECISION	  *	
 *  (TUNE IN CMakeLists.txt)       *
@@ -38,8 +40,8 @@ typedef float4 SVec4;
 /***********************
 *  NAMESPACES MACROS  *
 ***********************/
-#define CFD_NAMESPACE_BEGIN namespace CFD {
-#define CFD_NAMESPACE_END   }
+#define NEREUS_NAMESPACE_BEGIN namespace NEREUS {
+#define NEREUS_NAMESPACE_END   }
 
 #define EXTERN_C_BEGIN extern "C" {
 #define EXTERN_C_END   }

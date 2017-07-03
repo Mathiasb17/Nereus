@@ -30,7 +30,7 @@ void threadSync();
 
 void copyArrayFromDevice(void *host, const void *device, struct cudaGraphicsResource **cuda_vbo_resource, int size);
 void copyArrayToDevice(void *device, const void *host, int offset, int size);
-void registerGLBufferObject(unsigned int vbo, struct cudaGraphicsResource **cuda_vbo_resource);
+void registerGLBufferObject(SUint vbo, struct cudaGraphicsResource **cuda_vbo_resource);
 void unregisterGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
 void *mapGLBufferObject(struct cudaGraphicsResource **cuda_vbo_resource);
 void unmapGLBufferObject(struct cudaGraphicsResource *cuda_vbo_resource);
@@ -43,7 +43,7 @@ void setParameters(SphSimParams *hostParams);
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void computeGridSize(unsigned int n, unsigned int blockSize, unsigned int &numBlocks, unsigned int &numThreads);
+void computeGridSize(SUint n, SUint blockSize, SUint &numBlocks, SUint &numThreads);
 
 //==================================================================================================== 
 //==================================================================================================== 
@@ -52,52 +52,52 @@ void integrateSystem(SReal *pos,
 					 SReal *vel,
 					 SReal *forces,
 					 SReal deltaTime,
-					 unsigned int numParticles);
+					 SUint numParticles);
 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void calcHash(unsigned int  *gridParticleHash,
-			  unsigned int  *gridParticleIndex,
+void calcHash(SUint  *gridParticleHash,
+			  SUint  *gridParticleIndex,
 			  SReal *pos,
 			  int    numParticles);
 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void reorderDataAndFindCellStartDBoundary(unsigned int *cellStart,
-										unsigned int *cellEnd,
+void reorderDataAndFindCellStartDBoundary(SUint *cellStart,
+										SUint *cellEnd,
 										SReal *sortedPos,
 										SReal *sortedVbi,
-										unsigned int *gridParticleHash,
-										unsigned int *gridParticleIndex,
+										SUint *gridParticleHash,
+										SUint *gridParticleIndex,
 										SReal *oldPos,
 										SReal *oldVbi,
-										unsigned int numBoundaries,
-										unsigned int numCells
+										SUint numBoundaries,
+										SUint numCells
 										);
 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void reorderDataAndFindCellStart(unsigned int  *cellStart,
-								 unsigned int  *cellEnd,
+void reorderDataAndFindCellStart(SUint  *cellStart,
+								 SUint  *cellEnd,
 								 SReal *sortedPos,
 								 SReal *sortedVel,
 								 SReal *sortedDens,
 								 SReal *sortedPres,
 								 SReal *sortedForces,
 								 SReal *sortedCol,
-								 unsigned int  *gridParticleHash,
-								 unsigned int  *gridParticleIndex,
+								 SUint  *gridParticleHash,
+								 SUint  *gridParticleIndex,
 								 SReal *oldPos,
 								 SReal *oldVel,
 								 SReal *oldDens,
 								 SReal *oldPres,
 								 SReal *oldForces,
 								 SReal *oldCol,
-								 unsigned int   numParticles,
-								 unsigned int   numCells);
+								 SUint   numParticles,
+								 SUint   numCells);
 
 
 //==================================================================================================== 
@@ -112,15 +112,15 @@ void computeDensityPressure(
 		SReal *sortedCol,
 		SReal *sortedBoundaryPos,
 		SReal *sortedBoundaryVbi,
-		unsigned int  *gridParticleIndex,
-		unsigned int  *cellStart,
-		unsigned int  *cellEnd,
-		unsigned int *gridBoundaryIndex,
-		unsigned int *cellBoundaryStart,
-		unsigned int *cellBoundaryEnd,
-		unsigned int   numParticles,
-		unsigned int   numCells,
-		unsigned int   numBoundaries);
+		SUint  *gridParticleIndex,
+		SUint  *cellStart,
+		SUint  *cellEnd,
+		SUint *gridBoundaryIndex,
+		SUint *cellBoundaryStart,
+		SUint *cellBoundaryEnd,
+		SUint   numParticles,
+		SUint   numCells,
+		SUint   numBoundaries);
 
 //==================================================================================================== 
 //==================================================================================================== 
@@ -137,26 +137,26 @@ void computePciDensityPressure(
 		SReal* sortedVelStar,
 		SReal* sortedDensStar,
 		SReal* sortedDensError,
-		unsigned int  *gridParticleIndex,
-		unsigned int  *cellStart,
-		unsigned int  *cellEnd,
-		unsigned int   numParticles,
-		unsigned int   numCells);
+		SUint  *gridParticleIndex,
+		SUint  *cellStart,
+		SUint  *cellEnd,
+		SUint   numParticles,
+		SUint   numCells);
 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-SReal maxDensity(SReal* dDensities, unsigned int numParticles);
+SReal maxDensity(SReal* dDensities, SUint numParticles);
 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-SVec3 maxVelocity(SReal* dVelocities, unsigned int numParticles);
+SVec3 maxVelocity(SReal* dVelocities, SUint numParticles);
 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void sortParticles(unsigned int *dGridParticleHash, unsigned int *dGridParticleIndex, unsigned int numParticles);
+void sortParticles(SUint *dGridParticleHash, SUint *dGridParticleIndex, SUint numParticles);
 
 /***********
 *  IISPH  *
@@ -170,14 +170,14 @@ void predictAdvection(SReal* sortedPos,
 	SReal                       * sortedPres,
 	SReal                       * sortedForces,
 	SReal                       * sortedCol,
-	unsigned int                * cellStart,
-	unsigned int                * cellEnd,
-	unsigned int                * gridParticleIndex,
+	SUint                * cellStart,
+	SUint                * cellEnd,
+	SUint                * gridParticleIndex,
 	SReal						* sortedBoundaryPos,
 	SReal						* sortedBoundaryVbi,
-	unsigned int                * cellBoundaryStart,
-	unsigned int                * cellBoundaryEnd,
-	unsigned int                * gridBoundaryIndex,
+	SUint                * cellBoundaryStart,
+	SUint                * cellBoundaryEnd,
+	SUint                * gridBoundaryIndex,
 	SReal                       * sortedDensAdv,
 	SReal                       * sortedDensCorr,
 	SReal                       * sortedP_l,
@@ -190,33 +190,33 @@ void predictAdvection(SReal* sortedPos,
 	SReal                       * sortedDiiBoundary,
 	SReal                       * sortedSumDij,
 	SReal                       * sortedNormal,
-	unsigned int numParticles,
-	unsigned int numBoundaries,
-	unsigned int numCells);
+	SUint numParticles,
+	SUint numBoundaries,
+	SUint numCells);
 
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
+void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, SUint* cellStart, SUint* cellEnd, SUint* gridParticleIndex,
 				  SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi,
-				  unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedDensAdv, SReal* sortedDensCorr, SReal* sortedP_l,  SReal* sortedPreviousP, 
+				  SUint* cellBoundaryStart, SUint* cellBoundaryEnd, SUint* gridBoundaryIndex, SReal* sortedDensAdv, SReal* sortedDensCorr, SReal* sortedP_l,  SReal* sortedPreviousP, 
 				  SReal* sortedAii, SReal* sortedVelAdv, SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedDiiFluid, SReal* sortedDiiBoundary, SReal* sortedSumDij, SReal* sortedNormal,
-				  unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells);
+				  SUint numParticles, SUint numBoundaries, SUint numCells);
 /************
 *  PCISPH  *
 ************/
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
-				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells);
+void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, SUint* cellStart, SUint* cellEnd, SUint* gridParticleIndex,
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, SUint* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
+				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, SUint numParticles, SUint numBoundaries, SUint numCells);
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void pcisph_pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, unsigned int* cellStart, unsigned int* cellEnd, unsigned int* gridParticleIndex,
-				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, unsigned int* cellBoundaryStart, unsigned int* cellBoundaryEnd, unsigned int* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
-				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, unsigned int numParticles, unsigned int numBoundaries, unsigned int numCells);
+void pcisph_pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal* sortedPres, SReal* sortedForces, SReal* sortedCol, SUint* cellStart, SUint* cellEnd, SUint* gridParticleIndex,
+				SReal* sortedBoundaryPos, SReal* sortedBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, SUint* gridBoundaryIndex, SReal* sortedRhoAdv, SReal* sortedPosAdv, SReal* sortedVelAdv, 
+				SReal* sortedForcesAdv, SReal* sortedForcesP, SReal* sortedNormal, SUint numParticles, SUint numBoundaries, SUint numCells);
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 

@@ -20,7 +20,7 @@
 
 #include <cuda_runtime.h>
 
-CFD_NAMESPACE_BEGIN
+NEREUS_NAMESPACE_BEGIN
 
 //=====================================================================================================   
 //=====================================================================================================   
@@ -124,8 +124,8 @@ void IISPH::_initialize()
 {
 	SPH::_initialize();
 
-	unsigned int memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
-	unsigned int memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
+	SUint memSize = sizeof(SReal) * 4 * MAX_PARTICLE_NUMBER;
+	SUint memSizeFloat = sizeof(SReal) * MAX_PARTICLE_NUMBER;
 
 	allocateArray((void**)&m_dSortedDensAdv, memSizeFloat);
 	allocateArray((void**)&m_dSortedDensCorr, memSizeFloat);
@@ -214,9 +214,8 @@ void IISPH::update()
 	cudaMemcpy(m_pos, m_dSortedPos, sizeof(SReal)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_vel, m_dSortedVel, sizeof(SReal)*4*m_numParticles,cudaMemcpyDeviceToHost);
 	cudaMemcpy(m_pressure, m_dSortedPress, sizeof(SReal)*m_numParticles,cudaMemcpyDeviceToHost);
-	//exit(0);
 }
 //=====================================================================================================   
 //=====================================================================================================   
 //=====================================================================================================   
-CFD_NAMESPACE_END 
+NEREUS_NAMESPACE_END 

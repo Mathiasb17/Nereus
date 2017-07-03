@@ -127,7 +127,7 @@ const char * fragment_shader_basic =
  **********************************************************************/
 
 SReal particle_radius = 0.02;
-SVec4 cube_points[8];SVec4 cube_colors[8]; unsigned int cube_indices[36];
+SVec4 cube_points[8];SVec4 cube_colors[8]; SUint cube_indices[36];
 
 void initCube()
 {
@@ -213,7 +213,7 @@ void glEnableCapabilities()
 	glClearColor(1,1,1,1);
 }
 
-void getNewVbo(GLenum target, GLuint *newVbo, unsigned int bufferSize, const GLvoid* data, GLenum usage)
+void getNewVbo(GLenum target, GLuint *newVbo, SUint bufferSize, const GLvoid* data, GLenum usage)
 {
 	glGenBuffers(1, newVbo);
 	glBindBuffer(target, *newVbo);
@@ -268,7 +268,7 @@ void compileShaderProgram(GLuint *sp, GLuint vs, GLuint fs)
 	glLinkProgram(*sp);
 }
 
-void displaySpheres(glm::mat4 mat_mvp, glm::mat4 mat_mv, GLuint shader_program, GLuint vao, GLuint vbo_pos, unsigned int nbSpheres)
+void displaySpheres(glm::mat4 mat_mvp, glm::mat4 mat_mv, GLuint shader_program, GLuint vao, GLuint vbo_pos, SUint nbSpheres)
 {
 	glUseProgram(shader_program);
 
@@ -496,7 +496,7 @@ void displayFPS(GLFWwindow *window)
 //==================================================================================================== 
 //==================================================================================================== 
 //==================================================================================================== 
-void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
+void drop_more_particles(GLFWwindow* win, NEREUS::SPH *sim_sph)
 {
 	static bool dropped = false;
 	int stateK = glfwGetKey(win, GLFW_KEY_K);
@@ -526,11 +526,11 @@ void drop_more_particles(GLFWwindow* win, CFD::SPH *sim_sph)
 int main(void)
 {
 #if RECORD_SIMULATION == 1
-	static unsigned int save = 0;
+	static SUint save = 0;
 	openVideoStream();
 #endif
 
-	CFD::SPH *sim_sph = new CFD::SPH();
+	NEREUS::SPH *sim_sph = new NEREUS::IISPH();
 	sim_sph->_initialize();
 	sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(1.0f, 2.0f, 2.9f, 1.f), make_SVec4(0,0,0,0));
 	//sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(0.5f, 0.5f, 0.5f, 1.f), make_SVec4(0,0,0,0));
@@ -568,7 +568,7 @@ int main(void)
 	//opengl cube buffers handling
 	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_pos, 8 * sizeof(SVec4), cube_points, GL_STATIC_DRAW);
 	getNewVbo(GL_ARRAY_BUFFER, &vbo_cube_color, 8 *sizeof(SVec4), cube_colors, GL_STATIC_DRAW);
-	getNewVbo(GL_ELEMENT_ARRAY_BUFFER, &vbo_cube_indices, 36 * sizeof(unsigned int), cube_indices, GL_STATIC_DRAW);
+	getNewVbo(GL_ELEMENT_ARRAY_BUFFER, &vbo_cube_indices, 36 * sizeof(SUint), cube_indices, GL_STATIC_DRAW);
 	getNewVao(&vao_cube, vbo_cube_pos, vbo_cube_color, vbo_cube_indices);
 
 	//shaders handling
