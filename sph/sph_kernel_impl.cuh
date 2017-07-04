@@ -8,15 +8,14 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
-#include <helper_cuda.h>
-#include <helper_cuda_gl.h>
-
-#include <helper_functions.h>
+#include <cuda_helpers/helper_cuda.h>
+#include <cuda_helpers/helper_cuda_gl.h>
+#include <cuda_helpers/helper_functions.h>
+#include <cuda_helpers/helper_math.h>
 
 #include <stdio.h>
 #include <math.h>
 
-#include <helper_math.h>
 #include <math_constants.h>
 #include <float.h>
 
@@ -403,7 +402,6 @@ __global__ void computeDensityPressure(
 	const SReal rd = sph_params.restDensity;
 	const SReal pm = sph_params.particleMass;
 
-	//DOES A PARTICLE CONTRIBUTE TO ITS OWN DENSITY YES OR NO ?!?
 #if KERNEL_SET == MULLER
 	dens += pm * Wdefault(make_SVec3(0.0, 0.0, 0.0), ir, kp);
 #elif KERNEL_SET == MONAGHAN
@@ -534,6 +532,7 @@ __device__ void computeCellForces(
 					const SReal b = dot(p1p2,p1p2) + 0.01f*(ir*ir);
 					*fvisc = *fvisc + (m2/dens2  * v1v2 * (a/b));
 					
+#if USE_SURFACE_TENSION == 1
 					//tension surface becker
 					SVec3 ai = make_SVec3(0.0, 0.0, 0.0);
 					const SReal r2 = dot(p1p2, p1p2);
@@ -544,6 +543,7 @@ __device__ void computeCellForces(
 						ai = ai - (kappa / pm * pm * p1p2 * kernel_diameter);
 
 					*fsurf = *fsurf + ai;
+#endif
 				}
 			}
 		}
@@ -823,6 +823,12 @@ __global__ void computeIisphDensity(
 	SReal dens = 0.0;
 	int nb = 0;
 
+#if KERNEL_SET == MULLER
+	dens += pm * Wdefault(make_SVec3(0.0, 0.0, 0.0), ir, kp);
+#elif KERNEL_SET == MONAGHAN
+	dens += pm * Wmonaghan(make_SVec3(0.0, 0.0, 0.0), ir);
+#endif
+
 	//loop over each neighbor cell
 	for (int z=-1; z<=1; z++)
 	{
@@ -835,11 +841,6 @@ __global__ void computeIisphDensity(
 				dens += computeBoundaryCellDensity(neighbourPos, pos1, gridBoundaryIndex, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kp, rd, pm);
 			}
 		}
-	}
-
-	if (dens <= 1.0) 
-	{
-		dens = 1.0;
 	}
 
 	oldDens[originalIndex] = dens;

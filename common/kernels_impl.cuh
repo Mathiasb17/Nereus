@@ -7,13 +7,11 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
-#include <helper_cuda.h>
-#include <helper_cuda_gl.h>
+#include <cuda_helpers/helper_cuda.h>
+#include <cuda_helpers/helper_cuda_gl.h>
+#include <cuda_helpers/helper_functions.h>
+#include <cuda_helpers/helper_math.h>
 
-#include <helper_functions.h>
-
-
-#include <helper_math.h>
 #include <math.h>
 
 #include "common.h"

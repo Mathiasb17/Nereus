@@ -15,8 +15,8 @@
 #include <thrust/tuple.h>
 #include <thrust/sort.h>
 
-#include <helper_functions.h>
-#include <helper_cuda.h>
+#include <cuda_helpers/helper_functions.h>
+#include <cuda_helpers/helper_cuda.h>
 
 #include <cuda_runtime.h>
 
@@ -37,8 +37,8 @@ IISPH::IISPH():
 	m_params.restDensity = 1000.0;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1e-3;
-	m_params.viscosity = 0.005;
-	m_params.surfaceTension = 0.0001;
+	m_params.viscosity = 0.003;
+	m_params.surfaceTension = 0.1;
 
 	m_params.gravity.x = 0.0;
 	m_params.gravity.y = 0.0;
@@ -46,7 +46,7 @@ IISPH::IISPH():
 	m_params.gravity.z = 0.0;
 
 	m_params.interactionRadius = 0.0537;//better !
-	m_params.particleMass = powf(m_params.interactionRadius, 3)*m_params.restDensity;
+	m_params.particleMass =  0.5 * powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
 	m_params.beta = 3850.0;
 

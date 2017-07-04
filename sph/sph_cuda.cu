@@ -5,11 +5,11 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 
-#include <helper_cuda.h>
-#include <helper_cuda_gl.h>
-#include <helper_math.h>
+#include <cuda_helpers/helper_cuda.h>
+#include <cuda_helpers/helper_cuda_gl.h>
+#include <cuda_helpers/helper_math.h>
+#include <cuda_helpers/helper_functions.h>
 
-#include <helper_functions.h>
 #include <thrust/device_ptr.h>
 #include <thrust/for_each.h>
 #include <thrust/iterator/zip_iterator.h>
@@ -233,7 +233,7 @@ void calcHash(SUint  *gridParticleHash,
 		int    numParticles)
 {
 	SUint numThreads, numBlocks;
-	computeGridSize(numParticles, 256, numBlocks, numThreads);
+	computeGridSize(numParticles, CUDA_BLOCKSIZE, numBlocks, numThreads);
 
 	// execute the kernel
 	calcHashD<<< numBlocks, numThreads >>>(gridParticleHash,
@@ -264,7 +264,7 @@ void reorderDataAndFindCellStartDBoundary(SUint *cellStart,
 										)
 {
 	SUint numThreads, numBlocks;
-	computeGridSize(numBoundaries, 64, numBlocks, numThreads);
+	computeGridSize(numBoundaries, CUDA_BLOCKSIZE, numBlocks, numThreads);
 
 	checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(SUint)));
 
@@ -312,7 +312,7 @@ void reorderDataAndFindCellStart(SUint  *cellStart,
 		SUint   numCells)
 {
 	SUint numThreads, numBlocks;
-	computeGridSize(numParticles, 64, numBlocks, numThreads);
+	computeGridSize(numParticles, CUDA_BLOCKSIZE, numBlocks, numThreads);
 
 	// set all cells to empty
 	checkCudaErrors(cudaMemset(cellStart, 0xffffffff, numCells*sizeof(SUint)));
@@ -396,7 +396,7 @@ void computeDensityPressure(
 
 	// thread per particle
 	SUint numThreads, numBlocks;
-	computeGridSize(numParticles, 64, numBlocks, numThreads);
+	computeGridSize(numParticles, CUDA_BLOCKSIZE, numBlocks, numThreads);
 
 	// execute the kernel
 	computeDensityPressure<<<numBlocks, numThreads>>>(
@@ -567,7 +567,7 @@ void predictAdvection(SReal* sortedPos,
 #endif
 
 	SUint numThreads, numBlocks;
-	computeGridSize(numParticles, 64, numBlocks, numThreads);
+	computeGridSize(numParticles, CUDA_BLOCKSIZE, numBlocks, numThreads);
 
 	computeIisphDensity<<<numBlocks, numThreads>>>(
 			(SVec4*) sortedPos,
@@ -731,7 +731,7 @@ void pressureSolve(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens, SReal*
 	checkCudaErrors(cudaBindTexture(0, oldNormalTex, sortedNormal, numParticles*sizeof(SVec4)));
 #endif
 	SUint numThreads, numBlocks;
-	computeGridSize(numParticles, 64, numBlocks, numThreads);
+	computeGridSize(numParticles, CUDA_BLOCKSIZE, numBlocks, numThreads);
 
 	SUint l=0; 
 	SReal rho_avg = 0.f;
@@ -913,7 +913,7 @@ void pcisph_internalForces(SReal* sortedPos, SReal* sortedVel, SReal* sortedDens
 
 	// thread per particle
 	SUint numThreads, numBlocks;
-	computeGridSize(numParticles, 64, numBlocks, numThreads);
+	computeGridSize(numParticles, CUDA_BLOCKSIZE, numBlocks, numThreads);
 
 	computeDensityPressure<<<numBlocks, numThreads>>>(
 			(SVec4 *)sortedPos,

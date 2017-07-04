@@ -532,10 +532,10 @@ int main(void)
 
 	Nereus::SPH *sim_sph = new Nereus::IISPH();
 	sim_sph->_initialize();
-	sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(1.0f, 2.0f, 2.9f, 1.f), make_SVec4(0,0,0,0));
+	//sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(1.0f, 2.0f, 2.9f, 1.f), make_SVec4(0,0,0,0));
 	
-	//sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(0.5f, 0.5f, 0.5f, 1.f), make_SVec4(0,0,0,0));
-	//sim_sph->setGravity(0.0);
+	sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(0.5f, 0.5f, 0.5f, 1.f), make_SVec4(0,0,0,0));
+	sim_sph->setGravity(0.0);
 
 	//make boundary particles
 	std::vector<SVec4> bi;

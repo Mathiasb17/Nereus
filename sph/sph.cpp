@@ -14,8 +14,8 @@
 #include <thrust/tuple.h>
 #include <thrust/sort.h>
 
-#include <helper_functions.h>
-#include <helper_cuda.h>
+#include <cuda_helpers/helper_functions.h>
+#include <cuda_helpers/helper_cuda.h>
 
 #include <colored_output.h>
 

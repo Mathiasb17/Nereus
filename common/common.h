@@ -3,6 +3,11 @@
 
 #include <cuda_runtime.h>
 
+/*******************
+*  CUDA SETTINGS  *
+*******************/
+#define CUDA_BLOCKSIZE 256
+
 /****************************
 *  KERNEL SET IDENTIFIERS  *
 ****************************/
@@ -45,7 +50,5 @@ typedef float4 SVec4;
 
 #define EXTERN_C_BEGIN extern "C" {
 #define EXTERN_C_END   }
-
-
 
 #endif /* ifndef COMMON_H */
