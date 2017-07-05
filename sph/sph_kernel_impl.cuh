@@ -757,7 +757,6 @@ __device__ SVec3 computeDisplacementFactorBoundaryCell(SReal dens, SReal mj, int
 #elif KERNEL_SET == MULLER
 					grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-
 				res = res - ( (psi/(dens*dens)) * grad * (dt*dt) );
 			}
 		}
@@ -1015,9 +1014,9 @@ __device__ SReal rho_adv_boundary(SVec3 pos1, SVec3 vel1, SReal rd, SReal pm, SR
 		const SUint endIndex = FETCH(cellBoundaryEnd, gridHash);
 		for (SUint j=startIndex; j<endIndex; j++)
 		{
-			const SVec3 vb   = make_SVec3(0.1f, 0.1f, 0.1f);
+			const SVec3 vb   = make_SVec3(0.0, 0.0, 0.0);
 			const SVec3 bpos = make_SVec3(FETCH(oldBoundaryPos, j));
-			const SReal  vbi = FETCH(oldBoundaryVbi, j);
+			const SReal vbi = FETCH(oldBoundaryVbi, j);
 
 			const SVec3 p1p2 = pos1 - bpos;
 			const SVec3 v1v2 = vel1 - vb;
@@ -1061,7 +1060,7 @@ __device__ SReal compute_aii_cell(SReal ir, SReal dt, SReal pm, SReal kpg, SReal
 				grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
 
-				SVec3 dji = a*(grad* -1.0);
+				SVec3 dji = a*(-grad);
 				res += (pm * dot((diif+diib)-dji, grad));
 			}
 		}
@@ -1187,7 +1186,7 @@ __global__ void computeAdvectionFactor(
 	/*******************
 	*  COMPUTE P_i^0  *
 	*******************/
-	oldP_l[originalIndex] = 0.5f * oldPres[originalIndex]; 
+	oldP_l[originalIndex] = 0.5 * oldPres[originalIndex]; 
 
 	/*****************
 	*  COMPUTE AII  *
