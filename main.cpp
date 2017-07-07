@@ -503,7 +503,7 @@ void drop_more_particles(GLFWwindow* win, Nereus::SPH *sim_sph)
 	if (stateK == GLFW_PRESS && dropped == false)
 	{
 		dropped = true;
-		sim_sph->generateParticleCube(make_SVec4(-0.f, 1.4f, 0.0f,1.f), make_SVec4(0.5f, 0.5f, 0.5f, 0.f), make_SVec4(0,0,0,0));
+		sim_sph->generateParticleCube(make_SVec4(0.5f, 1.4f, 0.5f,0.0f), make_SVec4(0.5f, 0.5f, 0.5f, 0.f), make_SVec4(0,0,0,0));
 
 		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_pos, sim_sph->getNumParticles() * sizeof(SVec4), sim_sph->getHostPos(), GL_STATIC_DRAW);
 		getNewVbo(GL_ARRAY_BUFFER, &vbo_spheres_col, sim_sph->getNumParticles() * sizeof(SVec4), sim_sph->getHostCol(), GL_STATIC_DRAW);
@@ -532,10 +532,10 @@ int main(void)
 
 	Nereus::SPH *sim_sph = new Nereus::IISPH();
 	sim_sph->_initialize();
-	sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(1.0f, 2.0f, 2.9f, 1.f), make_SVec4(0,0,0,0));
+	//sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(1.0f, 2.0f, 2.9f, 1.f), make_SVec4(0,0,0,0));
 	
-	//sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(0.5f, 0.5f, 0.5f, 1.f), make_SVec4(0,0,0,0));
-	//sim_sph->setGravity(0.0);
+	sim_sph->generateParticleCube(make_SVec4(-0.4f, 0.04f, 0.5f, 1.f), make_SVec4(0.5f, 0.5f, 0.5f, 1.f), make_SVec4(0,0,0,0));
+	sim_sph->setGravity(0.0);
 
 	//make boundary particles
 	std::vector<SVec4> bi;

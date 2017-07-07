@@ -37,8 +37,8 @@ IISPH::IISPH():
 	m_params.restDensity = 1000.0;
 	m_params.particleRadius = 0.02;
 	m_params.timestep = 1e-3;
-	m_params.viscosity = 0.003;
-	m_params.surfaceTension = 0.1;
+	m_params.viscosity = 0.01;
+	m_params.surfaceTension = 0.01;
 
 	m_params.gravity.x = 0.0;
 	m_params.gravity.y = 0.0;
@@ -48,7 +48,7 @@ IISPH::IISPH():
 	m_params.interactionRadius = 0.0537;//better !
 	m_params.particleMass =  0.5 * powf(m_params.interactionRadius, 3)*m_params.restDensity;
 
-	m_params.beta = 3850.0;
+	m_params.beta = 1050.0;
 
 	const SReal eta = 0.01;
     const SReal H = 0.1;

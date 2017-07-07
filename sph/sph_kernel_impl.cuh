@@ -717,7 +717,7 @@ __device__ SVec3 computeDisplacementFactorCell(SReal dens, SReal mj, int3 gridPo
 #elif KERNEL_SET == MULLER
 					grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-					res = res - ( (pm/(dens*dens)) * grad * (dt*dt) );
+					res = res - ( (pm/(dens*dens)) * grad /** (dt*dt)*/ );
 				}
 			}
 		}
@@ -757,7 +757,7 @@ __device__ SVec3 computeDisplacementFactorBoundaryCell(SReal dens, SReal mj, int
 #elif KERNEL_SET == MULLER
 					grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-				res = res - ( (psi/(dens*dens)) * grad * (dt*dt) );
+				res = res - ( (psi/(dens*dens)) * grad /** (dt*dt)*/ );
 			}
 		}
 	}
@@ -950,7 +950,7 @@ __global__ void computeDisplacementFactor(
             {
                 const int3 neighbourPos      = gridPos + make_int3(x, y, z);
 				displacement_factor_fluid    = displacement_factor_fluid + computeDisplacementFactorCell(dens, pm, neighbourPos, pos1, oldPos, originalIndex, cellStart, cellEnd, ir, kpg, rd, pm);
-				displacement_factor_boundary = displacement_factor_boundary +computeDisplacementFactorBoundaryCell(dens, pm, gridPos, pos1, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kpg, rd, pm, dt);
+				displacement_factor_boundary = displacement_factor_boundary +computeDisplacementFactorBoundaryCell(dens, pm, neighbourPos, pos1, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, ir, kpg, rd, pm, dt);
 			}
         }
     }
@@ -974,6 +974,7 @@ __device__ SReal rho_adv_fluid(SReal ir, SReal pm, SUint index, SVec3 pos1, SVec
 	if (startIndex != 0xffffffff)
 	{ 
 		const SUint endIndex = FETCH(cellEnd, gridHash);
+		const SReal dt = sph_params.timestep;
         for (SUint j=startIndex; j<endIndex; j++)
 		{
 			if(j != index)
@@ -992,7 +993,7 @@ __device__ SReal rho_adv_fluid(SReal ir, SReal pm, SUint index, SVec3 pos1, SVec
 #elif KERNEL_SET == MULLER
 					grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-					res += (pm  * dot(v1v2, grad));
+					res += (dt*pm  * dot(v1v2, grad));
 				}
 			}
 		}
@@ -1012,14 +1013,14 @@ __device__ SReal rho_adv_boundary(SVec3 pos1, SVec3 vel1, SReal rd, SReal pm, SR
 	if (startIndex != 0xffffffff)
 	{
 		const SUint endIndex = FETCH(cellBoundaryEnd, gridHash);
+		const SReal dt = sph_params.timestep;
 		for (SUint j=startIndex; j<endIndex; j++)
 		{
-			const SVec3 vb   = make_SVec3(0.0, 0.0, 0.0);
 			const SVec3 bpos = make_SVec3(FETCH(oldBoundaryPos, j));
 			const SReal vbi = FETCH(oldBoundaryVbi, j);
 
 			const SVec3 p1p2 = pos1 - bpos;
-			const SVec3 v1v2 = vel1 - vb;
+			const SVec3 v1v2 = vel1;
 			const SReal psi  = (rd * vbi);
 
 			SVec3 grad;
@@ -1028,7 +1029,7 @@ __device__ SReal rho_adv_boundary(SVec3 pos1, SVec3 vel1, SReal rd, SReal pm, SR
 #elif KERNEL_SET == MULLER
 			grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-			res += (psi* dot(v1v2, grad));
+			res += (dt*psi* dot(v1v2, grad));
 		}
 	}
 	return res;
@@ -1052,15 +1053,14 @@ __device__ SReal compute_aii_cell(SReal ir, SReal dt, SReal pm, SReal kpg, SReal
 				const SVec3 pos2 = make_SVec3(FETCH(oldPos, j));
 				const SVec3 p1p2 = pos1 - pos2;
 
-				const SReal a = ( -(dt*dt*pm)/(dens*dens) );
+				const SReal dpi = (pm)/(dens*dens);
 				SVec3 grad;
 #if KERNEL_SET == MONAGHAN
 				grad = Wmonaghan_grad(p1p2, ir);
 #elif KERNEL_SET == MULLER
 				grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-
-				SVec3 dji = a*(-grad);
+				SVec3 dji = dpi*grad;
 				res += (pm * dot((diif+diib)-dji, grad));
 			}
 		}
@@ -1071,11 +1071,13 @@ __device__ SReal compute_aii_cell(SReal ir, SReal dt, SReal pm, SReal kpg, SReal
 //====================================================================================================  
 //====================================================================================================  
 //====================================================================================================  
-__device__ SReal compute_aii_cell_boundary(SReal rd, SReal ir, SReal kpg, SVec3 diif, SVec3 diib, SVec3 pos1, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, int3 neighbourPos)
+__device__ SReal compute_aii_cell_boundary(SReal rd, SReal ir, SReal kpg, SReal dens, SVec3 diif, SVec3 diib, SVec3 pos1, SVec4* oldBoundaryPos, SReal* oldBoundaryVbi, SUint* cellBoundaryStart, SUint* cellBoundaryEnd, int3 neighbourPos)
 {
 	const SUint gridHash = calcGridHash(neighbourPos);
 	const SUint startIndex = FETCH(cellBoundaryStart, gridHash);
 	SReal res = 0.0;
+
+	const SReal pm = sph_params.particleMass;
 
 	if (startIndex != 0xffffffff)
 	{
@@ -1084,16 +1086,22 @@ __device__ SReal compute_aii_cell_boundary(SReal rd, SReal ir, SReal kpg, SVec3 
 		{
 			const SVec3 pos2 = make_SVec3(FETCH(oldBoundaryPos, j));
 			const SVec3 p1p2 = pos1 - pos2;
-			const SReal  vbi  = FETCH(oldBoundaryVbi, j);
+			const SReal vbi  = FETCH(oldBoundaryVbi, j);
 
 			const SReal psi = rd*vbi;
+			const SReal dpi = (pm)/(dens*dens);
+
 			SVec3 grad;
+
 #if KERNEL_SET == MONAGHAN
 			grad = Wmonaghan_grad(p1p2, ir);
 #elif KERNEL_SET == MULLER
 			grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-			res += psi * dot(diif + diib, grad);
+
+			const SVec3 dji = dpi * grad;
+
+			res += psi * dot( (diif + diib) - dji, grad);
 		}
 	}
 	return res;
@@ -1180,7 +1188,7 @@ __global__ void computeAdvectionFactor(
 	/*******************
 	*  WRITE RHO_ADV  *
 	*******************/
-	SReal rho_adv = dens + dt*(rho_advf + rho_advb);
+	SReal rho_adv = dens + (rho_advf + rho_advb);
 	oldDensAdv[originalIndex] = rho_adv; 
 
 	/*******************
@@ -1192,6 +1200,7 @@ __global__ void computeAdvectionFactor(
 	*  COMPUTE AII  *
 	*****************/
 	SReal aii = 0.0;
+	const SReal dpi = pm / (dens*dens);
 	for (int z=-1; z<=1; z++)
 	{
 		for (int y=-1; y<=1; y++)
@@ -1201,7 +1210,7 @@ __global__ void computeAdvectionFactor(
 				const int3 neighbourPos = gridPos + make_int3(x, y, z);
 
 				aii += compute_aii_cell(ir, dt, pm, kpg, dens, pos1, diif, diib, oldPos, cellStart, cellEnd, neighbourPos, originalIndex);
-				aii += compute_aii_cell_boundary(rd, ir, kpg, diif, diib, pos1, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, neighbourPos);
+				aii += compute_aii_cell_boundary(rd, ir, kpg, dens, diif, diib, pos1, oldBoundaryPos, oldBoundaryVbi, cellBoundaryStart, cellBoundaryEnd, neighbourPos);
 			}
 		}
 	}
@@ -1236,8 +1245,7 @@ __device__ SVec3 dijpjcell(SReal ir, SReal pm, SReal kpg, SVec3 pos1, SVec4* old
 #elif KERNEL_SET == MULLER
 				grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-
-				res = res + ((-pm/(densj*densj))*p_lj*grad);
+				res = res - ((pm/(densj*densj))*p_lj*grad);
 			}
 		}
 	}
@@ -1309,7 +1317,6 @@ __global__ void computeSumDijPj(
 			}
 		}
 	}
-	dijpj = dijpj * (dt*dt);
 
 	/******************
 	*  GLOBAL WRITE  *
@@ -1366,6 +1373,7 @@ __global__ void computePressure(
 	const SVec3 diif         = make_SVec3(FETCH(oldDiiFluid, originalIndex));
 	const SVec3 diib         = make_SVec3(FETCH(oldDiiBoundary, originalIndex));
 	const SReal aii          = FETCH(oldAii, originalIndex);
+	const SVec3 dijpj        = make_SVec3(FETCH(oldSumDij, originalIndex));
 
 	//grid compute
     const int3 gridPos = calcGridPos(pos1);
@@ -1377,10 +1385,10 @@ __global__ void computePressure(
 	const SReal dt = sph_params.timestep;
 	const SReal rd = sph_params.restDensity;
 
-	SVec3 dijpj = make_SVec3(0.0, 0.0, 0.0);
-
 	SReal fsum = 0.0;
 	SReal bsum = 0.0;
+
+	const SReal dpi = pm / (dens*dens);
 		
 	for (int z=-1; z<=1; z++)
 	{
@@ -1396,7 +1404,9 @@ __global__ void computePressure(
 				{ 
 					const SUint endIndex = FETCH(cellEnd, gridHash);
 
-					//loop over fluid neighbors
+					/***********
+					*  FLUID  *
+					***********/
 					for (SUint j=startIndex; j<endIndex; j++)
 					{
 						if(j != index)
@@ -1406,7 +1416,6 @@ __global__ void computePressure(
 							const SVec3 p1p2 = pos1 - pos2;
 							const SReal p_lj = FETCH(oldP_l, j);
 
-
 							SVec3 grad;
 #if KERNEL_SET == MONAGHAN
 				grad = Wmonaghan_grad(p1p2, ir);
@@ -1414,16 +1423,14 @@ __global__ void computePressure(
 				grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
 
-
-							const SVec3 dji = -(dt*dt*pm)/(dens*dens)*( -grad );//FIXME nan issues
+							const SVec3 dji = dpi*( grad );//FIXME nan issues
+							const SVec3 d_ji_pi = dji * p_lj;
 
 							const SVec3 diifj = make_SVec3(FETCH(oldDiiFluid, j));
 							const SVec3 diibj = make_SVec3(FETCH(oldDiiBoundary, j));
 							const SVec3 sum_dijj = make_SVec3(FETCH(oldSumDij, j));
 
-							const SVec3 aux = sum_dij - (diifj+diibj)*p_lj - (sum_dijj - dji*p_l);
-
-							fsum += pm*dot(aux, grad);
+							fsum += pm * dot( dijpj - (diifj+diibj)*p_lj - (sum_dijj - d_ji_pi), grad);
 						}
 					}
 				}
@@ -1433,7 +1440,10 @@ __global__ void computePressure(
 				{
 					const SUint endIndexB = FETCH(cellBoundaryEnd, gridHash);
 
-					//loop over boundary neighbors
+					
+					/****************
+					*  BOUNDARIES  *
+					****************/
 					for (SUint j=startIndex; j<endIndexB; j++)
 					{
 						const SVec3 posb = make_SVec3(FETCH(oldBoundaryPos, j));
@@ -1446,35 +1456,32 @@ __global__ void computePressure(
 #elif KERNEL_SET == MULLER
 						grad = Wdefault_grad(p1p2, ir, kpg);
 #endif
-						bsum += psi * dot(sum_dij, grad); 
+						bsum += psi * dot(dijpj, grad); 
 					}
 				}
 			}
 		}
 	}
 
-	SReal omega = 0.5f;
+	SReal omega = 0.5;
 	SReal rho_corr = rho_adv + fsum + bsum;
+	const SReal dt2 = dt*dt;
+	const SReal denom = aii * dt2;
+	const SReal b = rd - rho_adv;
 
-    if(fabs(aii)>FLT_EPSILON)
+    if(fabs(denom)>FLT_EPSILON)
     {
-        p_l = (1.0-omega)*previous_p_l + (omega/aii)*(rd - rho_corr);
+        p_l = (1.0-omega)*previous_p_l + (omega/denom)*(b - dt2 * (bsum+fsum));
     }
     else
     {
         p_l = 0.0;
     }
 
-    SReal p = fmax(p_l, 0.0);
-    p_l = p;
+	SReal p = fmax(p_l, 0.0);
+	p_l = p;
 
-    rho_corr += aii*previous_p_l;
-
-	/*if (rho_corr != rho_corr) */
-	/*{*/
-		/*rho_corr = 1.0;*/
-	/*}*/
-
+	rho_corr += aii*previous_p_l;
 
 	/******************
 	*  GLOBAL WRITE  *
