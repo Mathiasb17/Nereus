@@ -1719,7 +1719,7 @@ __global__ void pciPressureSolve(SReal* oldPos, SReal* oldVel, SReal* oldDens, S
 	const SUint index = blockIdx.x*blockDim.x + threadIdx.x;
     if (index >= numParticles) return;
 
-	/*const SUint originalIndex = gridParticleIndex[index];*/
+	const SUint originalIndex = gridParticleIndex[index];
 }
 
 #endif//_PARTICLES_KERNEL_IMPL_CUH
