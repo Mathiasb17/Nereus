@@ -1,4 +1,4 @@
-(June 2018) I've been off this project for months. Now i'm planning to do a brand new code base.
+(June 2018) I've been off this project for months. Now i'm starting to do a brand new code base.
 
 # Nereus
 
