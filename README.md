@@ -1,3 +1,5 @@
+(June 2018) I've been off this project for months. Now i'm planning to do a brand new code base.
+
 # Nereus
 
 Nereus is a CUDA parallelized library for particle based fluid dynamics.
